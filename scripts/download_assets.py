@@ -17,7 +17,7 @@ OUT_DIR = os.path.join(BASE_DIR, "assets")
 LANG_DIR = os.path.join(OUT_DIR, "lang")
 
 # --- Configuration ---
-PDN_VERSION = "5.1.9"
+PDN_VERSION = "5.1.12"
 PDN_URL = f"https://github.com/paintdotnet/release/releases/download/v{PDN_VERSION}/paint.net.{PDN_VERSION}.portable.x64.zip"
 
 # Resource filenames inside the ZIP
