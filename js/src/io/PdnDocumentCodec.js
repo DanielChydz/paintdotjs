@@ -433,6 +433,9 @@ class PdnDocumentCodec {
                 throw new Error("Truncated NRBF string");
             }
             const value = bytes[offset++];
+            if (shift === 28 && (value & 0x7f) > 7) {
+                throw new Error("Invalid NRBF string length");
+            }
             length |= (value & 0x7f) << shift;
             if ((value & 0x80) === 0) {
                 const end = offset + length;

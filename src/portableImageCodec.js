@@ -19,6 +19,7 @@ import {
     initializeImageMagick
 } from '@imagemagick/magick-wasm'
 import magickWasmUrl from '@imagemagick/magick-wasm/magick.wasm'
+import DdsDecoder from './dds/DdsDecoder'
 
 let imageMagickPromise = null;
 
@@ -94,6 +95,12 @@ const decodeJpegXr = async bytes => {
 };
 
 export async function decode(bytes, format) {
+    if (format === 'dds') {
+        const decoded = DdsDecoder.decode(bytes);
+        if (decoded !== null) {
+            return decoded;
+        }
+    }
     if (format === 'jxr' || format === 'wdp' || format === 'wmp') {
         return decodeJpegXr(bytes);
     }
