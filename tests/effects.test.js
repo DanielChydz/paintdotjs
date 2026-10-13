@@ -16,6 +16,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const {pathToFileURL} = require("node:url");
 const {test} = require("node:test");
 const root = path.resolve(__dirname, "..");
 
@@ -55,7 +56,8 @@ function loadContext(allocations = []) {
         "js/src/engine/document/history/memento/BitmapHistoryMemento.js",
         "js/src/engine/document/effect/BitmapEffectEngine.js"
     ]) {
-        vm.runInContext(fs.readFileSync(path.join(root, filename), "utf8"), context, {filename});
+        let absolute = path.join(root, filename);
+        vm.runInContext(fs.readFileSync(absolute, "utf8"), context, {filename: pathToFileURL(absolute).href});
     }
     return vm.runInContext("({BitmapEffectEngine, BitmapHistoryMemento, Rectangle})", context);
 }
@@ -191,4 +193,227 @@ test("shared effect snapshot avoids a second readback and preserves undo/redo", 
         "Effect", "", workspace, 0, null, surface,
         {width: source.width, height: source.height, data: new Uint8ClampedArray(1)}
     ), /entire surface/);
+});
+
+test("all registered effects are deterministic, dimension-preserving and leave their source intact", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let definitions = [
+        ...Object.values(BitmapEffectEngine.DEFINITIONS),
+        ...Object.values(BitmapEffectEngine.EFFECTS)
+    ];
+    for (let definition of definitions) {
+        let source = pixels(7, 5);
+        let original = new Uint8ClampedArray(source.data);
+        let values = BitmapEffectEngine.defaults(definition);
+        let result = BitmapEffectEngine.apply(source, 7, 5, definition, values);
+        let repeat = BitmapEffectEngine.apply(source, 7, 5, definition, values);
+        assert.equal(result.width, 7, definition.id);
+        assert.equal(result.height, 5, definition.id);
+        assert.equal(result.data.length, 140, definition.id);
+        assert.notEqual(result.data, source.data, definition.id);
+        assert.deepEqual(result.data, repeat.data, definition.id);
+        assert.deepEqual(source.data, original, definition.id);
+        let emptyMask = new Uint8Array(35);
+        let masked = BitmapEffectEngine.apply(source, 7, 5, definition, values, emptyMask);
+        assert.deepEqual(masked.data, original, `${definition.id}: empty selection`);
+    }
+});
+
+test("color inversion and alpha inversion match independent pixel formulas and are reversible", () => {
+    let {BitmapEffectEngine} = loadContext();
+    for (let id of ["invertColorsEffect", "invertAlphaEffect"]) {
+        let definition = BitmapEffectEngine.DEFINITIONS[id];
+        let source = pixels(4, 3);
+        let result = BitmapEffectEngine.apply(source, 4, 3, definition, {});
+        let expected = new Uint8ClampedArray(source.data);
+        for (let offset = 0; offset < expected.length; ++offset) {
+            if ((offset % 4 === 3) === (id === "invertAlphaEffect")) {
+                expected[offset] = 255 - expected[offset];
+            }
+        }
+        assert.deepEqual(result.data, expected);
+        assert.deepEqual(BitmapEffectEngine.apply(result, 4, 3, definition, {}).data, source.data);
+    }
+});
+
+test("neutral color adjustments preserve pixels exactly", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = pixels(4, 3);
+    for (let [id, overrides] of [
+        ["brightnessAndContrastAdjustment", {}], ["exposureEffect", {}],
+        ["highlightsAndShadowsEffect", {}], ["hueAndSaturationAdjustment", {}],
+        ["levelsEffect", {}], ["sepiaEffect", {intensity: 0}], ["temperatureAndTintEffect", {}],
+        ["curvesEffect", {channel: "rgb"}]
+    ]) {
+        let definition = BitmapEffectEngine.DEFINITIONS[id];
+        let values = {...BitmapEffectEngine.defaults(definition), ...overrides};
+        assert.deepEqual(BitmapEffectEngine.apply(source, 4, 3, definition, values).data, source.data, id);
+    }
+});
+
+test("partial selections blend transformed pixels and empty selections mean the entire image", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let definition = BitmapEffectEngine.DEFINITIONS.invertColorsEffect;
+    let source = pixels(3, 1);
+    let mask = new Uint8Array([0, 128, 255]);
+    let expected = new Uint8ClampedArray(source.data);
+    for (let pixel = 0; pixel < 3; ++pixel) {
+        for (let channel = 0; channel < 3; ++channel) {
+            let offset = pixel * 4 + channel;
+            expected[offset] += (255 - 2 * expected[offset]) * mask[pixel] / 255;
+        }
+    }
+    assert.deepEqual(BitmapEffectEngine.apply(source, 3, 1, definition, {}, mask).data, expected);
+    assert.equal(BitmapEffectEngine.createSelectionMask(3, 1, null), null);
+    assert.equal(BitmapEffectEngine.createSelectionMask(3, 1, {isEmpty: () => true}), null);
+    assert.equal(BitmapEffectEngine.createSelectionMask(3, 1, mask), mask);
+});
+
+test("levels apply the reference transfer function only to enabled color channels", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = pixels(9, 3);
+    for (let enabled of [[true, false, true], [false, true, false], [false, false, false]]) {
+        let values = {
+            inputLow: 30, inputHigh: 200, gamma: 2, outputLow: 15, outputHigh: 220,
+            red: enabled[0], green: enabled[1], blue: enabled[2]
+        };
+        let expected = new Uint8ClampedArray(source.data);
+        for (let offset = 0; offset < expected.length; ++offset) {
+            if (enabled[offset % 4]) {
+                let normalized = Math.max(0, Math.min(1, (expected[offset] - 30) / 170));
+                expected[offset] = 15 + Math.sqrt(normalized) * 205;
+            }
+        }
+        assert.deepEqual(BitmapEffectEngine.applyLevels(source, 9, 3, values).data, expected);
+    }
+});
+
+test("curve defaults are independent and linear curves have exact lookup values", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let definition = BitmapEffectEngine.DEFINITIONS.curvesEffect;
+    let first = BitmapEffectEngine.defaults(definition);
+    first.points[0][1] = 99;
+    assert.equal(BitmapEffectEngine.defaults(definition).points[0][1], 0);
+    assert.equal(definition.controls.find(control => control.key === "points").defaultValue[0][1], 0);
+    let identity = BitmapEffectEngine.createCurveLookup([[255, 255], [0, 0]]);
+    let inverse = BitmapEffectEngine.createCurveLookup([[255, 0], [128, 127], [0, 255]]);
+    for (let value = 0; value < 256; ++value) {
+        assert.equal(identity[value], value);
+        assert.equal(inverse[value], 255 - value);
+    }
+});
+
+test("HSL conversion round-trips grayscale, primary colors and representative RGB values", () => {
+    let {BitmapEffectEngine} = loadContext();
+    for (let rgb of [
+        [0, 0, 0], [255, 255, 255], [128, 128, 128],
+        [255, 0, 0], [0, 255, 0], [0, 0, 255],
+        [234, 51, 87], [26, 181, 76], [137, 62, 204]
+    ]) {
+        let hsl = BitmapEffectEngine.rgbToHsl(...rgb);
+        assert(hsl.every(value => Number.isFinite(value) && value >= 0 && value <= 1));
+        let result = BitmapEffectEngine.hslToRgb(...hsl);
+        for (let channel = 0; channel < 3; ++channel) {
+            assert(Math.abs(result[channel] - rgb[channel]) < 1e-10);
+        }
+    }
+});
+
+test("noise respects disabled intensity/coverage, preserves alpha and responds to its seed", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = pixels(32, 16);
+    let values = {intensity: 70, saturation: 100, coverage: 50, seed: 2};
+    let first = BitmapEffectEngine.addNoise(source, 32, 16, values);
+    let second = BitmapEffectEngine.addNoise(source, 32, 16, {...values, seed: 3});
+    assert.notDeepEqual(first.data, source.data);
+    assert.notDeepEqual(first.data, second.data);
+    for (let offset = 3; offset < source.data.length; offset += 4) {
+        assert.equal(first.data[offset], source.data[offset]);
+    }
+    for (let override of [{intensity: 0}, {coverage: 0}]) {
+        assert.deepEqual(BitmapEffectEngine.addNoise(source, 32, 16, {...values, ...override}).data, source.data);
+    }
+    assert.equal(BitmapEffectEngine.getGaussianNoiseTable(), BitmapEffectEngine.getGaussianNoiseTable());
+});
+
+test("zero-radius CPU blurs preserve pixels without sharing the source buffer", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = pixels(3, 2);
+    for (let result of [
+        BitmapEffectEngine.gaussianBlur(source, 3, 2, 0),
+        BitmapEffectEngine.discBlur(source, 3, 2, 0),
+        BitmapEffectEngine.percentileBlur(source, 3, 2, 0, 50),
+        BitmapEffectEngine.surfaceBlur(source, 3, 2, 0, 15)
+    ]) {
+        assert.deepEqual(result.data, source.data);
+        assert.notEqual(result.data, source.data);
+    }
+    assert.equal(BitmapEffectEngine.nativeGaussianBlur(source, 3, 2, 1), null);
+});
+
+test("brightness/contrast follows its transfer formula including threshold contrast", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = pixels(7, 3);
+    let definition = BitmapEffectEngine.DEFINITIONS.brightnessAndContrastAdjustment;
+    for (let contrast of [-100, -50, 50, 100]) {
+        let brightness = 10;
+        let expected = new Uint8ClampedArray(source.data);
+        for (let offset = 0; offset < source.data.length; offset += 4) {
+            let intensity = Math.round(source.data[offset] * .299
+                + source.data[offset + 1] * .587 + source.data[offset + 2] * .114);
+            for (let channel = 0; channel < 3; ++channel) {
+                if (contrast === 100) {
+                    expected[offset + channel] = intensity + brightness < 128 ? 0 : 255;
+                } else {
+                    let adjustment = contrast < 0
+                        ? (intensity - 127) * (contrast + 100) / 100 + 127 - intensity + brightness
+                        : (intensity - 127 + brightness) * 100 / (100 - contrast) + 127 - intensity;
+                    expected[offset + channel] += adjustment;
+                }
+            }
+        }
+        assert.deepEqual(BitmapEffectEngine.apply(source, 7, 3, definition, {brightness, contrast}).data, expected);
+    }
+});
+
+test("auto-level ignores transparent pixels and preserves uniform channels", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = new ImageData(new Uint8ClampedArray([
+        0, 0, 0, 0, 20, 80, 120, 255, 120, 80, 220, 128
+    ]), 3, 1);
+    let definition = BitmapEffectEngine.DEFINITIONS.autoLevel;
+    let result = BitmapEffectEngine.apply(source, 3, 1, definition, {});
+    assert.deepEqual(result.data.slice(4), new Uint8ClampedArray([0, 80, 0, 255, 255, 80, 255, 128]));
+    assert.equal(result.data[3], 0);
+});
+
+test("unlinked posterization uses each channel's own palette size", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = pixels(9, 3);
+    let definition = BitmapEffectEngine.DEFINITIONS.posterizeAdjustment;
+    let values = {red: 2, green: 3, blue: 4, alpha: 5, linked: false};
+    let expected = new Uint8ClampedArray(source.data);
+    let levels = [2, 3, 4, 5];
+    for (let offset = 0; offset < expected.length; ++offset) {
+        let intervals = levels[offset % 4] - 1;
+        expected[offset] = Math.round(Math.round(expected[offset] / 255 * intervals) * 255 / intervals);
+    }
+    assert.deepEqual(BitmapEffectEngine.apply(source, 9, 3, definition, values).data, expected);
+});
+
+test("transparent quantization is a no-op and zero-blur shadow-only output has expected alpha", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = pixels(5, 3);
+    let shadow = BitmapEffectEngine.dropShadow(source, 5, 3, {
+        blur: 0, distance: 0, angle: 0, opacity: .5, shadowOnly: true
+    });
+    let expected = new Uint8ClampedArray(source.data.length);
+    for (let offset = 3; offset < expected.length; offset += 4) {
+        expected[offset] = source.data[offset] / 2;
+        source.data[offset] = 0;
+    }
+    assert.deepEqual(shadow.data, expected);
+    let definition = BitmapEffectEngine.EFFECTS.quantizeEffect;
+    assert.deepEqual(BitmapEffectEngine.apply(source, 5, 3, definition,
+        BitmapEffectEngine.defaults(definition)).data, source.data);
 });

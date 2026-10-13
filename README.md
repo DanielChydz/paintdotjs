@@ -186,6 +186,40 @@ npm run test:desktop
 These checks exercise the real Electron renderer with temporary settings, verifying
 layer-name safety, document cleanup, and worker cancellation.
 
+### Tests and runtime coverage
+
+On Linux, the desktop tests require `xvfb-run` and the system libraries needed by
+Electron. Use Node.js 24 LTS for the following commands:
+
+```bash
+npm run test:coverage
+npm run test:coverage:check
+```
+
+The coverage command builds source-mapped test bundles, runs all tests, and writes
+an HTML report to `coverage/index.html` and machine-readable reports to `coverage/`.
+It includes **every first-party runtime JavaScript file**, including files that
+were never executed: `js/`, `src/`, and the desktop runtime helpers
+`scripts/asset_archive.js`, `scripts/install_desktop_assets.js`, and
+`scripts/resource/ResourceReader.js`. It verifies that no source file disappeared
+from the report.
+
+Coverage combines Node.js, VM-loaded engine code, the real Electron renderer, and
+effect workers. Worker coverage is collected before termination and mapped back
+to the original effect engine. Bundled source maps map codec coverage back to
+`src/`; third-party libraries and native/WASM internals are not included in these
+JavaScript percentages.
+
+`test:coverage:check` requires **100% lines and 100% branches** and deliberately
+fails while either target is unmet. Passing the test suite alone does not imply
+100% coverage. Build and release wrappers are outside this runtime threshold;
+validate them with the existing lint, asset/version/header checks and package
+builds.
+
+`npm test` runs the same tests without collecting coverage; build the bundles first
+with `npm run desktop:build` on a fresh checkout. Coverage builds are for testing
+only: normal app/package commands rebuild the release bundles without source maps.
+
 CPU-heavy effects use one cancellable worker per preview; additional CPU-only
 effects move off the UI thread for images of at least 262,144 pixels. Canvas-native
 effects stay on their existing rendering path to preserve their pixel output.

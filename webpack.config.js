@@ -14,6 +14,7 @@
 
 const {BannerPlugin, DefinePlugin, ProvidePlugin} = require('webpack')
 const path = require('node:path')
+const {pathToFileURL} = require('node:url')
 
 const attributionBanner = [
     'paint.js, an unofficial JavaScript port of Paint.NET 3.36.7',
@@ -32,7 +33,10 @@ module.exports = {
     output: {
         filename: 'bundle.js',
         path: path.resolve(__dirname, 'build/web'),
-        clean: true
+        clean: true,
+        ...(process.env.PAINTDOTJS_COVERAGE === '1' ? {
+            devtoolModuleFilenameTemplate: info => pathToFileURL(info.absoluteResourcePath).href
+        } : {})
     },
     resolve: {
         fallback: {

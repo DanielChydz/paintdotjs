@@ -27,6 +27,66 @@ async function checkDesktop() {
     let counts = () => ["document:update_viewport", "document:invalidated"]
         .map(event => app.listeners[event].length);
     let baseline = counts();
+    let codecCanvas = document.createElement("canvas");
+    codecCanvas.width = 3;
+    codecCanvas.height = 2;
+    let codecContext = codecCanvas.getContext("2d");
+    codecContext.fillStyle = "rgb(32, 96, 192)";
+    codecContext.fillRect(0, 0, 3, 2);
+    let png = new Uint8Array(await (await new Promise(resolve => codecCanvas.toBlob(resolve))).arrayBuffer());
+    let blurred = BitmapEffectEngine.gaussianBlur(codecContext.getImageData(0, 0, 3, 2), 3, 2, 3);
+    check(blurred.data.every((value, index) => value === [32, 96, 192, 255][index % 4]),
+        "Native Gaussian blur changed a constant opaque image");
+    let codecPixels = codecContext.getImageData(0, 0, 3, 2);
+    for (let tiling of ["transparent", "wrap", "mirror"]) {
+        for (let sampling of ["linear", "point"]) {
+            let definition = BitmapEffectEngine.ROTATE_ZOOM;
+            let values = {...BitmapEffectEngine.defaults(definition), tiling, sampling};
+            let identity = BitmapEffectEngine.apply(codecPixels, 3, 2, definition, values);
+            check(identity.data.every((value, index) => value === codecPixels.data[index]),
+                "Neutral rotate/zoom changed pixels");
+            let translated = BitmapEffectEngine.apply(codecPixels, 3, 2, definition, {...values, panX: 20});
+            check(translated.data.every((value, index) =>
+                value === (tiling === "transparent" ? 0 : codecPixels.data[index])),
+            "Rotate/zoom did not honor its tiling mode");
+        }
+    }
+    let selection = new Selection();
+    try {
+        selection.setContinuation(new Rectangle(0, 0, 1, 2), CombineMode.REPLACE);
+        let mask = BitmapEffectEngine.createSelectionMask(3, 2, selection);
+        check(mask.every((value, index) => value === (index % 3 === 0 ? 255 : 0)),
+            "Rectangular selection mask has incorrect coverage");
+        selection.setContinuation(new Rectangle(0, 0, 3, 2), CombineMode.REPLACE);
+        check(BitmapEffectEngine.createSelectionMask(3, 2, selection) === null,
+            "Full selection did not use the unmasked fast path");
+    } finally {
+        selection.data.dispose();
+    }
+    for (let format of ["png", "avif"]) {
+        let encoded = await window.portableImageCodec.encode(png, format, 100);
+        let decoded = await window.portableImageCodec.decode(encoded, format);
+        check(decoded.width === 3 && decoded.height === 2 && decoded.rgba.length === 24, "Codec dimensions differ");
+        for (let offset = 0; offset < decoded.rgba.length; offset += 4) {
+            check(decoded.rgba[offset + 3] === 255, "Codec lost opaque alpha");
+            if (format === "png") {
+                check(decoded.rgba[offset] === 32 && decoded.rgba[offset + 1] === 96
+                    && decoded.rgba[offset + 2] === 192, "Lossless PNG pixels differ");
+            }
+        }
+    }
+    for (let operation of ["encode", "decode"]) {
+        let rejected = false;
+        try {
+            await window.portableImageCodec[operation](png, "unsupported", 100);
+        } catch (error) {
+            check(error.message.includes("Unsupported image format"), "Wrong codec rejection");
+            rejected = true;
+        }
+        check(rejected, "Unknown codec format was accepted");
+    }
+    codecCanvas.width = 0;
+    codecCanvas.height = 0;
     for (let iteration = 0; iteration < 3; ++iteration) {
         let workspace = app.createBlankDocumentInNewWorkspace(512, 512);
         let canvases = [
@@ -121,7 +181,25 @@ async function checkDesktop() {
 }
 
 if (process.versions.electron) {
-    let {app} = require("electron");
+    let {app, BrowserWindow, ipcMain} = require("electron");
+    let coverage = new Map();
+    if (process.env.NODE_V8_COVERAGE) {
+        let loadURL = BrowserWindow.prototype.loadURL;
+        BrowserWindow.prototype.loadURL = function (...args) {
+            return loadURL.call(this, "about:blank")
+                .then(() => coverage.get(this.webContents.id).collector.start())
+                .then(() => loadURL.apply(this, args));
+        };
+        ipcMain.on("paintdotjs:test-worker-coverage", async (event, url) => {
+            try {
+                await coverage.get(event.sender.id).collector.captureWorkers(url);
+                event.returnValue = null;
+            } catch (error) {
+                console.error("Worker coverage collection failed", error);
+                event.returnValue = error.message;
+            }
+        });
+    }
     app.setAppPath(root);
     app.setPath("userData", process.env.PAINTDOTJS_TEST_USER_DATA);
     let timeout = setTimeout(() => {
@@ -129,13 +207,28 @@ if (process.versions.electron) {
         app.exit(1);
     }, 60000);
     app.on("web-contents-created", (event, contents) => {
+        if (process.env.NODE_V8_COVERAGE) {
+            let DesktopCoverageCollector = require("./coverage/DesktopCoverageCollector.js");
+            let collector = new DesktopCoverageCollector(contents, process.env.NODE_V8_COVERAGE, root);
+            coverage.set(contents.id, {collector});
+        }
         contents.on("render-process-gone", (goneEvent, details) => {
             console.error("Renderer failed", details);
             app.exit(1);
         });
-        contents.once("did-finish-load", async () => {
+        contents.on("did-finish-load", async () => {
+            if (contents.getURL() === "about:blank") {
+                return;
+            }
             try {
+                let collector = coverage.get(contents.id)?.collector;
+                if (collector !== undefined) {
+                    await collector.installWorkerHook();
+                }
                 await contents.executeJavaScript("(" + checkDesktop.toString() + ")()");
+                if (collector !== undefined) {
+                    await collector.finish();
+                }
                 clearTimeout(timeout);
                 console.log("Desktop regression checks passed");
                 app.exit(0);
@@ -152,7 +245,7 @@ if (process.versions.electron) {
     let fs = require("node:fs");
     let os = require("node:os");
     let {spawnSync} = require("node:child_process");
-    test("desktop layer-name safety, document cleanup and worker cancellation", () => {
+    test("desktop codecs, layer-name safety, document cleanup and worker cancellation", () => {
         let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintdotjs-desktop-test-"));
         try {
             let result = spawnSync("xvfb-run", [

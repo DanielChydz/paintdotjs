@@ -1,0 +1,15 @@
+{
+  "all": true,
+  "src": ["js", "src", "scripts"],
+  "include": [
+    "js/**/*.js",
+    "src/**/*.js",
+    "scripts/asset_archive.js",
+    "scripts/install_desktop_assets.js",
+    "scripts/resource/ResourceReader.js"
+  ],
+  "exclude-after-remap": true,
+  "reporter": ["text-summary", "html", "json", "json-summary"],
+  "reports-dir": "coverage",
+  "temp-directory": "coverage/tmp"
+}

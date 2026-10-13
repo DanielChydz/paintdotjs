@@ -2,6 +2,7 @@
 /dist-electron/
 /build/
 /pages-dist/
+/coverage/
 index.php
 electron-builder.env
 node_modules/
