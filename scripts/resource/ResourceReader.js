@@ -20,6 +20,9 @@ class ResourceReader {
     }
 
     require(length) {
+        if (!Number.isSafeInteger(length) || length < 0) {
+            throw new Error(`Invalid read length in ${this.filename}`);
+        }
         if (this.offset + length > this.buffer.length) {
             throw new Error(`Unexpected end of .resources file: ${this.filename}`);
         }
@@ -50,6 +53,9 @@ class ResourceReader {
         let value = 0;
         for (let shift = 0; shift < 35; shift += 7) {
             const byte = this.bytes(1)[0];
+            if (shift === 28 && (byte & 0x7f) > 0x0f) {
+                throw new Error(`Invalid 7-bit integer in ${this.filename}`);
+            }
             value |= (byte & 0x7f) << shift;
             if (byte < 0x80) {
                 return value >>> 0;
@@ -63,10 +69,11 @@ class ResourceReader {
     }
 
     seek(offset, relative = false) {
-        this.offset = relative ? this.offset + offset : offset;
-        if (this.offset < 0 || this.offset > this.buffer.length) {
+        let position = relative ? this.offset + offset : offset;
+        if (!Number.isSafeInteger(offset) || position < 0 || position > this.buffer.length) {
             throw new Error(`Invalid seek in ${this.filename}`);
         }
+        this.offset = position;
     }
 }
 

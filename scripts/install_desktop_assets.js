@@ -32,6 +32,9 @@ function readStringResources(filename) {
     }
     const resourceCount = reader.int32();
     const typeCount = reader.int32();
+    if (resourceCount < 0 || typeCount < 0) {
+        throw new Error(`Invalid .resources counts: ${filename}`);
+    }
     for (let index = 0; index < typeCount; index++) {
         reader.string();
     }

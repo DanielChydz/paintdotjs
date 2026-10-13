@@ -79,17 +79,22 @@ async function downloadArchive({url, destination, expectedSha256, onProgress = (
 function extractArchive(archive, destination) {
     return new Promise((resolve, reject) => {
         let settled = false;
+        let openedZip = null;
         const fail = error => {
             if (settled) {
                 return;
             }
             settled = true;
+            if (openedZip !== null) {
+                openedZip.close();
+            }
             reject(error instanceof Error ? error : new Error(String(error)));
         };
         yauzl.open(archive, {lazyEntries: true, autoClose: true}, (openError, zip) => {
             if (openError) {
                 return fail(openError);
             }
+            openedZip = zip;
             zip.on('error', fail);
             zip.on('end', () => {
                 if (settled) {
@@ -104,7 +109,6 @@ function extractArchive(archive, destination) {
                 const unixType = (entry.externalFileAttributes >>> 16) & 0o170000;
                 if (relative.startsWith('/') || relative === '..' || relative.startsWith('../')
                     || path.posix.isAbsolute(relative) || unixType === 0o120000) {
-                    zip.close();
                     return fail(new Error(`Unsafe path in official archive: ${entry.fileName}`));
                 }
                 const target = path.join(destination, ...relative.split('/'));
