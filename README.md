@@ -143,6 +143,31 @@ not part of the MIT-compatible Paint.NET 3.36.7 source release on which this pro
 first build, paint.js fetches the required assets from the official Paint.NET download. This lets the
 interface follow Paint.NET v5.1.12+ without redistributing those files in this repository.
 
+### Build an Ubuntu package
+
+On Linux, build a `.deb` package for Ubuntu 24.04 or newer and the host architecture:
+
+```bash
+npm run dist:deb
+```
+
+The package is written to `dist/paintdotjs-<version>-linux-<arch>.deb` and includes
+Electron, the application, and its required assets. Node.js and npm are only needed
+to build the package, not to run the installed application.
+
+On an x86_64 Ubuntu 24.04 or newer system, install the package with:
+
+```bash
+sudo apt install ./dist/paintdotjs-*-linux-amd64.deb
+```
+
+APT installs the required system libraries, including Ubuntu's `t64` packages.
+`npm run dist:linux` continues to build only the AppImage.
+
+Desktop packages keep the emitted codec chunks and WASM, but omit the duplicate
+npm codec copies and development-only project files. Release webpack bundles
+do not include eval-based source maps; `npm run web-watch` retains them for debugging.
+
 ### Effect performance checks
 
 ```bash

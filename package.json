@@ -33,6 +33,7 @@
     "desktop:build": "webpack --config webpack.config.js",
     "dist": "npm run desktop:build && electron-builder",
     "dist:linux": "npm run desktop:build && electron-builder --linux AppImage",
+    "dist:deb": "npm run desktop:build && electron-builder --linux deb --publish never",
     "dist:mac": "npm run desktop:build && electron-builder --mac dmg zip --universal",
     "install:local": "node ./scripts/install_local.js",
     "assets:manifest": "node ./scripts/check_assets.js --refresh-manifest",
@@ -81,14 +82,20 @@
     "artifactName": "paintdotjs-${version}-${os}-${arch}.${ext}",
     "asar": true,
     "files": [
-      "**/*",
+      "index.html",
+      "package.json",
+      "LICENSE.md",
+      "NOTICE.md",
+      "css/**/*",
+      "js/**/*",
+      "lib/**/*",
+      "scripts/**/*",
+      "desktop-resources/**/*",
       "build/web/**/*",
-      "!assets/**/*",
-      "!pages-dist/**/*",
-      "!dist/**/*",
-      "!run/**/*",
-      "!flatpak/**/*",
-      "!.tmp/**/*",
+      "!node_modules/@imagemagick/magick-wasm/**/*",
+      "!node_modules/jpegxr/**/*",
+      "!node_modules/ms-nrbf-js/**/*",
+      "!node_modules/buffer/**/*",
       "!scripts/__pycache__/**/*",
       "!**/*.map"
     ],
@@ -266,6 +273,25 @@
     },
     "dmg": {
       "sign": false
+    },
+    "deb": {
+      "maintainer": "Daniel <dan.devmail@proton.me>",
+      "packageCategory": "graphics",
+      "depends": [
+        "libgtk-3-0t64",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0t64",
+        "libuuid1",
+        "libsecret-1-0",
+        "libgbm1",
+        "libasound2t64",
+        "libcups2t64"
+      ],
+      "recommends": []
     },
     "linux": {
       "icon": "desktop-resources/icon.png",

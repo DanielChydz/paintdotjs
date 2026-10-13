@@ -28,7 +28,7 @@ module.exports = {
     mode: 'production',
     target: 'web',
     entry: './src/index.js',
-    devtool: 'eval-source-map',
+    devtool: process.argv.includes('--watch') ? 'eval-source-map' : false,
     output: {
         filename: 'bundle.js',
         path: path.resolve(__dirname, 'build/web'),
