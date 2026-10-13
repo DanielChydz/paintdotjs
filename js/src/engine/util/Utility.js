@@ -83,7 +83,7 @@ class Utility {
 
     static simplifyRegion(region, complexity) {
         if (complexity === 0 || region.size() < complexity) {
-            return region.clone();
+            return region.clone().getRectangles();
         }
 
         let boxes = new Array(complexity);
@@ -137,6 +137,10 @@ class Utility {
                 ymax = Math.max(ymax, bottom.y);
                 ++edgeCount;
             }
+        }
+
+        if (edgeCount === 0) {
+            return [];
         }
 
         // Sort edge table by miny
