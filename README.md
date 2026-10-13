@@ -143,6 +143,37 @@ not part of the MIT-compatible Paint.NET 3.36.7 source release on which this pro
 first build, paint.js fetches the required assets from the official Paint.NET download. This lets the
 interface follow Paint.NET v5.1.12+ without redistributing those files in this repository.
 
+### Effect performance checks
+
+```bash
+npm run test:effects
+```
+
+The checks verify byte-identical box-blur output, bounded sliding-window scratch
+storage, selection blending, and shared effect snapshots with undo/redo.
+
+After building, run the desktop regressions on Linux with `xvfb-run` installed:
+
+```bash
+npm run test:desktop
+```
+
+These checks exercise the real Electron renderer with temporary settings, verifying
+layer-name safety, document cleanup, and worker cancellation.
+
+CPU-heavy effects use one cancellable worker per preview; additional CPU-only
+effects move off the UI thread for images of at least 262,144 pixels. Canvas-native
+effects stay on their existing rendering path to preserve their pixel output.
+Undo history is not truncated; closing a document releases its listeners, history,
+and canvas backing stores.
+
+### Desktop security
+
+Document layer names are displayed as plain text, not HTML. Keep Electron and the
+bundled image codecs updated: Ubuntu system updates do not replace these embedded
+runtimes. The current desktop bridge still uses a Node-enabled renderer; migrating
+it to a sandboxed, context-isolated preload API is a separate hardening task.
+
 ### Build the Flatpak
 
 The Flatpak manifest is in [`flatpak/net.paintjs.Paintjs.yml`](flatpak/net.paintjs.Paintjs.yml).

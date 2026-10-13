@@ -20,13 +20,20 @@ class BitmapHistoryMemento extends HistoryMemento {
         documentWorkspace,
         layerIndex,
         changedRegion = null,
-        copyFromThisSurface = documentWorkspace.getDocument().getLayers().getAt(layerIndex).getSurface()
+        copyFromThisSurface = documentWorkspace.getDocument().getLayers().getAt(layerIndex).getSurface(),
+        copyFromThisImageData = null
     ) {
         super(name, image);
 
         this.documentWorkspace = documentWorkspace;
         this.layerIndex = layerIndex;
         const source = copyFromThisSurface;
+        if (copyFromThisImageData !== null && (changedRegion !== null
+            || copyFromThisImageData.width !== source.getWidth()
+            || copyFromThisImageData.height !== source.getHeight()
+            || copyFromThisImageData.data?.length !== source.getWidth() * source.getHeight() * 4)) {
+            throw new Error("A shared history snapshot must cover the entire surface.");
+        }
         const requestedRectangles = changedRegion === null
             ? [source.getBounds()]
             : changedRegion.getRectangles();
@@ -42,7 +49,9 @@ class BitmapHistoryMemento extends HistoryMemento {
             }
             this.chunks.push({
                 bounds,
-                imageData: source.context.getImageData(bounds.x, bounds.y, bounds.width, bounds.height)
+                imageData: copyFromThisImageData === null
+                    ? source.context.getImageData(bounds.x, bounds.y, bounds.width, bounds.height)
+                    : copyFromThisImageData
             });
         }
         this.bounds = this.chunks.length === 0 ? Rectangle.empty() : this.chunks

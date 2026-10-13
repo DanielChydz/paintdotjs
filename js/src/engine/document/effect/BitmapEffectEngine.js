@@ -543,15 +543,14 @@ class BitmapEffectEngine {
         if (mask === null) {
             return rendered;
         }
-        const output = new ImageData(new Uint8ClampedArray(source.data), width, height);
         for (let pixel = 0, offset = 0; pixel < mask.length; ++pixel, offset += 4) {
             const amount = mask[pixel] / 255;
             for (let channel = 0; channel < 4; ++channel) {
-                output.data[offset + channel] = source.data[offset + channel]
+                rendered.data[offset + channel] = source.data[offset + channel]
                     + (rendered.data[offset + channel] - source.data[offset + channel]) * amount;
             }
         }
-        return output;
+        return rendered;
     }
 
     static createSelectionMask(width, height, selection) {
@@ -736,22 +735,27 @@ class BitmapEffectEngine {
         if (radius === 0) {
             return new ImageData(new Uint8ClampedArray(source.data), width, height);
         }
-        const horizontal = new Float32Array(source.data.length);
-        const output = new ImageData(width, height);
         const diameter = radius * 2 + 1;
-        for (let y = 0; y < height; ++y) {
-            const sums = [0, 0, 0, 0];
+        const rowLength = width * 4;
+        const rowCount = Math.min(height, diameter + 1);
+        const horizontal = new Float32Array(rowLength * rowCount);
+        const vertical = new Float64Array(rowLength);
+        const output = new ImageData(width, height);
+        // Keep only the rows needed by the sliding vertical window. The extra
+        // slot prevents a new row from overwriting the row being subtracted.
+        const renderRow = y => {
+            let rowOffset = (y % rowCount) * rowLength;
+            let sums = [0, 0, 0, 0];
             for (let x = -radius; x <= radius; ++x) {
-                const sx = Math.max(0, Math.min(width - 1, x));
-                const offset = (y * width + sx) * 4;
+                let sx = Math.max(0, Math.min(width - 1, x));
+                let offset = (y * width + sx) * 4;
                 for (let c = 0; c < 4; ++c) {
                     sums[c] += source.data[offset + c];
                 }
             }
             for (let x = 0; x < width; ++x) {
-                const offset = (y * width + x) * 4;
                 for (let c = 0; c < 4; ++c) {
-                    horizontal[offset + c] = sums[c] / diameter;
+                    horizontal[rowOffset + x * 4 + c] = sums[c] / diameter;
                 }
                 const removeX = Math.max(0, x - radius);
                 const addX = Math.min(width - 1, x + radius + 1);
@@ -760,27 +764,29 @@ class BitmapEffectEngine {
                         - source.data[(y * width + removeX) * 4 + c];
                 }
             }
+        };
+        for (let y = 0; y <= Math.min(radius, height - 1); ++y) {
+            renderRow(y);
         }
-        for (let x = 0; x < width; ++x) {
-            const sums = [0, 0, 0, 0];
-            for (let y = -radius; y <= radius; ++y) {
-                const sy = Math.max(0, Math.min(height - 1, y));
-                const offset = (sy * width + x) * 4;
-                for (let c = 0; c < 4; ++c) {
-                    sums[c] += horizontal[offset + c];
-                }
+        for (let y = -radius; y <= radius; ++y) {
+            let sy = Math.max(0, Math.min(height - 1, y));
+            let rowOffset = (sy % rowCount) * rowLength;
+            for (let offset = 0; offset < rowLength; ++offset) {
+                vertical[offset] += horizontal[rowOffset + offset];
             }
-            for (let y = 0; y < height; ++y) {
-                const offset = (y * width + x) * 4;
-                for (let c = 0; c < 4; ++c) {
-                    output.data[offset + c] = sums[c] / diameter;
-                }
-                const removeY = Math.max(0, y - radius);
-                const addY = Math.min(height - 1, y + radius + 1);
-                for (let c = 0; c < 4; ++c) {
-                    sums[c] += horizontal[(addY * width + x) * 4 + c]
-                        - horizontal[(removeY * width + x) * 4 + c];
-                }
+        }
+        for (let y = 0; y < height; ++y) {
+            let removeY = Math.max(0, y - radius);
+            let addY = Math.min(height - 1, y + radius + 1);
+            if (addY > y + radius && y < height - 1) {
+                renderRow(addY);
+            }
+            let removeOffset = (removeY % rowCount) * rowLength;
+            let addOffset = (addY % rowCount) * rowLength;
+            for (let offset = 0; offset < rowLength; ++offset) {
+                output.data[y * rowLength + offset] = vertical[offset] / diameter;
+                vertical[offset] += horizontal[addOffset + offset]
+                    - horizontal[removeOffset + offset];
             }
         }
         return output;

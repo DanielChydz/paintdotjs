@@ -331,6 +331,10 @@ class Surface {
     }
 
     dispose() {
+        if (this.canvas !== null) {
+            this.canvas.width = 0;
+            this.canvas.height = 0;
+        }
         this.canvas = null;
         this.context = null;
         this.checkerboard = null;

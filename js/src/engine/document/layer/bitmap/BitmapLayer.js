@@ -41,7 +41,7 @@ class BitmapLayer extends Layer {
 
     clone() {
         let layer = new BitmapLayer(this.documentWorkspace, this.width, this.height);
-        layer.surface = this.surface.clone();
+        layer.surface.context.drawImage(this.surface.canvas, 0, 0);
         layer.properties = this.properties.clone();
         return layer;
     }

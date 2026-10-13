@@ -52,6 +52,32 @@ class DocumentWorkspace extends DocumentView {
         this.onLayersChanged = this.onLayersChanged.bind(this);
     }
 
+    dispose() {
+        if (this.document !== null) {
+            let layers = this.document.getLayers();
+            layers.removingAt.remove(this.onLayerRemoving);
+            layers.insertedAt.remove(this.onLayerInserted);
+            layers.changed.remove(this.onLayersChanged);
+            for (let layer of layers.layers) {
+                layer.dispose();
+            }
+        }
+        if (this.scratchSurface !== null) {
+            this.scratchSurface.dispose();
+            this.scratchSurface = null;
+        }
+        if (this.selectionRenderer.selectedPath !== null) {
+            this.selectionRenderer.selectedPath.dispose();
+            this.selectionRenderer.selectedPath = null;
+        }
+        this.selection.data.dispose();
+        this.history.clearUndoStack();
+        this.history.clearRedoStack();
+        this.activeLayer = null;
+        this.fileHandle = null;
+        super.dispose();
+    }
+
     onDocumentChanging() {
         super.onDocumentChanging();
 

@@ -76,11 +76,15 @@ class BitmapEffectAction extends DocumentWorkspaceAction {
         // every slider preview. A full-canvas selection collapses to null.
         const selectionMask = BitmapEffectEngine.createSelectionMask(
             surface.getWidth(), surface.getHeight(), documentWorkspace.getSelection());
+        // Preview and undo share the immutable source instead of reading the layer twice.
         const memento = new BitmapHistoryMemento(
             i18n(this.definition.translationKey || this.definition.id + ".name"),
             "assets/icons/" + this.definition.icon,
             documentWorkspace,
-            layerIndex
+            layerIndex,
+            null,
+            surface,
+            source
         );
         const present = pixels => {
             surface.context.putImageData(pixels, 0, 0);
@@ -102,8 +106,13 @@ class BitmapEffectAction extends DocumentWorkspaceAction {
         // their CPU algorithms are optimized. Run them outside the main thread
         // so window movement, cancellation, and slider input remain responsive.
         // Each new preview terminates stale work.
-        const useWorker = ["oilPaintingEffect", "bokehEffect"].includes(this.definition.id)
-            && typeof Worker !== "undefined" && typeof Blob !== "undefined";
+        const useWorker = typeof Worker !== "undefined" && typeof Blob !== "undefined"
+            && (["oilPaintingEffect", "bokehEffect"].includes(this.definition.id)
+                || (source.width * source.height >= 262144 && [
+                    "medianBlurEffect", "motionBlurEffect", "radialBlurEffect",
+                    "reduceNoiseEffect", "squareBlurEffect", "surfaceBlurEffect",
+                    "unfocusEffect", "zoomBlurEffect", "quantizeEffect", "fragmentEffect"
+                ].includes(this.definition.id)));
         let workerUrl = null;
         let workerJob = null;
         const setWorkerBusy = busy => {

@@ -35,7 +35,7 @@ class DocumentView {
         // Bind instance methods
         this.onDocumentInvalidated = this.onDocumentInvalidated.bind(this);
 
-        this.app.on("document:update_viewport", documentView => {
+        this.onUpdateViewport = documentView => {
             if (documentView !== this) {
                 return;
             }
@@ -44,12 +44,28 @@ class DocumentView {
 
             // TODO Surface box pre-paint? (bad performance on scroll)
             // this.updateComposition();
-        });
-        this.app.on("document:invalidated", document => {
+        };
+        this.onInvalidatedDocument = document => {
             if (document === this.document) {
                 this.updateComposition();
             }
-        });
+        };
+        this.app.on("document:update_viewport", this.onUpdateViewport);
+        this.app.on("document:invalidated", this.onInvalidatedDocument);
+    }
+
+    dispose() {
+        this.app.off("document:update_viewport", this.onUpdateViewport);
+        this.app.off("document:invalidated", this.onInvalidatedDocument);
+        if (this.document !== null) {
+            this.document.invalidated.remove(this.onDocumentInvalidated);
+            this.document = null;
+        }
+        if (this.compositionSurface !== null) {
+            this.compositionSurface.dispose();
+            this.compositionSurface = null;
+        }
+        this.surfaceBox.setSurface(null);
     }
 
     onDocumentInvalidated() {

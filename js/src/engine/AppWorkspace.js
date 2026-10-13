@@ -139,6 +139,7 @@ class AppWorkspace extends AppView {
             this.setActiveDocumentWorkspace(next);
         }
         this.fire("app:close_document", documentWorkspace);
+        documentWorkspace.dispose();
         this.updateTitle();
         return true;
     }

@@ -56,7 +56,7 @@ class LayerItem extends MenuItem {
 
             // Name
             let name = document.createElement("span");
-            name.innerHTML = this.layer.properties.name;
+            name.textContent = this.layer.properties.name;
             element.appendChild(name);
 
             // Visible checkbox
