@@ -13,6 +13,8 @@
  */
 
 class PreviewShapeTool extends DrawingTool {
+    static miterLimit = 10;
+
     constructor(type, shape) {
         super(type, 2, false);
         this.shape = shape;
@@ -531,6 +533,7 @@ class PreviewShapeTool extends DrawingTool {
         // around rectangle corners and make a 1px outline look wider than it
         // is (especially when the browser antialiases the path).
         context.lineJoin = "miter";
+        context.miterLimit = PreviewShapeTool.miterLimit;
         const dash = this.getSetting("dash", "solid");
         const dashPatterns = {
             dash: [4, 2],
@@ -1112,7 +1115,8 @@ class PreviewShapeTool extends DrawingTool {
         }
         const bounds = Utility.pointsToRectangle(this.startPoint, this.endPoint);
         const width = this.getWidth();
-        const padding = width + 2;
+        // Acute corners can extend to half the stroke width times miterLimit.
+        const padding = width * PreviewShapeTool.miterLimit / 2 + 2;
         bounds.inflate(padding, padding);
         const corners = [
             new Point(bounds.getLeft(), bounds.getTop()), new Point(bounds.getRight(), bounds.getTop()),

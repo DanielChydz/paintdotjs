@@ -14,6 +14,15 @@
 
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
+const desktopScenarios = [
+    {name: "desktop codecs, layer-name safety, document cleanup and worker cancellation", file: ""},
+    {name: "desktop dialog submission, cancellation, effects and persistent settings", file: "checkDialogs.js"},
+    {name: "desktop document import, image codecs, transformations and undo/redo", file: "checkDocumentIO.js"},
+    {name: "desktop painting, shapes, selections, text, history and deferred scrolling", file: "checkPainting.js"},
+    {name: "desktop pixel movement, resampling, flood fill, cloning and recoloring", file: "checkPixelTools.js"},
+    {name: "desktop WebGL resampling matches the CPU reference", file: "checkGpu.js",
+        extraArgs: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]}
+];
 
 async function checkDesktop() {
     let check = (condition, message) => {
@@ -181,7 +190,16 @@ async function checkDesktop() {
 }
 
 if (process.versions.electron) {
+    let scenario = desktopScenarios.find(item => item.file === (process.env.PAINTDOTJS_TEST_SCENARIO || ""));
+    if (scenario === undefined) {
+        throw new Error("Unknown desktop regression scenario.");
+    }
+    let checkScenario = scenario.file === "" ? checkDesktop : require("./runtime/" + scenario.file);
     let {app, BrowserWindow, ipcMain} = require("electron");
+    let lastPhase = "loading";
+    ipcMain.on("paintdotjs:test-phase", (_event, phase) => {
+        lastPhase = phase;
+    });
     let coverage = new Map();
     if (process.env.NODE_V8_COVERAGE) {
         let loadURL = BrowserWindow.prototype.loadURL;
@@ -203,13 +221,14 @@ if (process.versions.electron) {
     app.setAppPath(root);
     app.setPath("userData", process.env.PAINTDOTJS_TEST_USER_DATA);
     let timeout = setTimeout(() => {
-        console.error("Desktop regression checks timed out");
+        console.error("Desktop regression checks timed out during " + lastPhase);
         app.exit(1);
     }, 60000);
     app.on("web-contents-created", (event, contents) => {
         if (process.env.NODE_V8_COVERAGE) {
             let DesktopCoverageCollector = require("./coverage/DesktopCoverageCollector.js");
-            let collector = new DesktopCoverageCollector(contents, process.env.NODE_V8_COVERAGE, root);
+            let collector = new DesktopCoverageCollector(
+                contents, process.env.NODE_V8_COVERAGE, root, scenario.file === "");
             coverage.set(contents.id, {collector});
         }
         contents.on("render-process-gone", (goneEvent, details) => {
@@ -225,7 +244,25 @@ if (process.versions.electron) {
                 if (collector !== undefined) {
                     await collector.installWorkerHook();
                 }
-                await contents.executeJavaScript("(" + checkDesktop.toString() + ")()");
+                await contents.executeJavaScript("(" + (async function (run) {
+                    let errors = [];
+                    let onError = event => errors.push(event.error?.stack || event.message);
+                    let onRejection = event => errors.push(String(event.reason));
+                    window.addEventListener("error", onError);
+                    window.addEventListener("unhandledrejection", onRejection);
+                    try {
+                        await run();
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                        if (errors.length > 0) {
+                            throw new Error(errors.join("\n"));
+                        }
+                    } catch (error) {
+                        throw new Error(error?.stack || error?.message || String(error));
+                    } finally {
+                        window.removeEventListener("error", onError);
+                        window.removeEventListener("unhandledrejection", onRejection);
+                    }
+                }).toString() + ")(" + checkScenario.toString() + ")");
                 if (collector !== undefined) {
                     await collector.finish();
                 }
@@ -233,7 +270,7 @@ if (process.versions.electron) {
                 console.log("Desktop regression checks passed");
                 app.exit(0);
             } catch (error) {
-                console.error(error);
+                console.error("Desktop scenario failed during " + lastPhase, error);
                 app.exit(1);
             }
         });
@@ -245,14 +282,16 @@ if (process.versions.electron) {
     let fs = require("node:fs");
     let os = require("node:os");
     let {spawnSync} = require("node:child_process");
-    test("desktop codecs, layer-name safety, document cleanup and worker cancellation", () => {
+    for (let scenario of desktopScenarios) {
+        test(scenario.name, () => {
         let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintdotjs-desktop-test-"));
         try {
             let result = spawnSync("xvfb-run", [
                 "-a", path.join(root, "node_modules/.bin/electron"),
-                "--ozone-platform=x11", __filename
+                "--ozone-platform=x11", ...(scenario.extraArgs || []), __filename
             ], {
-                env: {...process.env, PAINTDOTJS_TEST_USER_DATA: directory},
+                env: {...process.env, PAINTDOTJS_TEST_USER_DATA: directory,
+                    PAINTDOTJS_TEST_SCENARIO: scenario.file},
                 encoding: "utf8",
                 timeout: 90000
             });
@@ -262,5 +301,6 @@ if (process.versions.electron) {
         } finally {
             fs.rmSync(directory, {recursive: true, force: true});
         }
-    });
+        });
+    }
 }

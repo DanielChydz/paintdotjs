@@ -18,13 +18,14 @@ const {pathToFileURL} = require("node:url");
 
 class DesktopCoverageCollector {
 
-    constructor(contents, directory, root) {
+    constructor(contents, directory, root, expectWorkers = true) {
         this.contents = contents;
         this.directory = directory;
         this.root = root;
         this.sessions = new Map();
         this.sequence = 0;
         this.workerScripts = 0;
+        this.expectWorkers = expectWorkers;
         this.error = null;
         contents.debugger.on("message", (_event, method, params) => {
             if (method === "Target.attachedToTarget" && params.targetInfo.type === "worker") {
@@ -138,7 +139,7 @@ class DesktopCoverageCollector {
         if (this.error !== null) {
             throw this.error;
         }
-        if (this.workerScripts === 0) {
+        if (this.expectWorkers && this.workerScripts === 0) {
             throw new Error("No effect worker coverage was collected.");
         }
         let coverage = await this.command("Profiler.takePreciseCoverage");

@@ -626,6 +626,13 @@ class MaskedSurface {
             Math.ceil(Math.max(footprintXLength, footprintYLength)), 1, 16);
         const toLinear = gammaCorrected ? MaskedSurface.getToLinearLut() : null;
         const accumulator = new Float64Array(4);
+        const maskBounds = this.rectangleMaskBounds;
+        const maskMinimumX = maskBounds === null ? 0 : maskBounds.getLeft() - this.bounds.x - 0.5;
+        const maskMinimumY = maskBounds === null ? 0 : maskBounds.getTop() - this.bounds.y - 0.5;
+        const maskMaximumX = maskBounds === null ? 0 : maskBounds.getRight() - this.bounds.x - 0.5;
+        const maskMaximumY = maskBounds === null ? 0 : maskBounds.getBottom() - this.bounds.y - 0.5;
+        const coverageExtentX = 0.375 * (Math.abs(inverseA) + Math.abs(inverseC));
+        const coverageExtentY = 0.375 * (Math.abs(inverseB) + Math.abs(inverseD));
         let outputOffset = 0;
 
         for (let y = 0; y < rendered.height; ++y) {
@@ -639,6 +646,40 @@ class MaskedSurface {
                 const sourceY = inverseB * translatedX + inverseD * translatedY
                     - this.bounds.y - 0.5;
                 accumulator.fill(0);
+                let coverage = 1;
+                if (this.rectangularMask) {
+                    if (renderingQuality === "aliased") {
+                        coverage = sourceX >= maskMinimumX && sourceX <= maskMaximumX
+                            && sourceY >= maskMinimumY && sourceY <= maskMaximumY ? 1 : 0;
+                    } else if (sourceX - coverageExtentX < maskMinimumX
+                        || sourceX + coverageExtentX > maskMaximumX
+                        || sourceY - coverageExtentY < maskMinimumY
+                        || sourceY + coverageExtentY > maskMaximumY) {
+                        coverage = 0;
+                        // Match the shader's 4x4 coverage only at the boundary.
+                        if (sourceX + coverageExtentX >= maskMinimumX
+                            && sourceX - coverageExtentX <= maskMaximumX
+                            && sourceY + coverageExtentY >= maskMinimumY
+                            && sourceY - coverageExtentY <= maskMaximumY) {
+                            for (let sampleY = 0; sampleY < 4; ++sampleY) {
+                                const offsetY = (sampleY + 0.5) * 0.25 - 0.5;
+                                for (let sampleX = 0; sampleX < 4; ++sampleX) {
+                                    const offsetX = (sampleX + 0.5) * 0.25 - 0.5;
+                                    const maskX = sourceX + inverseA * offsetX + inverseC * offsetY;
+                                    const maskY = sourceY + inverseB * offsetX + inverseD * offsetY;
+                                    if (maskX >= maskMinimumX && maskX <= maskMaximumX
+                                        && maskY >= maskMinimumY && maskY <= maskMaximumY) {
+                                        coverage += 1 / 16;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (coverage === 0) {
+                        outputOffset += 4;
+                        continue;
+                    }
+                }
 
                 // Direct2D's hard border keeps interpolation inside the input
                 // extent, but does not paint outside the transformed image.
@@ -679,12 +720,13 @@ class MaskedSurface {
                     this.sampleBilinear(source, sourceX, sourceY, toLinear, accumulator, 1);
                 }
 
-                this.writeSample(output.data, outputOffset, accumulator, gammaCorrected);
+                this.writeSample(output.data, outputOffset, accumulator, gammaCorrected, coverage);
                 outputOffset += 4;
             }
         }
         rendered.context.putImageData(output, 0, 0);
-        this.drawRenderedCanvas(targetSurface, rendered.canvas, destinationBounds, transform);
+        this.drawRenderedCanvas(targetSurface, rendered.canvas, destinationBounds, transform,
+            this.rectangularMask);
         rendered.dispose();
     }
 
@@ -745,8 +787,8 @@ class MaskedSurface {
         }
     }
 
-    writeSample(destination, offset, accumulator, gammaCorrected) {
-        const alpha = Utility.clamp(accumulator[3], 0, 1);
+    writeSample(destination, offset, accumulator, gammaCorrected, coverage = 1) {
+        const alpha = Utility.clamp(accumulator[3], 0, 1) * coverage;
         if (alpha <= 1 / 65535) {
             return;
         }
@@ -800,12 +842,13 @@ class MaskedSurface {
 
     static getToLinearLut() {
         if (MaskedSurface.toLinearLut === undefined) {
-            MaskedSurface.toLinearLut = Uint8ClampedArray.from({length: 256}, (_, value) => {
+            // Preserve sub-byte linear values, as the shader does.
+            MaskedSurface.toLinearLut = Float64Array.from({length: 256}, (_, value) => {
                 const normalized = value / 255;
                 const linear = normalized <= 0.04045
                     ? normalized / 12.92
                     : Math.pow((normalized + 0.055) / 1.055, 2.4);
-                return Math.round(linear * 255);
+                return linear * 255;
             });
         }
         return MaskedSurface.toLinearLut;

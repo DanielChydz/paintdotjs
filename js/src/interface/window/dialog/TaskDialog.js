@@ -138,11 +138,6 @@ class TaskDialog {
                 dialog.append(titleBar, content);
             }
 
-            backdrop.onclick = event => {
-                if (event.target === backdrop) {
-                    finish(cancelValue);
-                }
-            };
             backdrop.appendChild(dialog);
             document.body.appendChild(backdrop);
             mover = new DialogMover(dialog, titleBar, backdrop);

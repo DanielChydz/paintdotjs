@@ -373,6 +373,9 @@ class ScrollList extends Item {
                 }
                 // Use key because the instance of the item may change
                 let itemByKey = this.items.find(i => i.getKey() === item.getKey());
+                if (itemByKey === undefined || !this.isInitialized()) {
+                    return;
+                }
                 if (this.isItemInViewport(itemByKey)) {
                     return;
                 }

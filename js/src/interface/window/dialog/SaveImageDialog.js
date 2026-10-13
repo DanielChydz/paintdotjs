@@ -340,11 +340,6 @@ class SaveImageDialog {
                 scheduleRender();
             };
             close.onclick = cancel.onclick = () => finish(null);
-            backdrop.onclick = event => {
-                if (event.target === backdrop) {
-                    finish(null);
-                }
-            };
             dialog.onsubmit = async event => {
                 event.preventDefault();
                 if (timer !== null) {

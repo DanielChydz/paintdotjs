@@ -60,11 +60,6 @@ class NewFileDialog {
             };
             close.onclick = () => finish(null);
             cancel.onclick = () => finish(null);
-            backdrop.onclick = event => {
-                if (event.target === backdrop) {
-                    finish(null);
-                }
-            };
             dialog.onsubmit = event => {
                 event.preventDefault();
                 if (typeof AppSettingsStore !== "undefined") {

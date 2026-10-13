@@ -191,11 +191,6 @@ class LayerPropertiesDialog {
             };
             close.onclick = () => finish(null);
             cancel.onclick = () => finish(null);
-            backdrop.onclick = event => {
-                if (event.target === backdrop) {
-                    finish(null);
-                }
-            };
             dialog.onsubmit = event => {
                 event.preventDefault();
                 const result = readProperties();

@@ -148,11 +148,6 @@ class EffectConfigDialog {
                 }
             };
             close.onclick = cancel.onclick = () => finish(null);
-            backdrop.onclick = event => {
-                if (event.target === backdrop) {
-                    finish(null);
-                }
-            };
             dialog.onsubmit = event => {
                 event.preventDefault();
                 finish({...values});

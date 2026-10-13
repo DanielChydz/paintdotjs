@@ -98,7 +98,7 @@ still some additions and limitations worth noting.
 | AVIF | Yes | Yes | Yes | Yes | — |
 | HEIC/HEIF | With the Windows codec | With the Windows codec | Yes | No | The bundled paint.js codec can decode these files but cannot encode them. |
 | WebP | Yes | Yes | Yes | Yes | — |
-| DDS | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. |
+| DDS | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. RGBA/BGRA 32-bit DDS is decoded directly, including older paint.js files; other variants use the bundled codec. |
 | TIFF (`.tif`, `.tiff`) | Yes | Yes | Yes | Yes | paint.js saves uncompressed RGBA images only. |
 | GIF | Yes | Yes | Yes | Yes | paint.js saves a single static, palette-based image only. |
 | BMP | Yes | Yes | Yes | Yes | paint.js saves 32-bit images with alpha only. |
@@ -184,7 +184,29 @@ npm run test:desktop
 ```
 
 These checks exercise the real Electron renderer with temporary settings, verifying
-layer-name safety, document cleanup, and worker cancellation.
+layer-name safety, document cleanup, worker cancellation, dialogs, image codecs,
+painting, selections, text, move history, and CPU/WebGL resampling. The WebGL
+scenario uses SwiftShader to execute the actual shaders without requiring a
+hardware GPU; this is a correctness check, not a hardware GPU benchmark.
+
+Final CPU resampling uses the same 4x4 rectangular selection coverage as WebGL,
+including its aliased mode, without allocating an intermediate mask canvas.
+Linear-light interpolation retains fractional precision rather than quantizing
+the lookup table to eight bits. The cheaper Canvas fallback used while dragging
+is unchanged; final-quality CPU interpolation is not forced onto every preview.
+
+Optional local CPU measurements and visual comparisons can be generated with:
+
+```bash
+PAINTDOTJS_TEST_BENCHMARK_OUTPUT=/tmp/paintdotjs-resampling.json \
+PAINTDOTJS_TEST_VISUAL_OUTPUT=/tmp/paintdotjs-cpu-gpu.png \
+node --test --test-name-pattern='desktop WebGL' tests/desktop.test.cjs
+```
+
+The benchmark records five warmed-up samples per size/filter, median durations,
+intermediate mask-buffer sizes, and renderer process memory snapshots. RSS includes
+allocator and graphics caches; it must not be interpreted as the live mask size
+or a guaranteed whole-application memory reduction.
 
 ### Tests and runtime coverage
 
