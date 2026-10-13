@@ -650,7 +650,7 @@ class ColorsForm extends Form {
     }
 
     createPaletteMenuEntry(id, text, icon, callback, checked = false) {
-        const entry = new DropEntry(id, callback);
+        const entry = new DropEntry(id, callback, true);
         entry.getText = () => text;
         entry.getShortcut = () => null;
         if (checked) {

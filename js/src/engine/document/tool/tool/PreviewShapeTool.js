@@ -195,15 +195,6 @@ class PreviewShapeTool extends DrawingTool {
         return false;
     }
 
-    onPulse() {
-        if (this.supportsPendingEdit()) {
-            MoveToolBase.prototype.onPulse.call(this);
-        }
-        else {
-            super.onPulse();
-        }
-    }
-
     onDeactivate() {
         if (this.colorsForm !== null) {
             this.colorsForm.changed.remove(this.colorsChangedListener);

@@ -21,7 +21,6 @@ class MoveNubRenderer extends CanvasControl {
         this.transform = new Matrix();
         this.transform.reset();
         this.transformAngle = 0;
-        this.alpha = 255;
         this.size = new Size(5, 5);
         this.hitTestPadding = 8;
     }

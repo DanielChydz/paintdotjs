@@ -288,10 +288,6 @@ class Tool {
 
     }
 
-    onPulse() {
-        // TODO panTracking & right click
-    }
-
     onKeyPress(key) {
         return false;
     }

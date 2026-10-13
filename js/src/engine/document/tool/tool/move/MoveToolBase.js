@@ -142,37 +142,6 @@ class MoveToolBase extends Tool {
         };
     }
 
-    onPulse() {
-        if (this.moveNubs !== null) {
-            for (let i = 0; i < this.moveNubs.length; ++i) {
-                // Oscillate between 25% and 100% alpha over a period of 2 seconds
-                // Alpha value of 100% is sustained for a large duration of this period
-                const period = 10000 * 2000; // 10000 ticks per ms, 2000ms per period
-                let tick = (Date.now() % period) + (i * (period / this.moveNubs.length));
-                let sin = Math.sin((tick / period) * (2.0 * Math.PI));
-
-                // sin is [-1, +1]
-                sin = Math.min(0.5, sin);
-
-                // sin is [-1, +0.5]
-                sin += 1.0;
-
-                // sin is [0, 1.5]
-                sin /= 2.0;
-
-                // sin is [0, 0.75]
-                sin += 0.25;
-
-                // sin is [0.25, 1]
-                let newAlpha = (sin * 255.0);
-                let clampedAlpha = Utility.clamp(newAlpha, 0, 255);
-                this.moveNubs[i].setAlpha(clampedAlpha);
-            }
-        }
-
-        super.onPulse();
-    }
-
     getNubBounds() {
         return this.getSelection().getBounds(false);
     }

@@ -14,8 +14,9 @@
 
 class DropEntry extends ActionItem {
 
-    constructor(id, callback) {
+    constructor(id, callback, plainText = false) {
         super(id, callback);
+        this.plainText = plainText;
     }
 
     initialize(parent) {
@@ -72,7 +73,11 @@ class DropEntry extends ActionItem {
             // Label
             let label = document.createElement("div");
             label.className = "text";
-            label.innerHTML = this.getText();
+            if (this.plainText) {
+                label.textContent = this.getText();
+            } else {
+                label.innerHTML = this.getText();
+            }
             element.appendChild(label);
 
             // Shortcut
