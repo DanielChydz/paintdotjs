@@ -18,7 +18,7 @@ const {pathToFileURL} = require("node:url");
 
 class DesktopCoverageCollector {
 
-    constructor(contents, directory, root, expectWorkers = true) {
+    constructor(contents, directory, root, expectWorkers = true, origin = null) {
         this.contents = contents;
         this.directory = directory;
         this.root = root;
@@ -26,6 +26,7 @@ class DesktopCoverageCollector {
         this.sequence = 0;
         this.workerScripts = 0;
         this.expectWorkers = expectWorkers;
+        this.origin = origin;
         this.error = null;
         contents.debugger.on("message", (_event, method, params) => {
             if (method === "Target.attachedToTarget" && params.targetInfo.type === "worker") {
@@ -35,6 +36,11 @@ class DesktopCoverageCollector {
                     console.error("Worker coverage setup failed", error);
                 });
                 this.sessions.set(session.id, session);
+            } else if (method === "Target.attachedToTarget") {
+                void this.command("Runtime.runIfWaitingForDebugger", {}, params.sessionId).catch(error => {
+                    this.error = error;
+                    console.error("Non-effect target could not resume", error);
+                });
             } else if (method === "Target.detachedFromTarget") {
                 this.sessions.delete(params.sessionId);
             }
@@ -145,7 +151,8 @@ class DesktopCoverageCollector {
         let coverage = await this.command("Profiler.takePreciseCoverage");
         let scripts = [];
         for (let script of coverage.result) {
-            if (!script.url.startsWith("paintjs://app/")) {
+            if (!script.url.startsWith("paintjs://app/")
+                && (this.origin === null || !script.url.startsWith(this.origin + "/"))) {
                 continue;
             }
             let pathname = decodeURIComponent(new URL(script.url).pathname);

@@ -1,0 +1,84 @@
+/*
+ * paint.js, an unofficial JavaScript port of Paint.NET 3.36.7
+ *
+ * Original Paint.NET source:
+ * Copyright (C) dotPDN LLC, Rick Brewster, and contributors.
+ *
+ * JavaScript port and port-specific changes:
+ * Copyright (C) 2024-present LabyStudio.
+ * https://github.com/LabyStudio
+ *
+ * The interface design and behavior target Paint.NET 5.1.12+.
+ * Licensed under LICENSE.md. See NOTICE.md for full attribution.
+ */
+
+module.exports = async function checkBrowser() {
+    let check = (condition, message) => {
+        if (!condition) {
+            throw new Error(message);
+        }
+    };
+    let waitFor = async predicate => {
+        let deadline = performance.now() + 10000;
+        while (!predicate()) {
+            check(performance.now() < deadline, "Browser/PWA update timed out");
+            await new Promise(resolve => setTimeout(resolve, 20));
+        }
+    };
+    check(typeof require === "undefined" && isApp === false, "Browser test accidentally used desktop mode");
+    check(window.isSecureContext && "serviceWorker" in navigator, "Secure browser APIs are unavailable");
+    for (let workspace of [...app.getDocumentWorkspaces()]) {
+        app.closeDocumentWorkspace(workspace, false);
+    }
+    AboutDialog.open();
+    let about = document.querySelector(".project-info-about");
+    check(about !== null && !about.parentElement.classList.contains("dialog-backdrop-app"),
+        "Browser about dialog used desktop styling");
+    AboutDialog.open();
+    check(document.querySelectorAll(".project-info-about").length === 1, "About dialog was duplicated");
+    about.querySelector(".app-dialog-close").click();
+    let pending = NewFileDialog.open(32, 16);
+    let form = document.querySelector(".new-file-dialog");
+    check(!form.parentElement.classList.contains("dialog-backdrop-app"), "Browser new-file styling is wrong");
+    form.requestSubmit();
+    let dimensions = await pending;
+    check(dimensions.width === 32 && dimensions.height === 16, "Browser new-file dialog lost dimensions");
+    let workspace = app.createBlankDocumentInNewWorkspace(32, 16);
+    workspace.setDirty(true);
+    let registration = await navigator.serviceWorker.ready;
+    await waitFor(() => navigator.serviceWorker.controller !== null);
+    let channel = new MessageChannel();
+    let version = new Promise(resolve => {
+        channel.port1.onmessage = event => resolve(event.data);
+    });
+    registration.active.postMessage({type: "GET_VERSION"}, [channel.port2]);
+    check(await version === 1, "Initial worker is not active");
+    channel.port1.close();
+    await fetch("/__test__/update", {method: "POST"});
+    await registration.update();
+    await waitFor(() => document.querySelector(".update-prompt-dialog") !== null);
+    let update = document.querySelector(".update-prompt-dialog");
+    check(update.textContent.includes("9.0.2"), "Available update version was not displayed");
+    update.querySelectorAll(".task-dialog-choice")[0].click();
+    await waitFor(() => document.querySelector(".update-prompt-dialog") === null);
+    check(registration.waiting !== null && app.hasUnsavedDocuments(), "Later installed an update or lost work");
+
+    await fetch("/__test__/update", {method: "POST"});
+    await registration.update();
+    await waitFor(() => document.querySelector(".update-prompt-dialog") !== null);
+    document.querySelectorAll(".update-prompt-dialog .task-dialog-choice")[1].click();
+    await waitFor(() => document.querySelector(".task-dialog-message")?.textContent.includes("Save your open work"));
+    let confirm = document.querySelector(".task-dialog-message").closest(".task-dialog");
+    confirm.querySelectorAll(".task-dialog-choice")[2].click();
+    await waitFor(() => document.querySelector(".task-dialog") === null);
+    check(workspace.document !== null && workspace.isDirty(), "Cancelled update lost unsaved work");
+    check(navigator.serviceWorker.controller.state === "activated", "Update replaced active worker after cancel");
+
+    window.dispatchEvent(new Event("beforeunload", {cancelable: true}));
+    await waitFor(() => document.querySelector(".unsaved-changes-dialog") !== null);
+    document.querySelectorAll(".unsaved-changes-dialog .task-dialog-choice")[2].click();
+    await waitFor(() => !DocumentIO.webCloseDialogOpen);
+    check(workspace.document !== null && workspace.isDirty(), "Browser close cancellation lost work");
+    app.closeDocumentWorkspace(workspace, false);
+    return {ok: true};
+};

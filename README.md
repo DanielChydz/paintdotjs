@@ -189,6 +189,20 @@ painting, selections, text, move history, and CPU/WebGL resampling. The WebGL
 scenario uses SwiftShader to execute the actual shaders without requiring a
 hardware GPU; this is a correctness check, not a hardware GPU benchmark.
 
+Additional scenarios verify save previews, native file writes, clipboard history,
+color palettes, keyboard navigation, error recovery, and real FontFace/IndexedDB
+font persistence. Font tests use an installed system font resolved with
+Fontconfig's `fc-match`; the font is not copied into the repository or package.
+Palette names are rendered as literal text without changing formatting in other
+menus. Geometry tests cover clipping, degenerate polygons, region inflation,
+affine transforms, and color conversion.
+Transform handles remain static; no pulse timer is scheduled.
+
+The browser scenario runs without Node integration in an isolated, sandboxed
+window served over loopback HTTP. It exercises real service-worker installation
+and update lifecycles, update postponement, and unsaved-work protection using a
+small deterministic worker fixture rather than a mocked browser-mode flag.
+
 Final CPU resampling uses the same 4x4 rectangular selection coverage as WebGL,
 including its aliased mode, without allocating an intermediate mask canvas.
 Linear-light interpolation retains fractional precision rather than quantizing
@@ -227,7 +241,7 @@ were never executed: `js/`, `src/`, and the desktop runtime helpers
 from the report.
 
 Coverage combines Node.js, VM-loaded engine code, the real Electron renderer, and
-effect workers. Worker coverage is collected before termination and mapped back
+the Node-disabled browser renderer and effect workers. Worker coverage is collected before termination and mapped back
 to the original effect engine. Bundled source maps map codec coverage back to
 `src/`; third-party libraries and native/WASM internals are not included in these
 JavaScript percentages.

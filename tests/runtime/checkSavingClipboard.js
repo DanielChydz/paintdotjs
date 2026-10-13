@@ -1,0 +1,199 @@
+/*
+ * paint.js, an unofficial JavaScript port of Paint.NET 3.36.7
+ *
+ * Original Paint.NET source:
+ * Copyright (C) dotPDN LLC, Rick Brewster, and contributors.
+ *
+ * JavaScript port and port-specific changes:
+ * Copyright (C) 2024-present LabyStudio.
+ * https://github.com/LabyStudio
+ *
+ * The interface design and behavior target Paint.NET 5.1.12+.
+ * Licensed under LICENSE.md. See NOTICE.md for full attribution.
+ */
+
+module.exports = async function checkSavingClipboard() {
+    let check = (condition, message) => {
+        if (!condition) {
+            throw new Error(message);
+        }
+    };
+    let phase = name => require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+    let waitFor = async predicate => {
+        let deadline = performance.now() + 5000;
+        while (!predicate()) {
+            check(performance.now() < deadline, "Save/clipboard workflow timed out");
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+    };
+    let equal = (actual, expected, message) => check(actual.length === expected.length
+        && actual.every((value, index) => value === expected[index]), message);
+    let input = (element, value) => {
+        element.value = String(value);
+        element.dispatchEvent(new Event("input", {bubbles: true}));
+    };
+    let change = (element, value) => {
+        element.value = value;
+        element.dispatchEvent(new Event("change", {bubbles: true}));
+    };
+    let cancel = form => form.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+    let form = () => document.querySelector(".save-config-dialog");
+    let ready = () => form() !== null && !form().querySelector("button[type=submit]").disabled;
+    for (let workspace of [...app.getDocumentWorkspaces()]) {
+        app.closeDocumentWorkspace(workspace, false);
+    }
+    let workspace = app.createBlankDocumentInNewWorkspace(32, 16);
+    let surface = workspace.getActiveLayer().getSurface();
+    surface.context.fillStyle = "red";
+    surface.context.fillRect(8, 4, 8, 4);
+    let canvas = surface.canvas;
+    let encode = (format, options) => ImageEncoder.encode(canvas, format, options);
+
+    phase("save dialog formats and real previews");
+    for (let format of ["png", "jpeg", "webp", "bmp", "gif", "tiff", "tga", "dds", "avif", "jxl"]) {
+        let pending = SaveImageDialog.open({canvas, encode, initialFormat: format});
+        check(SaveImageDialog.open({}) === pending, "Duplicate save dialog was opened");
+        await waitFor(ready);
+        let dialog = form();
+        let preview = dialog.querySelector(".save-config-preview-stage img");
+        await waitFor(() => preview.naturalWidth === 32 && preview.complete
+            && Number.isFinite(parseFloat(preview.style.width)));
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        check(preview.naturalHeight === 16, "Save preview lost image dimensions");
+        let frame = dialog.querySelector(".save-config-preview-frame");
+        let bounds = frame.getBoundingClientRect();
+        let width = parseFloat(preview.style.width);
+        frame.dispatchEvent(new WheelEvent("wheel", {deltaY: -100, clientX: bounds.left + 20,
+            clientY: bounds.top + 20, bubbles: true, cancelable: true}));
+        check(parseFloat(preview.style.width) > width, "Save preview wheel did not zoom: "
+            + format + " " + width + " -> " + preview.style.width);
+        for (let key of ["0", "1"]) {
+            frame.dispatchEvent(new KeyboardEvent("keydown", {key, ctrlKey: true, bubbles: true,
+                cancelable: true}));
+        }
+        frame.dispatchEvent(new MouseEvent("dblclick", {bubbles: true, cancelable: true}));
+        frame.dispatchEvent(new MouseEvent("dblclick", {bubbles: true, cancelable: true}));
+        if (format === "jpeg") {
+            let quality = dialog.querySelector("input[type=number]");
+            input(quality, 150);
+            check(quality.value === "100", "JPEG quality was not clamped");
+            input(dialog.querySelector("input[type=range]"), 77);
+            check(quality.value === "77", "JPEG quality slider/number disagree");
+            change(dialog.querySelector(".save-config-chroma"), "4:4:4");
+            dialog.querySelector(".save-config-defaults").click();
+            check(quality.value === "95", "JPEG defaults were not restored");
+            input(quality, 81);
+            change(dialog.querySelector(".save-config-chroma"), "4:4:4");
+        }
+        check(dialog.checkValidity(), "Save settings are not valid");
+        dialog.requestSubmit();
+        let result = await pending;
+        check(result.format === format && result.blob.size > 0, "Save result lost its format/blob");
+        if (format === "jpeg") {
+            check(result.options.quality === 81 && result.options.subsampling === "4:4:4",
+                "Save result lost JPEG options");
+        }
+    }
+    phase("save cancellation and failed encoding");
+    for (let action of ["escape", "close", "cancel"]) {
+        let pending = SaveImageDialog.open({canvas, encode});
+        let dialog = form();
+        if (action === "escape") {
+            cancel(dialog);
+        } else if (action === "close") {
+            dialog.querySelector(".app-dialog-close").click();
+        } else {
+            [...dialog.querySelectorAll("button")].find(button => button.textContent === "Cancel").click();
+        }
+        check(await pending === null, "Cancelled save returned data");
+    }
+    let pending = SaveImageDialog.open({canvas, encode: async () => {
+        throw new Error("Injected encoder failure");
+    }});
+    await waitFor(() => form().querySelector(".save-config-status").textContent === "Injected encoder failure");
+    check(form().querySelector("button[type=submit]").disabled, "Failed encoding enabled save");
+    form().requestSubmit();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    check(form() !== null, "Failed encoding submitted a success-shaped result");
+    cancel(form());
+    check(await pending === null, "Failed preview could not be cancelled");
+
+    phase("stale save previews");
+    let release;
+    pending = SaveImageDialog.open({canvas, encode: () => new Promise(resolve => {
+        release = resolve;
+    })});
+    await waitFor(() => typeof release === "function");
+    cancel(form());
+    check(await pending === null, "In-flight save did not cancel");
+    release(await encode("png", {}));
+    await new Promise(resolve => setTimeout(resolve, 30));
+    check(form() === null, "Late encoder result revived a closed dialog");
+
+    phase("native file write");
+    let fs = require("node:fs");
+    let filePath = require("node:path").join(require("node:process").env.PAINTDOTJS_TEST_USER_DATA, "saved.png");
+    workspace.setFileInfo("saved.png", null, filePath, "png", {});
+    workspace.setDirty(true);
+    check(await DocumentIO.saveActive(), "Native save failed");
+    check(!workspace.isDirty(), "Successful save left the document dirty");
+    let bytes = fs.readFileSync(filePath);
+    equal(bytes.subarray(0, 8), [137, 80, 78, 71, 13, 10, 26, 10], "Saved file is not PNG");
+    let decoded = await window.portableImageCodec.decode(bytes, "png");
+    equal(decoded.rgba, surface.context.getImageData(0, 0, 32, 16).data, "Saved PNG changed pixels");
+
+    phase("selection outlines and pixel clipboard");
+    let selection = workspace.getSelection();
+    selection.setContinuation(new Rectangle(8, 4, 8, 4), CombineMode.REPLACE);
+    selection.commitContinuation();
+    check(DocumentIO.copySelectionOutline(), "Selection outline was not copied");
+    selection.reset();
+    check(DocumentIO.pasteSelectionOutline(), "Selection outline was not pasted");
+    check(selection.getBounds().width === 8 && selection.getBounds().height === 4,
+        "Pasted selection lost its geometry");
+    workspace.getHistory().stepBackward();
+    check(selection.isEmpty(), "Selection paste undo failed");
+    workspace.getHistory().stepForward();
+    check(await DocumentIO.copySelection(), "Selection pixels were not copied");
+    let blob = DocumentIO.internalClipboard;
+    let clipboard = await window.portableImageCodec.decode(new Uint8Array(await blob.arrayBuffer()), "png");
+    check(clipboard.width === 8 && clipboard.height === 4, "Clipboard crop has wrong dimensions");
+    check(clipboard.rgba.every((value, index) => value === [255, 0, 0, 255][index % 4]),
+        "Clipboard crop changed selected pixels");
+    check(await DocumentIO.cutSelection(), "Cut failed");
+    check(surface.context.getImageData(8, 4, 1, 1).data[3] === 0, "Cut did not erase selected pixels");
+    workspace.getHistory().stepBackward();
+    equal(surface.context.getImageData(8, 4, 1, 1).data, [255, 0, 0, 255], "Cut undo lost pixels");
+    let layerCount = workspace.getDocument().getLayers().getLayerCount();
+    check(await DocumentIO.pasteIntoNewLayer(), "Paste into layer failed");
+    check(workspace.getDocument().getLayers().getLayerCount() === layerCount + 1,
+        "Paste did not add a layer");
+    equal(workspace.getActiveLayer().getSurface().context.getImageData(8, 4, 1, 1).data,
+        [255, 0, 0, 255], "Paste lost its copied origin");
+    workspace.getHistory().stepBackward();
+    check(workspace.getDocument().getLayers().getLayerCount() === layerCount, "Paste-layer undo failed");
+    workspace.getHistory().stepForward();
+    check(await DocumentIO.pasteIntoNewImage(), "Paste into image failed");
+    let pasted = app.getActiveDocumentWorkspace();
+    check(pasted.getDocument().getWidth() === 8 && pasted.getDocument().getHeight() === 4,
+        "New pasted document has incorrect dimensions");
+    check(pasted.isDirty(), "New pasted document was marked saved");
+    app.closeDocumentWorkspace(pasted, false);
+    app.setActiveDocumentWorkspace(workspace);
+
+    phase("dirty document close and modal choice");
+    workspace.setDirty(true);
+    pending = DocumentIO.closeDocumentWorkspace(workspace);
+    check(await DocumentIO.closeDocumentWorkspace(workspace) === false, "Concurrent close was accepted");
+    let dialog = document.querySelector(".unsaved-changes-dialog");
+    check(dialog.textContent.includes("saved.png"), "Close confirmation lost the filename");
+    let choices = [...dialog.querySelectorAll(".task-dialog-choice")];
+    choices[2].click();
+    check(await pending === false && workspace.document !== null, "Cancel closed the dirty document");
+    pending = DocumentIO.closeDocumentWorkspace(workspace);
+    document.querySelectorAll(".unsaved-changes-dialog .task-dialog-choice")[1].click();
+    check(await pending === true && workspace.document === null, "Discard did not close the document");
+    check(await DocumentIO.closeDocumentWorkspace(workspace) === false, "Closed document closed twice");
+    check(await DocumentIO.closeDocumentWorkspace(null) === false, "Null workspace was closed");
+    return {ok: true};
+};

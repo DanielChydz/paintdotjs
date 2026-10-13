@@ -21,7 +21,11 @@ const desktopScenarios = [
     {name: "desktop painting, shapes, selections, text, history and deferred scrolling", file: "checkPainting.js"},
     {name: "desktop pixel movement, resampling, flood fill, cloning and recoloring", file: "checkPixelTools.js"},
     {name: "desktop WebGL resampling matches the CPU reference", file: "checkGpu.js",
-        extraArgs: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]}
+        extraArgs: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]},
+    {name: "desktop save previews, native file writing, clipboard and close confirmation", file: "checkSavingClipboard.js"},
+    {name: "desktop color palettes, font storage, dropdown navigation and error recovery", file: "checkControls.js"},
+    {name: "desktop native pointer routing, interrupted strokes, viewport and transform controls", file: "checkPointerRouting.js"},
+    {name: "browser runtime without Node integration and real PWA updates", file: "checkBrowser.js", browser: true}
 ];
 
 async function checkDesktop() {
@@ -196,14 +200,24 @@ if (process.versions.electron) {
     }
     let checkScenario = scenario.file === "" ? checkDesktop : require("./runtime/" + scenario.file);
     let {app, BrowserWindow, ipcMain} = require("electron");
+    let browserOrigin = null;
     let lastPhase = "loading";
     ipcMain.on("paintdotjs:test-phase", (_event, phase) => {
         lastPhase = phase;
+    });
+    ipcMain.handle("paintdotjs:test-input", (event, input) => {
+        let window = BrowserWindow.fromWebContents(event.sender);
+        window.show();
+        window.focus();
+        event.sender.sendInputEvent(input);
     });
     let coverage = new Map();
     if (process.env.NODE_V8_COVERAGE) {
         let loadURL = BrowserWindow.prototype.loadURL;
         BrowserWindow.prototype.loadURL = function (...args) {
+            if (!coverage.has(this.webContents.id)) {
+                return loadURL.apply(this, args);
+            }
             return loadURL.call(this, "about:blank")
                 .then(() => coverage.get(this.webContents.id).collector.start())
                 .then(() => loadURL.apply(this, args));
@@ -225,10 +239,27 @@ if (process.versions.electron) {
         app.exit(1);
     }, 60000);
     app.on("web-contents-created", (event, contents) => {
+        if (scenario.browser && browserOrigin === null) {
+            contents.once("did-finish-load", async () => {
+                try {
+                    let WebRuntimeServer = require("./browser/WebRuntimeServer.js");
+                    let server = new WebRuntimeServer(root);
+                    browserOrigin = await server.start();
+                    let browser = new BrowserWindow({show: false, width: 1280, height: 900,
+                        webPreferences: {nodeIntegration: false, contextIsolation: true, sandbox: true}});
+                    lastPhase = "browser runtime";
+                    await browser.loadURL(browserOrigin + "/index.html?skipWelcome=1");
+                } catch (error) {
+                    console.error("Browser fixture startup failed", error);
+                    app.exit(1);
+                }
+            });
+            return;
+        }
         if (process.env.NODE_V8_COVERAGE) {
             let DesktopCoverageCollector = require("./coverage/DesktopCoverageCollector.js");
             let collector = new DesktopCoverageCollector(
-                contents, process.env.NODE_V8_COVERAGE, root, scenario.file === "");
+                contents, process.env.NODE_V8_COVERAGE, root, scenario.file === "", browserOrigin);
             coverage.set(contents.id, {collector});
         }
         contents.on("render-process-gone", (goneEvent, details) => {
@@ -241,7 +272,7 @@ if (process.versions.electron) {
             }
             try {
                 let collector = coverage.get(contents.id)?.collector;
-                if (collector !== undefined) {
+                if (collector !== undefined && !scenario.browser) {
                     await collector.installWorkerHook();
                 }
                 await contents.executeJavaScript("(" + (async function (run) {
