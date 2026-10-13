@@ -109,7 +109,7 @@ Animated and multi-page files are imported and exported as a single static image
 
 ## Development
 
-Development requires Node.js 22 or newer. Install the dependencies first:
+Development requires Node.js 22.13.0 or newer; Node.js 24 LTS is recommended. Install the dependencies first:
 
 ```bash
 npm ci

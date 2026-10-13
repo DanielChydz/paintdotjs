@@ -42,7 +42,7 @@ modules:
       - npx webpack --config webpack.config.js
       - |
         . ../flatpak-node/electron-builder-arch-args.sh
-        electron_zip=$(echo ../flatpak-node/cache/electron/electron-v44.5.1-linux-*.zip)
+        electron_zip=$(echo ../flatpak-node/cache/electron/electron-v44.7.0-linux-*.zip)
         npx electron-builder $ELECTRON_BUILDER_ARCH_ARGS --linux dir --publish never \
           --config.electronDist="$electron_zip"
       - cp -a dist/linux*unpacked /app/main
