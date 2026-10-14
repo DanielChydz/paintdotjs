@@ -131,6 +131,61 @@ module.exports = async function checkTextGradient() {
         HTMLCanvasElement.prototype.getContext = getContext;
     }
 
+    phase("real gradient GL compile/link failures clean up and preserve the Canvas color fallback");
+    colors.setMainColor(Color.fromRGBA(255, 0, 0, 255));
+    colors.setSecondaryColor(Color.fromRGBA(0, 0, 255, 255));
+    for (let failure of ["vertex", "fragment", "link"]) {
+        let contexts = [];
+        let rejectedChecks = 0;
+        try {
+            HTMLCanvasElement.prototype.getContext = function (type, ...options) {
+                let gl = getContext.call(this, type, ...options);
+                if (type === "webgl2" && gl !== null) {
+                    contexts.push(gl);
+                    let shaderParameter = gl.getShaderParameter;
+                    let programParameter = gl.getProgramParameter;
+                    gl.getShaderParameter = function (shader, parameter) {
+                        let shaderType = shaderParameter.call(this, shader, this.SHADER_TYPE);
+                        if (parameter === this.COMPILE_STATUS
+                            && ((failure === "vertex" && shaderType === this.VERTEX_SHADER)
+                                || (failure === "fragment" && shaderType === this.FRAGMENT_SHADER))) {
+                            ++rejectedChecks;
+                            return false;
+                        }
+                        return shaderParameter.call(this, shader, parameter);
+                    };
+                    gl.getProgramParameter = function (program, parameter) {
+                        if (failure === "link" && parameter === this.LINK_STATUS) {
+                            ++rejectedChecks;
+                            return false;
+                        }
+                        return programParameter.call(this, program, parameter);
+                    };
+                }
+                return gl;
+            };
+            gradient = start(ToolType.GRADIENT);
+            gradient.onMouseDown(8, 8, MouseButton.LEFT);
+            gradient.onMouseMove(80, 8);
+            gradient.onMouseUp(80, 8, MouseButton.LEFT);
+            let pixel = surface.context.getImageData(12, 8, 1, 1).data;
+            check(rejectedChecks > 0 && contexts.length > 0, "Gradient fault did not exercise actual GL status checks: " + failure);
+            check(gradient.gradientGl === null && gradient.gradientProgram === null && gradient.gradientCanvas === null,
+                "Failed gradient retained its GL/program/canvas state: " + failure);
+            check(Math.abs(pixel[0] - 239) <= 1 && pixel[1] === 0 && Math.abs(pixel[2] - 16) <= 1 && pixel[3] === 255,
+                "Failed gradient did not preserve the independent Canvas color oracle: " + failure);
+            gradient.commitPending();
+        } finally {
+            HTMLCanvasElement.prototype.getContext = getContext;
+            for (let gl of contexts) {
+                let extension = gl.getExtension("WEBGL_lose_context");
+                if (extension !== null) {
+                    extension.loseContext();
+                }
+            }
+        }
+    }
+
     phase("multiline caret placement, viewport focus and text cancellation");
     colors.setMainColor(Color.fromRGBA(0, 0, 0, 255));
     let text = start(ToolType.TEXT, {fontFamily: "monospace", fontSize: 12, fontUnit: "pixels"});
