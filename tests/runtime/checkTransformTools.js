@@ -129,6 +129,132 @@ module.exports = async function checkTransformTools() {
     check(!tool.updateRotationIndicator(new Point(52, 50)), "Inside selection showed a rotation indicator");
     check(!tool.updateRotationIndicator(new Point(120, 120)), "Distant pointer showed a rotation indicator");
 
+    phase("floating pixel moves coalesce frames, apply live interpolation settings and preserve exact history");
+    let pixelReset = () => {
+        app.setActiveTool(null);
+        selection.reset();
+        surface.clear();
+        surface.context.fillStyle = "red";
+        surface.context.fillRect(32, 40, 20, 20);
+        surface.context.fillStyle = "blue";
+        surface.context.fillRect(52, 40, 20, 20);
+        workspace.getActiveLayer().invalidate();
+        selection.setContinuation(new Rectangle(32, 40, 40, 20), CombineMode.REPLACE);
+        selection.commitContinuation();
+        workspace.getHistory().clearAll();
+        ToolType.MOVE.resetSettings();
+        ToolType.MOVE.setSetting("resampling", "nearest");
+        ToolType.MOVE.setSetting("renderingQuality", "aliased");
+        app.setActiveToolFromType(ToolType.MOVE);
+        return app.getActiveTool();
+    };
+    let imageBytes = () => surface.context.getImageData(0, 0, 128, 128).data;
+    let same = (first, second) => first.every((value, index) => value === second[index]);
+    tool = pixelReset();
+    let initialPixels = new Uint8ClampedArray(imageBytes());
+    tool.onMouseDown(52, 50, MouseButton.LEFT);
+    check(tool.tracking && tool.context.currentMode === MoveToolBaseMode.TRANSLATE, "Pixel move did not begin translation");
+    tool.onMouseMove(54, 51);
+    let pendingFrame = tool.pendingMoveFrame;
+    tool.onMouseMove(64, 58);
+    check(pendingFrame !== null && tool.pendingMoveFrame === pendingFrame
+        && tool.pendingMovePoint.x === 64 && tool.pendingMovePoint.y === 58,
+    "Pixel move did not coalesce updates into the newest frame position");
+    tool.onSettingChanged("tolerance");
+    check(tool.pendingMoveFrame === pendingFrame, "Unrelated setting canceled the queued move");
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    check(tool.pendingMoveFrame === null && tool.pendingMovePoint === null,
+        "Rendered move frame retained its position or frame handle");
+    tool.onMouseUp(64, 58, MouseButton.LEFT);
+    let expectedPixels = new Uint8ClampedArray(128 * 128 * 4);
+    for (let y = 48; y < 68; ++y) {
+        for (let x = 44; x < 84; ++x) {
+            let offset = (y * 128 + x) * 4;
+            expectedPixels[offset + (x < 64 ? 0 : 2)] = 255;
+            expectedPixels[offset + 3] = 255;
+        }
+    }
+    check(same(imageBytes(), expectedPixels), "Translated pixels differ from the independent rectangle/color oracle");
+    let moveToolbar = PanelRegistry.get("toolMenu");
+    for (let resampling of ["linear", "bilinear", "multisampleLinear", "anisotropic", "bicubic", "highQualityCubic", "nearest"]) {
+        moveToolbar.updateSetting(ToolType.MOVE, "resampling", resampling);
+        check(same(imageBytes(), expectedPixels), "Live interpolation changed integer-aligned source pixels: " + resampling);
+        check(!tool.fullQuality && tool.pendingMoveFrame === null, "Live interpolation retained final-quality or frame state");
+    }
+    for (let gamma of [false, true]) {
+        moveToolbar.updateSetting(ToolType.MOVE, "gammaCorrected", gamma);
+        check(same(imageBytes(), expectedPixels), "Live gamma setting changed integer-aligned source pixels");
+    }
+    tool.onSettingChanged("renderingQuality");
+    DocumentIO.finishActiveTool(false);
+    let moveHistory = workspace.getHistory();
+    let steps = moveHistory.undoStack.length;
+    check(steps > 0, "Finishing a floating pixel move did not record history");
+    let finishSnapshot = moveHistory.undoStack.at(-1).compoundHistoryMemento.actions
+        .find(action => action instanceof BitmapHistoryMemento);
+    check(finishSnapshot.bounds.x === 32 && finishSnapshot.bounds.y === 40
+        && finishSnapshot.bounds.width === 54 && finishSnapshot.bounds.height === 30
+        && finishSnapshot.chunks.reduce((bytes, chunk) => bytes + chunk.imageData.data.byteLength, 0) === 54 * 30 * 4,
+    "Finish history did not restrict its pixel snapshot to the merged source/destination footprint");
+    for (let index = 0; index < steps; ++index) {
+        moveHistory.stepBackward();
+    }
+    check(same(imageBytes(), initialPixels), "Pixel move undo did not recover the untouched source");
+    DocumentIO.finishActiveTool(false);
+    for (let index = 0; index < steps; ++index) {
+        moveHistory.stepForward();
+    }
+    let redonePixels = imageBytes();
+    let firstDifference = redonePixels.findIndex((value, index) => value !== expectedPixels[index]);
+    check(firstDifference === -1, "Pixel move redo did not recover its final pixels: "
+        + JSON.stringify({offset: firstDifference, actual: Array.from(redonePixels.slice(firstDifference, firstDifference + 4)),
+            expected: Array.from(expectedPixels.slice(firstDifference, firstDifference + 4)),
+            steps, undo: moveHistory.undoStack.length, redo: moveHistory.redoStack.length}));
+    tool = pixelReset();
+    tool.onMouseDown(52, 50, MouseButton.LEFT);
+    tool.onMouseUp(116, 74, MouseButton.LEFT);
+    let clippedPixels = new Uint8ClampedArray(128 * 128 * 4);
+    for (let y = 64; y < 84; ++y) {
+        for (let x = 96; x < 128; ++x) {
+            let offset = (y * 128 + x) * 4;
+            clippedPixels[offset + (x < 116 ? 0 : 2)] = 255;
+            clippedPixels[offset + 3] = 255;
+        }
+    }
+    DocumentIO.finishActiveTool(false);
+    check(same(imageBytes(), clippedPixels), "Disjoint offscreen move did not clip its target pixels");
+    finishSnapshot = moveHistory.undoStack.at(-1).compoundHistoryMemento.actions
+        .find(action => action instanceof BitmapHistoryMemento);
+    check(finishSnapshot.chunks.length === 2
+        && finishSnapshot.chunks.reduce((bytes, chunk) => bytes + chunk.imageData.data.byteLength, 0)
+            === (40 * 20 + 34 * 24) * 4,
+    "Disjoint move history captured the gap or the entire canvas instead of two clipped footprints");
+    steps = moveHistory.undoStack.length;
+    for (let index = 0; index < steps; ++index) {
+        moveHistory.stepBackward();
+    }
+    check(same(imageBytes(), initialPixels), "Disjoint move undo did not restore source pixels");
+    DocumentIO.finishActiveTool(false);
+    for (let index = 0; index < steps; ++index) {
+        moveHistory.stepForward();
+    }
+    check(same(imageBytes(), clippedPixels), "Disjoint move redo left a source copy or lost target pixels");
+    tool = pixelReset();
+    tool.onSettingChanged("resampling");
+    tool.onMouseDown(52, 50, MouseButton.LEFT);
+    tool.onMouseMove(60, 55);
+    check(tool.pendingMoveFrame !== null, "Interrupted pixel move did not have a queued frame");
+    app.setActiveToolFromType(ToolType.PENCIL);
+    check(tool.pendingMoveFrame === null && tool.pendingMovePoint === null,
+        "Deactivating Move retained its queued frame or position");
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    check(same(imageBytes(), initialPixels), "Canceled queued move changed original pixels after deactivation");
+    app.setActiveTool(null);
+    tool.dispose();
+    check(tool.context === null && tool.renderArgs === null
+        && tool.pendingPasteSurface === null && tool.pendingPasteUnderlay === null,
+    "Disposed Move retained its context or pending pixel resources");
+
     phase("brush preview geometry, pixel sampling and alpha averaging");
     app.setActiveTool(null);
     selection.reset();

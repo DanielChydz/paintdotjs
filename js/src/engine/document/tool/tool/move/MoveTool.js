@@ -134,7 +134,8 @@ class MoveTool extends MoveToolBase {
         );
         this.currentHistoryMementos.push(contextAction);
 
-        // Capture and invalidate the resampler's complete output footprint.
+        // Include the source because redo restores the pre-lift image before
+        // applying Finish, as well as the resampler's complete output footprint.
         // A rotated bitmap crop can extend beyond the transformed selection by
         // a pixel before the filter padding is added. Using only the selection
         // bounds leaves that outer strip stale in the composition surface.
@@ -142,7 +143,11 @@ class MoveTool extends MoveToolBase {
             this.context.deltaTransform,
             this.activeLayer.getSurface()
         );
-        let simplifiedRegion = Region.fromRectangle(commitBounds);
+        let sourceBounds = this.context.liftedPixels.getBounds();
+        sourceBounds.intersect(this.activeLayer.getBounds());
+        let simplifiedRegion = Region.fromRectangles(
+            this.mergeDirtyRectangles([sourceBounds, commitBounds])
+        );
         let bitmapAction2 = new BitmapHistoryMemento(
             this.getName(),
             this.getImage(),
