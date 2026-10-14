@@ -106,7 +106,7 @@ class AppWorkspace extends AppView {
         // but it is still user work and must not be discarded as an untouched
         // startup image.
         if (workspace === this.activeDocumentWorkspace
-            && this.activeTool?.bitmapTransaction !== null) {
+            && this.activeTool !== null && this.activeTool.bitmapTransaction !== null) {
             return false;
         }
 

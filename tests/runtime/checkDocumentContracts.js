@@ -31,6 +31,16 @@ module.exports = async function checkDocumentContracts() {
     for (let workspace of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(workspace, false);
     }
+    phase("untouched startup image is replaced even while no tool is active");
+    app.setActiveTool(null);
+    let startup = app.createBlankDocumentInNewWorkspace(8, 8, 96, true);
+    let startupCanvas = startup.getActiveLayer().getSurface().getCanvas();
+    check(app.isInitialWorkspaceUntouched(startup), "An untouched startup image was treated as edited when no tool was active");
+    let replacementWorkspace = app.createBlankDocumentInNewWorkspace(12, 10);
+    check(app.getDocumentWorkspaces().length === 1 && app.getActiveDocumentWorkspace() === replacementWorkspace
+        && startupCanvas.width === 0 && startup.document === null,
+    "Creating an image retained the untouched startup workspace or its canvas");
+    app.closeDocumentWorkspace(replacementWorkspace, false);
     let workspace = app.createBlankDocumentInNewWorkspace(16, 12);
     app.setActiveTool(null);
     let model = workspace.getDocument();
@@ -103,5 +113,60 @@ module.exports = async function checkDocumentContracts() {
     } finally {
         selection.data.dispose();
     }
+    app.closeDocumentWorkspace(workspace, false);
+    phase("moving without a selection selects the canvas and ignores overlapping presses");
+    workspace = app.createBlankDocumentInNewWorkspace(128, 128);
+    app.setActiveTool(null);
+    workspace.getActiveLayer().getSurface().clear();
+    let surface = workspace.getActiveLayer().getSurface();
+    surface.context.fillStyle = "red";
+    surface.context.fillRect(30, 40, 20, 16);
+    let original = surface.context.getImageData(0, 0, 128, 128).data;
+    workspace.getHistory().clearAll();
+    ToolType.MOVE.setSetting("resampling", "nearest");
+    workspace.setZoom(1);
+    app.setActiveToolFromType(ToolType.MOVE);
+    let move = app.getActiveTool();
+    move.onMouseMove(64, 64);
+    check(!move.tracking && workspace.getSelection().isEmpty(), "Idle Move created a selection or a transaction");
+    check(!move.onKeyPress("F12"), "Unsupported Move key started a gesture");
+    move.onMouseDown(64, 64, MouseButton.MIDDLE);
+    check(!move.tracking && workspace.getSelection().isEmpty(), "Middle-button Move began a bitmap gesture");
+    move.onMouseDown(64, 64, MouseButton.LEFT);
+    let selectedBounds = workspace.getSelection().getBounds();
+    check(move.tracking && selectedBounds.width === 128 && selectedBounds.height === 128,
+        "Move without a selection did not select the complete canvas");
+    check(!move.onKeyPress(KeyButton.RIGHT), "A key nudge interrupted a tracked Move gesture");
+    let start = move.context.startMouseXY.clone();
+    move.onMouseDown(80, 80, MouseButton.LEFT);
+    check(move.context.startMouseXY.equals(start), "A second press replaced the tracked gesture origin");
+    move.onMouseUp(69, 67, MouseButton.LEFT);
+    DocumentIO.finishActiveTool(false);
+    let expected = new Uint8ClampedArray(128 * 128 * 4);
+    for (let y = 43; y < 59; ++y) {
+        for (let x = 35; x < 55; ++x) {
+            expected.set([255, 0, 0, 255], (y * 128 + x) * 4);
+        }
+    }
+    let actual = surface.context.getImageData(0, 0, 128, 128).data;
+    check(actual.every((value, index) => value === expected[index]), "Whole-canvas Move did not preserve translated pixels");
+    let history = workspace.getHistory();
+    let steps = history.undoStack.length;
+    for (let index = 0; index < steps; ++index) {
+        history.stepBackward();
+    }
+    actual = surface.context.getImageData(0, 0, 128, 128).data;
+    check(actual.every((value, index) => value === original[index]), "Whole-canvas Move undo lost its original pixels");
+    DocumentIO.finishActiveTool(false);
+    workspace.getSelection().reset();
+    app.setActiveToolFromType(ToolType.MOVE);
+    move = app.getActiveTool();
+    move.onMouseDown(64, 64, MouseButton.RIGHT);
+    check(move.context.currentMode === MoveToolBaseMode.ROTATE && !workspace.getSelection().isEmpty(),
+        "Right-button Move without a selection did not begin rotation of the canvas");
+    move.onMouseUp(64, 64, MouseButton.RIGHT);
+    DocumentIO.finishActiveTool(false);
+    actual = surface.context.getImageData(0, 0, 128, 128).data;
+    check(actual.every((value, index) => value === original[index]), "Stationary whole-canvas rotation changed pixels");
     app.closeDocumentWorkspace(workspace, false);
 };
