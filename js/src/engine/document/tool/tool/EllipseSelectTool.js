@@ -68,31 +68,7 @@ class EllipseSelectTool extends SelectionTool {
     }
 
     flattenEllipse(bounds, tolerance) {
-        if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0) {
-            return [];
-        }
-
-        const radiusX = bounds.getWidth() / 2;
-        const radiusY = bounds.getHeight() / 2;
-        const centerX = bounds.getLeft() + radiusX;
-        const centerY = bounds.getTop() + radiusY;
-        const maxRadius = Math.max(radiusX, radiusY);
-
-        // Choose enough straight segments that their maximum deviation from
-        // the true ellipse is at most the same 0.01px flattening tolerance v5
-        // requests from Direct2D.
-        const cosine = Utility.clamp(1 - tolerance / maxRadius, -1, 1);
-        const requiredSegments = Math.ceil(Math.PI / Math.acos(cosine));
-        const segments = Math.max(16, Math.ceil(requiredSegments / 4) * 4);
-        const points = new Array(segments + 1);
-        for (let i = 0; i <= segments; ++i) {
-            const angle = i * Math.PI * 2 / segments;
-            points[i] = new Point(
-                centerX + radiusX * Math.cos(angle),
-                centerY + radiusY * Math.sin(angle)
-            );
-        }
-        return points;
+        return VertexList.flattenEllipse(bounds, tolerance);
     }
 
     getCursorImgUp() {

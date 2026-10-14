@@ -23,14 +23,14 @@ function loadGeometry() {
     let context = vm.createContext({});
     for (let relative of [
         "util/Point", "util/Size", "util/Rectangle", "util/Scanline", "util/UtilityEdge",
-        "document/selection/MatrixOrder", "document/selection/Matrix",
+        "document/selection/MatrixOrder", "document/selection/Matrix", "document/selection/CombineMode",
         "document/selection/VertexList", "document/selection/GraphicsPath",
         "util/Region", "util/Utility", "util/Color"
     ]) {
         let filename = path.resolve(__dirname, "../js/src/engine", relative + ".js");
         vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
     }
-    return vm.runInContext("({Point, Size, Rectangle, Scanline, MatrixOrder, Matrix, VertexList, GraphicsPath, Region, Utility, Color})", context);
+    return vm.runInContext("({Point, Size, Rectangle, Scanline, MatrixOrder, Matrix, CombineMode, VertexList, GraphicsPath, Region, Utility, Color})", context);
 }
 
 function rectangleValues(rectangle) {
@@ -48,6 +48,146 @@ function channels(color) {
 function near(actual, expected) {
     assert(Math.abs(actual - expected) < 1e-9, `${actual} != ${expected}`);
 }
+
+test("vertex lists validate typed points, retain extrema and represent independent elliptical figures", () => {
+    let {Point, Rectangle, VertexList, GraphicsPath} = loadGeometry();
+    let empty = new VertexList();
+    assert.equal(empty.getBounds(), null);
+    empty.close();
+    assert.equal(empty.getVertices().length, 0);
+    assert.throws(() => empty.push({x: 1, y: 2}), /array of Point/);
+    assert.throws(() => new VertexList([null]), /array of Point/);
+    let vertices = new VertexList([new Point(8, 9), new Point(2, 1), new Point(12, 15), new Point(6, 0)], true);
+    assert.deepEqual(rectangleValues(vertices.getBounds()), [2, 0, 10, 15]);
+    assert.equal(vertices.isHole(), true);
+    let clone = vertices.clone();
+    clone.getVertices()[0].x = -50;
+    assert.equal(vertices.getVertices()[0].x, 8);
+    assert.equal(clone.isHole(), true);
+    let ellipse = new GraphicsPath();
+    ellipse.addEllipse(new Rectangle(10, 20, 12, 8));
+    assert.equal(ellipse.getPathPoints().length, 57);
+    assert.deepEqual(rectangleValues(ellipse.getBounds()), [10, 20, 12, 8]);
+    for (let point of ellipse.getPathPoints()) {
+        near(((point.x - 16) / 6) ** 2 + ((point.y - 24) / 4) ** 2, 1);
+    }
+    ellipse.closeAllFigures();
+    let points = ellipse.getPathPoints();
+    assert.ok(points[0].equals(points.at(-1)));
+    assert.throws(() => ellipse.addEllipse({x: 0, y: 0, width: 1, height: 1}), /instance of Rectangle/);
+    let disconnected = new GraphicsPath();
+    disconnected.addLines([new Point(0, 0), new Point(1, 1)]);
+    disconnected.addLines([new Point(10, 10), new Point(12, 12)]);
+    assert.equal(disconnected.getVertexLists().length, 2);
+    assert.deepEqual(Array.from(disconnected.getPathPoints(), pointValues), [[0, 0], [1, 1], [10, 10], [12, 12]]);
+    for (let invalid of [null, [], [new Point(0, 0), {}]]) {
+        assert.throws(() => disconnected.addLines(invalid), /array/);
+    }
+});
+
+test("empty path set operations return independent results with exact set identities", () => {
+    let {Rectangle, GraphicsPath, CombineMode} = loadGeometry();
+    let filled = new GraphicsPath();
+    filled.addRectangle(new Rectangle(2, 3, 4, 5));
+    let empty = new GraphicsPath();
+    let modes = [CombineMode.REPLACE, CombineMode.UNION, CombineMode.XOR,
+        CombineMode.INTERSECT, CombineMode.EXCLUDE, CombineMode.COMPLEMENT];
+    for (let mode of modes) {
+        assert.ok(GraphicsPath.combine(empty, mode, empty).isEmpty());
+        for (let emptyFirst of [true, false]) {
+            let result = GraphicsPath.combine(emptyFirst ? empty : filled, mode, emptyFirst ? filled : empty);
+            let retainsFigure = mode === CombineMode.UNION || mode === CombineMode.XOR
+                || (emptyFirst && (mode === CombineMode.REPLACE || mode === CombineMode.COMPLEMENT))
+                || (!emptyFirst && mode === CombineMode.EXCLUDE);
+            assert.equal(result.isEmpty(), !retainsFigure);
+            if (retainsFigure) {
+                assert.notEqual(result, filled);
+                assert.notEqual(result.getPathPoints()[0], filled.getPathPoints()[0]);
+                assert.deepEqual(rectangleValues(result.getBounds()), [2, 3, 4, 5]);
+            }
+        }
+    }
+    assert.throws(() => GraphicsPath.combine(filled, -1, empty), /Invalid enum argument/);
+});
+
+test("adaptive ellipse vertices obey the requested chord error at every size and retain cardinal bounds", () => {
+    let {Rectangle, VertexList, GraphicsPath} = loadGeometry();
+    for (let [width, height] of [[1, 1], [4, 2], [24, 8], [160, 60], [4096, 17], [16000, 16000]]) {
+        for (let tolerance of [0.01, 0.25]) {
+            let bounds = new Rectangle(10, -20, width, height);
+            let points = VertexList.flattenEllipse(bounds, tolerance);
+            let segments = points.length - 1;
+            assert.ok(segments >= 16 && segments % 4 === 0);
+            let centerX = 10 + width / 2;
+            let centerY = -20 + height / 2;
+            for (let i = 0; i < segments; ++i) {
+                let angle = (i + 0.5) * 2 * Math.PI / segments;
+                let curveX = centerX + width / 2 * Math.cos(angle);
+                let curveY = centerY + height / 2 * Math.sin(angle);
+                let chordX = (points[i].x + points[i + 1].x) / 2;
+                let chordY = (points[i].y + points[i + 1].y) / 2;
+                assert.ok(Math.hypot(curveX - chordX, curveY - chordY) <= tolerance + 1e-9,
+                    `Ellipse ${width}x${height} exceeded ${tolerance}px at segment ${i}`);
+            }
+            let vertices = new VertexList(points);
+            assert.deepEqual(rectangleValues(vertices.getBounds()), [10, -20, width, height]);
+            let appended = new VertexList();
+            appended.addEllipse(10, -20, width, height, tolerance);
+            assert.deepEqual(Array.from(appended.getVertices(), pointValues), Array.from(points, pointValues));
+        }
+    }
+    for (let [width, height] of [[0, 2], [2, 0], [-1, 2], [2, -1]]) {
+        let bounds = new Rectangle(0, 0, width, height);
+        assert.equal(VertexList.flattenEllipse(bounds).length, 0);
+        let path = new GraphicsPath();
+        path.addEllipse(bounds);
+        assert.equal(path.isEmpty(), true);
+        assert.deepEqual(rectangleValues(path.getBounds()), [0, 0, 0, 0]);
+    }
+    assert.throws(() => VertexList.flattenEllipse({}), /instance of Rectangle/);
+    for (let tolerance of [0, -1, NaN, Infinity, "0.01"]) {
+        assert.throws(() => VertexList.flattenEllipse(new Rectangle(0, 0, 2, 2), tolerance), /positive finite/);
+    }
+    for (let bounds of [
+        new Rectangle(NaN, 0, 2, 2), new Rectangle(0, Infinity, 2, 2),
+        new Rectangle(0, 0, Infinity, 2), new Rectangle(Number.MAX_VALUE, 0, Number.MAX_VALUE, 2)
+    ]) {
+        assert.throws(() => VertexList.flattenEllipse(bounds), /bounds must be finite/);
+    }
+    for (let tolerance of [1e-20, Number.MIN_VALUE]) {
+        assert.throws(() => VertexList.flattenEllipse(new Rectangle(0, 0, 2, 2), tolerance), /unrepresentable vertex count/);
+    }
+});
+
+test("flatten transforms already-linear figures without dropping short edges, duplicates, holes or closure", () => {
+    let {Point, Rectangle, Matrix, VertexList, GraphicsPath} = loadGeometry();
+    let original = new GraphicsPath();
+    original.addRectangle(new Rectangle(0, 0, 1, 1));
+    original.addLines([new Point(2, 0), new Point(2, 3), new Point(2, 3), new Point(2, 4)]);
+    original.getVertexLists().push(new VertexList([new Point(0.2, 0.2), new Point(0.3, 0.2), new Point(0.2, 0.2)], true));
+    let before = Array.from(original.getPathPoints(), pointValues);
+    let matrix = new Matrix();
+    matrix.translate(10, 20);
+    for (let tolerance of [2, 0.25, 0.01]) {
+        let path = original.clone();
+        path.setPixelStencil({width: 1, height: 1, bitArray: new Uint8Array([255])});
+        path.flatten(matrix, tolerance);
+        assert.deepEqual(Array.from(path.getPathPoints(), pointValues), before.map(([x, y]) => [x + 10, y + 20]));
+        assert.equal(path.getVertexLists().length, 3);
+        assert.equal(path.getVertexLists()[2].isHole(), true);
+        assert.equal(path.pixelStencil, null);
+        assert.deepEqual(Array.from(original.getPathPoints(), pointValues), before);
+    }
+    for (let tolerance of [0, -1, NaN, Infinity, undefined, "0.1"]) {
+        let path = original.clone();
+        assert.throws(() => path.flatten(matrix, tolerance), /positive finite/);
+        assert.deepEqual(Array.from(path.getPathPoints(), pointValues), before);
+    }
+    assert.throws(() => original.flatten({}, 0.01), /instance of Matrix/);
+    let empty = new GraphicsPath();
+    empty.flatten(matrix, 0.01);
+    assert.equal(empty.isEmpty(), true);
+});
 
 test("color conversion covers hue sectors, achromatic values, wrapping and packed alpha", () => {
     let {Color} = loadGeometry();

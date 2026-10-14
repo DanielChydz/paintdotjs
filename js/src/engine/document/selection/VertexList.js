@@ -61,18 +61,49 @@ class VertexList {
         return new Rectangle(minX, minY, maxX - minX, maxY - minY);
     }
 
-    addEllipse(x, y, width, height) {
-        const centerX = x + width / 2;
-        const centerY = y + height / 2;
-        const radiusX = width / 2;
-        const radiusY = height / 2;
-        const segments = 32;
-
-        for (let i = 0; i <= segments; i++) {
-            let angle = i * 2 * Math.PI / segments;
-            let point = new Point(centerX + radiusX * Math.cos(angle), centerY + radiusY * Math.sin(angle));
+    addEllipse(x, y, width, height, tolerance = 0.01) {
+        for (let point of VertexList.flattenEllipse(new Rectangle(x, y, width, height), tolerance)) {
             this.push(point);
         }
+    }
+
+    static flattenEllipse(bounds, tolerance = 0.01) {
+        if (!(bounds instanceof Rectangle)) {
+            throw new Error("Input must be an instance of Rectangle");
+        }
+        if (!Number.isFinite(tolerance) || tolerance <= 0) {
+            throw new Error("Ellipse tolerance must be a positive finite number");
+        }
+        if (![bounds.x, bounds.y, bounds.width, bounds.height, bounds.getRight(), bounds.getBottom()]
+            .every(Number.isFinite)) {
+            throw new Error("Ellipse bounds must be finite");
+        }
+        if (bounds.getWidth() <= 0 || bounds.getHeight() <= 0) {
+            return [];
+        }
+
+        let radiusX = bounds.getWidth() / 2;
+        let radiusY = bounds.getHeight() / 2;
+        let centerX = bounds.getLeft() + radiusX;
+        let centerY = bounds.getTop() + radiusY;
+        let maxRadius = Math.max(radiusX, radiusY);
+        let angle = 2 * Math.asin(Math.sqrt(Math.min(1, tolerance / maxRadius / 2)));
+        let requiredSegments = Math.ceil(Math.PI / angle);
+        let segments = Math.max(16, Math.ceil(requiredSegments / 4) * 4);
+        if (!Number.isSafeInteger(segments) || segments >= 0xffffffff) {
+            throw new Error("Ellipse tolerance requires an unrepresentable vertex count");
+        }
+
+        // Preserve cardinal extrema and the selection tool's 0.01px chord tolerance.
+        let points = new Array(segments + 1);
+        for (let i = 0; i <= segments; ++i) {
+            let angle = i * Math.PI * 2 / segments;
+            points[i] = new Point(
+                centerX + radiusX * Math.cos(angle),
+                centerY + radiusY * Math.sin(angle)
+            );
+        }
+        return points;
     }
 
     push(...points) {
