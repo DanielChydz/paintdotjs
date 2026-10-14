@@ -227,3 +227,40 @@ test("version metadata tolerates absent globals and formats only nonempty distri
     assert.equal(info.formatVersion("3.0.0"), "3.0.0 (Ubuntu)");
     assert.equal(info.productName(), "paint.js");
 });
+
+test("language changes enable reload only for a pending preference and route the reload callback", () => {
+    let {settings, context, state, window} = updateFixture();
+    let language;
+    let reload;
+    let note;
+    let persisted = [];
+    context.Language = {preference: "auto", options: {en: "English", pl: "Polski"}};
+    context.AppSettingsStore.set = (key, value) => persisted.push([key, value]);
+    window.location.reload = () => ++state.reloads;
+    state.reloads = 0;
+    settings.addHeading = () => {};
+    settings.addCheckbox = () => {};
+    settings.addSelect = key => {
+        let select = {value: "auto"};
+        if (key === "ui.language") {
+            language = select;
+        }
+        return select;
+    };
+    settings.addNote = text => note = {textContent: text};
+    settings.addButton = (label, callback, options) => reload = {label, callback, ...options};
+    settings.renderUi();
+    assert.equal(reload.disabled, true);
+    assert.equal(reload.label, "Reload now");
+    language.value = "pl";
+    language.onchange();
+    assert.equal(reload.disabled, false);
+    assert.ok(note.textContent.includes("pending"));
+    assert.deepEqual(persisted, [["ui.language", "pl"]]);
+    reload.callback();
+    assert.equal(state.reloads, 1);
+    language.value = "auto";
+    language.onchange();
+    assert.equal(reload.disabled, true);
+    assert.ok(note.textContent.includes("Missing translations"));
+});

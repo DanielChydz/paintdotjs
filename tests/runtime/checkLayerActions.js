@@ -154,7 +154,7 @@ module.exports = async function checkLayerActions() {
                 "Properties dialog did not preview the actual layer");
         }
         if (outcome === "cancel") {
-            dialog.querySelector(".app-dialog-close").click();
+            [...dialog.querySelectorAll("button")].find(button => button.textContent === "Cancel").click();
         } else {
             dialog.requestSubmit();
         }

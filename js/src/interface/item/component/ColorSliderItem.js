@@ -14,7 +14,7 @@
 
 class ColorSliderItem extends Item {
 
-    constructor(id, colorProvider = _ => 0) {
+    constructor(id, colorProvider = _ => Color.BLACK) {
         super(id);
         this.colorProvider = colorProvider;
 

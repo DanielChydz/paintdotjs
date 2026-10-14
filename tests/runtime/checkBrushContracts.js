@@ -95,5 +95,23 @@ module.exports = async function checkBrushContracts() {
     check(sprite.canvas.width % 2 === 1 && sprite.canvas.width >= 33,
         "Brush sprite did not retain its odd centered supersampling extent");
     check(brush.getBrushSprite(33, 1, new Color(255, 0, 0)) === sprite, "Brush sprite cache failed to reuse an unchanged profile");
+    phase("brush and eraser setting changes preserve hover visibility outside the canvas");
+    for (let type of [ToolType.PAINT_BRUSH, ToolType.ERASER]) {
+        app.setActiveToolFromType(type);
+        let hovering = app.getActiveTool();
+        hovering.onSettingChanged();
+        check(!hovering.brushPreview.isVisible(), "A setting without a hover point showed the brush preview");
+        hovering.onMouseMove(10, 10, {pressure: 0.5});
+        type.setSetting("width", 7);
+        hovering.onSettingChanged();
+        check(hovering.brushPreview.isVisible() && hovering.brushPreview.diameter === 7,
+            "Changing width did not refresh the active hover preview");
+        hovering.onMouseMove(100, 100);
+        check(!hovering.brushPreview.isVisible(), "Hover outside the canvas retained a visible preview");
+        type.setSetting("width", 9);
+        hovering.onSettingChanged();
+        check(!hovering.brushPreview.isVisible(), "Changing width revived a stale preview after leaving the canvas");
+        check(same(pixels(), expected), "Hover or a width change modified painted pixels");
+    }
     app.closeDocumentWorkspace(workspace, false);
 };

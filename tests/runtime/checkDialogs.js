@@ -224,5 +224,23 @@ module.exports = async function checkDialogs() {
     SettingsDialog.open("canvas");
     settings.dialog.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
     check(settings.backdrop === null, "Escape did not close settings");
+    phase("task dialog Escape and title close retain their cancellation values");
+    for (let method of ["escape", "close"]) {
+        let pending = TaskDialog.show({title: "Cancelable task", message: "Cancel this task",
+            cancelValue: method === "escape" ? "cancelled" : undefined, choices: [{value: "continue", title: "Continue"}]});
+        let dialog = document.querySelector(".task-dialog");
+        let closeButton = dialog.querySelector(".app-dialog-close");
+        dialog.dispatchEvent(new KeyboardEvent("keydown", {key: "a", bubbles: true, cancelable: true}));
+        check(dialog.isConnected, "Ordinary task-dialog typing canceled the dialog");
+        if (method === "escape") {
+            dialog.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true, cancelable: true}));
+        } else {
+            closeButton.click();
+        }
+        check(await resultOf(pending) === (method === "escape" ? "cancelled" : null),
+            "Task-dialog cancellation lost its configured value");
+        closeButton.click();
+        check(!dialog.isConnected, "A repeated close reattached the task dialog");
+    }
     check(document.querySelector(".app-dialog-backdrop") === null, "Dialog backdrop leaked");
 };

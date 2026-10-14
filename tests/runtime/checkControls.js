@@ -425,6 +425,39 @@ module.exports = async function checkControls() {
     check(await FontManager.removeAllFonts() === 1 && await FontManager.removeAllFonts() === 0,
         "Bulk font removal did not report its real count");
 
+    phase("palette management and Help commands use the current menu model");
+    colors.swatchElement.getElement().click();
+    check(colors.swatchElement.isOpen() && colors.swatchElement.entries.length > 0,
+        "Palette management button did not build its current entries");
+    colors.swatchElement.close();
+    let help = PanelRegistry.get("settingsMenu").get("menu.help");
+    let oldOpen = window.open;
+    let opened = [];
+    try {
+        window.open = (...args) => opened.push(args);
+        for (let [id, url] of [
+            ["helpTopics", "https://www.getpaint.net/doc/latest/index.html"],
+            ["pdnWebsite", "https://www.getpaint.net/"],
+            ["pdnSearch", "https://www.google.com/search?q=site%3Agetpaint.net+Paint.NET"],
+            ["donate", "https://www.getpaint.net/donate.html"],
+            ["forum", "https://forums.getpaint.net/"],
+            ["tutorials", "https://forums.getpaint.net/forum/20-publishing-only/"],
+            ["sendFeedback", "https://github.com/LabyStudio/paintdotjs/issues"]
+        ]) {
+            help.open();
+            help.entries.find(entry => entry.id === "menu.help." + id).getElement().click();
+            check(!help.isOpen() && opened.at(-1).join("|") === [url, "_blank", "noopener,noreferrer"].join("|"),
+                "Help command opened an unexpected URL or retained its menu: " + id);
+        }
+    } finally {
+        help.close();
+        window.open = oldOpen;
+    }
+    phase("tool grid clicks select an actual registered tool");
+    let toolForm = FormRegistry.get("mainToolBarForm");
+    toolForm.getWindow().contentElement.querySelector('img[src$="pencil_tool_icon.png"]').parentElement.click();
+    check(app.getActiveTool().getType() === ToolType.PENCIL, "Tool grid button did not activate Pencil");
+
     phase("error recovery form");
     let report = ErrorForm.fromError(new Error("<b>Literal error</b>"), "QA");
     ErrorForm.show(report);
@@ -511,7 +544,8 @@ module.exports = async function checkControls() {
         check(!errorForm.saveButton.disabled && errorForm.saveStatus.textContent === "Saving stopped or was canceled.",
             "Canceled recovery save did not release its busy state");
         DocumentIO.saveAll = async () => true;
-        await errorForm.saveAll();
+        errorForm.saveButton.click();
+        await waitFor(() => errorForm.saveStatus.textContent.includes(" saved. Check"));
         let count = app.getDocumentWorkspaces().length;
         check(errorForm.saveStatus.textContent === count + " image" + (count === 1 ? "" : "s")
             + " saved. Check the selected folder or Downloads.", "Successful recovery save lost its actual document count");

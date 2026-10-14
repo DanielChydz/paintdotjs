@@ -29,7 +29,7 @@ class FileAction extends AppWorkspaceAction {
     }
 
     performAction(app) {
-
+        return super.performAction(app);
     }
 
 }

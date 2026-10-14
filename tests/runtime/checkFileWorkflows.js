@@ -68,6 +68,9 @@ module.exports = async function checkFileWorkflows() {
         && !await DocumentIO.saveActive() && !await DocumentIO.printActive(), "Empty workspace accepted a document command");
 
     phase("application action dispatcher creates a real document and preserves canceled defaults");
+    // Clipboard reads require focus; did-finish-load can precede ready-to-show.
+    await require("electron").ipcRenderer.invoke("paintdotjs:test-input", {type: "mouseMove", x: 10, y: 10});
+    await waitFor(() => document.hasFocus());
     await navigator.clipboard.writeText("No clipboard image");
     app.performAction(new NewFileAction());
     await waitFor(() => document.querySelector(".new-file-dialog") !== null);

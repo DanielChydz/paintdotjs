@@ -157,6 +157,56 @@ module.exports = async function checkSavingClipboard() {
     await new Promise(resolve => setTimeout(resolve, 30));
     check(form() === null, "Late encoder result revived a closed dialog");
 
+    phase("out-of-order save results retain the current format and report large file sizes");
+    let realPng = await encode("png", {});
+    for (let [staleFailure, padding, unit] of [[false, 2048, "KB"], [true, 2 * 1024 * 1024, "MB"]]) {
+        let requests = [];
+        pending = SaveImageDialog.open({canvas, initialFormat: "jpeg", encode: (format, values) => new Promise((resolve, reject) => {
+            requests.push({format, values, resolve, reject});
+        })});
+        await waitFor(() => requests.length === 1);
+        let dialog = form();
+        let picker = [...dialog.querySelectorAll("select")].find(select => [...select.options].some(option => option.value === "png"));
+        change(picker, "png");
+        await waitFor(() => requests.length === 2);
+        check(requests[0].format === "jpeg" && requests[1].format === "png", "Save generations used the wrong formats");
+        let latest = new Blob([realPng, new Uint8Array(padding)], {type: "image/png"});
+        requests[1].resolve(latest);
+        await waitFor(ready);
+        await waitFor(() => dialog.querySelector(".save-config-preview-stage img").naturalWidth === 32);
+        let label = dialog.querySelector(".save-config-preview-heading").textContent;
+        check(label.includes(unit), "Save file-size label did not use " + unit);
+        if (staleFailure) {
+            requests[0].reject(new Error("Obsolete JPEG encoding failed"));
+        } else {
+            requests[0].resolve(await encode("jpeg", {}));
+        }
+        await new Promise(resolve => setTimeout(resolve, 0));
+        check(ready() && dialog.querySelector(".save-config-status").textContent === ""
+            && dialog.querySelector(".save-config-preview-heading").textContent === label,
+        "An obsolete encoder result replaced the current preview or error state");
+        dialog.requestSubmit();
+        let saved = await pending;
+        check(saved.format === "png" && saved.blob === latest, "Out-of-order encoder completion submitted stale bytes");
+    }
+    phase("late preview failures and repeated stale close callbacks cannot affect a newer save dialog");
+    let failLate;
+    pending = SaveImageDialog.open({canvas, encode: () => new Promise((resolve, reject) => failLate = reject)});
+    await waitFor(() => typeof failLate === "function");
+    let staleClose = form().querySelector(".app-dialog-close");
+    staleClose.click();
+    check(await pending === null, "Closing an in-flight preview returned data");
+    let next = SaveImageDialog.open({canvas, encode});
+    await waitFor(ready);
+    let currentDialog = form();
+    staleClose.click();
+    failLate(new Error("Late failed encoder"));
+    await new Promise(resolve => setTimeout(resolve, 0));
+    check(form() === currentDialog && ready() && currentDialog.querySelector(".save-config-status").textContent === "",
+        "A stale close callback or rejected preview affected the newer dialog");
+    cancel(currentDialog);
+    check(await next === null, "The newer save dialog could not be canceled");
+
     phase("native file write");
     let fs = require("node:fs");
     let filePath = require("node:path").join(require("node:process").env.PAINTDOTJS_TEST_USER_DATA, "saved.png");

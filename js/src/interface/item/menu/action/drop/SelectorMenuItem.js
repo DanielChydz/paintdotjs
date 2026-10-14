@@ -61,6 +61,9 @@ class SelectorMenuItem extends DropMenuItem {
     }
 
     selectNextEntry() {
+        if (this.entries.length === 0) {
+            return;
+        }
         let index = this.entries.indexOf(this.getSelectedEntry());
         let nextIndex = (index + 1) % this.entries.length;
         const nextEntry = this.entries[nextIndex];

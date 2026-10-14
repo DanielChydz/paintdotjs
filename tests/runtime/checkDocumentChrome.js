@@ -238,6 +238,9 @@ module.exports = async function checkDocumentChrome() {
     secondCategory.element.click();
     check(firstCategory.submenuElement === null && secondCategory.submenuElement !== null, "Effect submenu did not close its sibling");
     effects.close();
+    file.open();
+    file.dropMenuPopup.requestClose();
+    check(!file.isOpen() && DropMenuPopup.activePopup === null, "Popup close-owner callback retained its registered menu");
     check(secondCategory.submenuElement === null && DropMenuPopup.activePopup === null, "Closing Effects retained a nested submenu");
     let popup = new DropMenuPopup("runtime-position", {className: "runtime-popup"});
     popup.positionAt(100, 100);
@@ -294,6 +297,31 @@ module.exports = async function checkDocumentChrome() {
         }
     }
     host.remove();
+    phase("document tab close releases clean documents and routes failed closes without removing a tab");
+    let closing = app.createBlankDocumentInNewWorkspace(16, 16);
+    let closingCanvas = closing.getActiveLayer().getSurface().getCanvas();
+    strip.getItemByDocumentWorkspace(closing).getElement().querySelector(".window-close-button").click();
+    await waitFor(() => !app.getDocumentWorkspaces().includes(closing));
+    check(closing.document === null && closingCanvas.width === 0, "Tab close retained its document or canvas");
+    let failedClose = app.createBlankDocumentInNewWorkspace(16, 16);
+    let closeDocument = DocumentIO.closeDocumentWorkspace;
+    let handleError = app.handleError;
+    let reported = [];
+    let failure = new Error("Injected close failure");
+    try {
+        DocumentIO.closeDocumentWorkspace = async () => {
+            throw failure;
+        };
+        app.handleError = error => reported.push(error);
+        strip.getItemByDocumentWorkspace(failedClose).getElement().querySelector(".window-close-button").click();
+        await waitFor(() => reported.length === 1);
+        check(reported[0] === failure && app.getDocumentWorkspaces().includes(failedClose)
+            && failedClose.getActiveLayer().getSurface().getCanvas().width === 16,
+            "Failed tab close removed its document or bypassed error reporting");
+    } finally {
+        DocumentIO.closeDocumentWorkspace = closeDocument;
+        app.handleError = handleError;
+    }
     for (let workspace of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(workspace, false);
     }

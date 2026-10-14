@@ -801,7 +801,7 @@ class DocumentIO {
         } catch (_) {
             throw new Error("Unsupported .pdn document format");
         }
-        if (data.format !== "paint.js.pdn/1" || !Array.isArray(data.layers)) {
+        if (data === null || data.format !== "paint.js.pdn/1" || !Array.isArray(data.layers)) {
             throw new Error("Unsupported .pdn document format");
         }
         const layers = [];

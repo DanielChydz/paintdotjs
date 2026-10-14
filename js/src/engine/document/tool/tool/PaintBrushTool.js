@@ -71,6 +71,7 @@ class PaintBrushTool extends DrawingTool {
         const point = new Point(x, y);
         const bounds = this.getActiveLayer().getBounds();
         if (!bounds.contains(point)) {
+            this.previewPoint = null;
             this.brushPreview.setVisible(false);
             return;
         }

@@ -237,6 +237,27 @@ module.exports = async function checkToolbarWindows() {
     }
     check(rejected, "Unknown toolbar control kind was accepted");
 
+    phase("select-control callbacks update actual tool settings and panel registry cleanup removes identity");
+    let blendControl = toolbar.createSelectControl(ToolType.PENCIL, {key: "blendMode", label: "Blend",
+        values: [["normal", "Normal"], ["multiply", "Multiply"]], width: 130});
+    document.body.appendChild(blendControl);
+    try {
+        blendControl.click();
+        ToolOptionDropdown.active.menu.querySelectorAll("button")[1].click();
+        check(ToolType.PENCIL.getSetting("blendMode") === "multiply" && ToolOptionDropdown.active === null,
+            "Select control callback did not persist the selected tool setting and close");
+        ToolType.PENCIL.setSetting("blendMode", "normal");
+    } finally {
+        ToolOptionDropdown.closeActive();
+        blendControl.remove();
+    }
+    let registered = new StripPanel("runtime-registry-panel", {});
+    PanelRegistry.register(registered);
+    check(PanelRegistry.get(registered.id) === registered && PanelRegistry.list().includes(registered),
+        "Panel registry did not retain the registered panel identity");
+    PanelRegistry.unregister(registered.id);
+    check(PanelRegistry.get(registered.id) === undefined && !PanelRegistry.list().includes(registered),
+        "Panel registry unregister left a stale panel reference");
     phase("floating-window resizing, anchored movement, focus and persisted state");
     let floating = new WebWindow("runtime-layout-test");
     floating.setTitle("Runtime window");
@@ -429,6 +450,62 @@ module.exports = async function checkToolbarWindows() {
         number.setEnabled(false);
         check(number.input.disabled && !NumberInput.stepInput(number.input, 1), "Disabled number item accepted stepping");
 
+        let colorSlider = new ColorSliderItem("runtime-default-color-slider");
+        panel.add(colorSlider);
+        let spectrum = colorSlider.canvas.getContext("2d").getImageData(0, 0, 85, 10).data;
+        check(spectrum.every((value, index) => value === (index % 4 === 3 ? 255 : 0)) && !colorSlider.isClickable(),
+            "Default color slider did not render an opaque black spectrum");
+        let sliderPercentages = [];
+        colorSlider.setChangeCallback(value => sliderPercentages.push(value));
+        colorSlider.setPercentage(0.4);
+        check(colorSlider.getPercentage() === 0.4 && colorSlider.cursor.style.left === "40%"
+            && sliderPercentages[0] === 0.4, "Color slider did not synchronize its cursor and callback");
+        let circle = new ColorCircleItem("runtime-color-circle");
+        panel.add(circle);
+        let wheelColor = new Color(20, 40, 60, 128);
+        circle.setColor(wheelColor);
+        check(circle.getColor() === wheelColor, "Color wheel did not retain its selected color");
+
+        let failedIcons = [new LabelMenuItem("runtime-missing-label-icon"), new DropEntry("runtime-missing-drop-icon", null)];
+        for (let item of failedIcons) {
+            item.withIconPathKey("missing-runtime-regression-icon");
+            panel.add(item);
+        }
+        let iconDeadline = performance.now() + 5000;
+        while (failedIcons.some(item => item.getElement().querySelector("img").style.opacity !== "0")) {
+            check(performance.now() < iconDeadline, "Missing icon did not settle its native error handler");
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+        check(failedIcons.every(item => item.getElement().isConnected), "Missing icon removed its containing menu entry");
+
+        let selector = new SelectorMenuItem("runtime-empty-selector");
+        panel.add(selector);
+        selector.selectNextEntry();
+        check(selector.getSelectedEntry() === null && selector.getSelectedId() === null,
+            "Empty selector cycling created a nonexistent selection");
+        let firstEntry = new DropEntry("runtime-selector-one").withNoIcon();
+        let secondEntry = new DropEntry("runtime-selector-two", () => selector.setSelectedId("runtime-selector-two")).withNoIcon();
+        selector.add(firstEntry);
+        selector.add(secondEntry);
+        selector.selectNextEntry();
+        check(selector.getSelectedId() === "runtime-selector-two", "Selector cycle did not invoke the next entry callback");
+        selector.selectNextEntry();
+        check(selector.getSelectedId() === "runtime-selector-one", "Selector cycle did not select an entry without a callback");
+        selector.remove(secondEntry);
+        selector.remove(secondEntry);
+        check(selector.entries.length === 1, "Removing an unavailable entry removed an unrelated menu item");
+        let emptyDropdownChanges = [];
+        let emptyDropdown = new ToolOptionDropdown({value: null, values: [], width: 80,
+            cycleOnMainClick: true, onChange: value => emptyDropdownChanges.push(value)});
+        document.body.appendChild(emptyDropdown.getElement());
+        try {
+            emptyDropdown.getElement().click();
+            check(emptyDropdown.value === null && emptyDropdownChanges.length === 0,
+                "Clicking an empty cycling dropdown reported a nonexistent value");
+        } finally {
+            emptyDropdown.element.remove();
+        }
+
         let form = FormRegistry.list()[0];
         let formWindow = form.getWindow();
         let wasOpen = formWindow.isOpen();
@@ -454,6 +531,25 @@ module.exports = async function checkToolbarWindows() {
     let actualSize = footer.get("menuViewActualSize");
     let zoomIn = footer.get("menuViewZoomIn");
     let zoomOut = footer.get("menuViewZoomOut");
+    let units = footer.get("measurementUnit");
+    app.setMeasurementUnit("pixel");
+    let separator = units.getElement().children[0].getBoundingClientRect();
+    units.getElement().dispatchEvent(new MouseEvent("click", {clientX: separator.left - 1, bubbles: true}));
+    check(app.getMeasurementUnit() === "inch" && units.getSelectedId() === "measurementUnit.inch",
+        "Measurement label click did not cycle to inches");
+    separator = units.getElement().children[0].getBoundingClientRect();
+    units.getElement().dispatchEvent(new MouseEvent("click", {clientX: separator.right + 1, bubbles: true}));
+    check(units.isOpen(), "Measurement arrow click did not open the unit menu");
+    units.entries[2].getElement().click();
+    check(app.getMeasurementUnit() === "centimeter" && !units.isOpen(), "Unit menu did not apply centimeters and close");
+    units.selectNextEntry();
+    check(app.getMeasurementUnit() === "pixel", "Measurement cycling did not wrap to pixels");
+    let zoomSlider = footer.get("menuViewZoomSlider");
+    input(zoomSlider.getElement().querySelector("input"), 151);
+    check(Math.abs(workspace.getZoom() - 10.471285480508996) < 1e-10,
+        "Footer zoom slider did not use logarithmic scaling above 100%");
+    input(zoomSlider.getElement().querySelector("input"), 51);
+    check(workspace.getZoom() === 0.51, "Footer zoom slider did not use percentage scaling below 100%");
     workspace.setZoom(1);
     zoomIn.getElement().click();
     check(workspace.getZoom() === 1.25, "Footer zoom-in multiplier changed");
@@ -482,6 +578,8 @@ module.exports = async function checkToolbarWindows() {
     app.closeDocumentWorkspace(workspace, false);
     zoomIn.getElement().click();
     zoomOut.getElement().click();
+    zoomSlider.onChange(151);
+    check(zoomSlider.getCurrentValue() === 100, "Empty-workspace zoom slider lost its default value");
     actualSize.toggleZoomBasis();
     percentage.close();
     check(percentage.getText() === "100%", "Footer percentage without a document lost its default");

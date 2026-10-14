@@ -47,6 +47,11 @@ module.exports = async function checkSettingsControls() {
     phase("settings UI preferences and language persistence");
     SettingsDialog.open("ui");
     let settings = SettingsDialog.instance;
+    let originalBackdrop = settings.backdrop;
+    SettingsDialog.open("canvas");
+    check(settings.backdrop === originalBackdrop && settings.activeSection === "canvas"
+        && document.querySelectorAll(".settings-dialog").length === 1, "Reopening settings created a second modal");
+    SettingsDialog.open("ui");
     settings.dialog.querySelector('[data-section="canvas"]')?.click();
     settings.selectSection("invalid");
     check(settings.activeSection === "ui", "Unknown settings section did not use UI");
@@ -235,6 +240,8 @@ module.exports = async function checkSettingsControls() {
     let oldAlert = window.alert;
     let alerts = [];
     let openFontDatabase = FontManager.openDatabase;
+    let oldWarn = console.warn;
+    let fontWarnings = [];
     try {
         window.alert = message => alerts.push(message);
         let failed = await settings.importFonts([new window.File(["invalid font bytes"], "Broken.ttf", {type: "font/ttf"})]);
@@ -254,6 +261,15 @@ module.exports = async function checkSettingsControls() {
         FontManager.openDatabase = async () => {
             throw new Error("Font database temporarily unavailable");
         };
+        let lazyFont = FontManager.getFonts()[0];
+        document.fonts.delete(FontManager.faces.get(lazyFont.id));
+        FontManager.faces.delete(lazyFont.id);
+        console.warn = (...args) => fontWarnings.push(args);
+        settings.page.scrollTop = 0;
+        settings.renderFontRows();
+        await waitFor(() => fontWarnings.some(args => args[0].includes(lazyFont.name)));
+        check(settings.fontList.querySelector(".settings-font-preview").style.fontFamily === ""
+            && FontManager.getFonts().length === 21, "Failed font preview removed metadata or installed an unavailable font");
         let remove = settings.fontList.querySelector(".settings-font-remove");
         remove.click();
         await waitFor(() => settings.status.textContent.includes("Could not remove"));
@@ -272,6 +288,7 @@ module.exports = async function checkSettingsControls() {
         check(FontManager.getFonts().length === 0, "Retry after a storage failure did not clear fonts");
     } finally {
         FontManager.openDatabase = openFontDatabase;
+        console.warn = oldWarn;
         window.alert = oldAlert;
     }
 

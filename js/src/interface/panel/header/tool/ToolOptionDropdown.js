@@ -138,6 +138,9 @@ class ToolOptionDropdown {
     }
 
     cycle() {
+        if (this.options.values.length === 0) {
+            return;
+        }
         if (ToolOptionDropdown.active === this) {
             this.close();
         }

@@ -218,6 +218,61 @@ module.exports = async function checkPointerRouting() {
     check(!app.isGridVisible() && !app.isRulersVisible(), "Grid or ruler remained enabled");
     check(app.getViewElement() === app.view && app.getEnvironmentElement() === app.environment,
         "Viewport accessors returned the wrong elements");
+    phase("native pointer failures route once and release capture/auto-scroll for the next gesture");
+    app.setActiveTool(null);
+    let pointerPixels = new Uint8ClampedArray(surface.context.getImageData(0, 0, 64, 64).data);
+    let reports = [];
+    let originalHandler = app.handleError;
+    app.handleError = error => reports.push(error);
+    try {
+        for (let hook of ["onMouseDown", "onMouseMove", "onMouseUp"]) {
+            let method = app[hook];
+            let failure = new Error("Injected " + hook + " failure");
+            app[hook] = () => {
+                throw failure;
+            };
+            try {
+                await send("mouseMove", 32, 32);
+                await send("mouseDown", 32, 32);
+                if (hook === "onMouseMove") {
+                    await send("mouseMove", 33, 32);
+                }
+                await send("mouseUp", 33, 32);
+                check(reports.includes(failure), "Native pointer failure bypassed the application error reporter: " + hook);
+                check(!app.pointerDown && app.activePointerId === null && app.autoScrollFrame === null,
+                    "Native pointer failure retained pointer or scrolling state: " + hook);
+                check(surface.context.getImageData(0, 0, 64, 64).data.every((value, index) => value === pointerPixels[index]),
+                    "Native pointer failure changed pixels without an active tool");
+            } finally {
+                app[hook] = method;
+                app.stopAutoScroll();
+            }
+        }
+        let onResize = app.onResize;
+        let resizeFailure = new Error("Injected resize failure");
+        app.onResize = () => {
+            throw resizeFailure;
+        };
+        try {
+            window.dispatchEvent(new Event("load"));
+            window.dispatchEvent(new Event("resize"));
+            check(reports.filter(error => error === resizeFailure).length === 2,
+                "Load/resize errors did not each reach the application reporter");
+        } finally {
+            app.onResize = onResize;
+        }
+    } finally {
+        app.handleError = originalHandler;
+    }
+    phase("modifier transitions preserve repeated-down state and clear on release");
+    for (let [key, getter] of [["Control", "isControlKeyDown"], ["Shift", "isShiftKeyDown"], ["Alt", "isAltKeyDown"]]) {
+        for (let repeat of [false, true]) {
+            window.dispatchEvent(new KeyboardEvent("keydown", {key, repeat, bubbles: true, cancelable: true}));
+            check(app[getter](), "Modifier down state was lost: " + key);
+        }
+        window.dispatchEvent(new KeyboardEvent("keyup", {key, bubbles: true}));
+        check(!app[getter](), "Modifier up state remained set: " + key);
+    }
     app.closeDocumentWorkspace(workspace, false);
     check(!app.onMouseDown(0, 0, MouseButton.LEFT) && !app.onMouseMove(0, 0) && !app.onMouseUp(0, 0, MouseButton.LEFT),
         "Empty workspace consumed drawing input");

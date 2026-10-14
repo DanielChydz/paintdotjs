@@ -183,13 +183,15 @@ test("UI base contracts preserve IDs/parents and release document mouse listener
 function historyFixture() {
     let context = vm.createContext({});
     for (let relative of [
-        "event/EventHandler", "history/HistoryMemento", "history/memento/ToolHistoryMemento", "history/HistoryStack"
+        "event/EventHandler", "history/HistoryMemento", "history/HistoryMementoData", "history/data/BitmapHistoryMementoData",
+        "history/memento/NullHistoryMemento", "history/memento/CompoundHistoryMemento",
+        "history/memento/ToolHistoryMemento", "history/HistoryStack"
     ]) {
         let filename = path.resolve(__dirname, "../js/src/engine/document", relative + ".js");
         vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
     }
-    let {HistoryStack, HistoryMemento, ToolHistoryMemento} = vm.runInContext(
-        "({HistoryStack, HistoryMemento, ToolHistoryMemento})", context);
+    let {HistoryStack, HistoryMemento, ToolHistoryMemento, NullHistoryMemento, CompoundHistoryMemento, BitmapHistoryMementoData} = vm.runInContext(
+        "({HistoryStack, HistoryMemento, ToolHistoryMemento, NullHistoryMemento, CompoundHistoryMemento, BitmapHistoryMementoData})", context);
     let state = {value: 0, type: "brush", notifications: [], switches: []};
     let app = {
         getActiveTool: () => state.type === null ? null : {getType: () => state.type},
@@ -216,7 +218,7 @@ function historyFixture() {
         }
         return memento;
     };
-    return {state, workspace, history, makeMemento, ToolHistoryMemento};
+    return {state, workspace, history, makeMemento, ToolHistoryMemento, NullHistoryMemento, CompoundHistoryMemento, BitmapHistoryMementoData};
 }
 
 test("history navigation restores intermediate values and branches after undo", () => {
@@ -287,4 +289,87 @@ test("tool history navigation restores the required tool before undo and redo", 
     assert.equal(state.value, 0);
     assert.equal(state.type, "brush");
     assert.throws(() => new ToolHistoryMemento(workspace, "Abstract", "").performUndo(), /Not implemented/);
+});
+
+test("scroll sessions replace drag listeners, route only the owning pointer and clean up on blur", () => {
+    let document = new EventEmitter();
+    let window = new EventEmitter();
+    for (let emitter of [document, window]) {
+        emitter.addEventListener = emitter.on;
+        emitter.removeEventListener = emitter.removeListener;
+    }
+    let context = vm.createContext({document, window});
+    for (let relative of ["engine/util/Debounced.js", "interface/item/layout/data/ScrollSession.js"]) {
+        let filename = path.resolve(__dirname, "../js/src", relative);
+        vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    }
+    let session = vm.runInContext("new ScrollSession()", context);
+    let received = [];
+    let owner = {continuePointerDrag: event => received.push(event), stopPointerDrag: () => session.endPointerDrag()};
+    session.beginPointerDrag(owner, 42, 8, 10);
+    assert.equal(session.dragGrabOffset, 8);
+    assert.equal(session.getLastPointerCoordinate(), 10);
+    document.emit("pointermove", {pointerId: 43});
+    document.emit("pointerup", {pointerId: 43});
+    assert.equal(received.length, 0);
+    assert.equal(session.dragOwner, owner);
+    let event = {pointerId: 42, clientX: 100};
+    document.emit("pointermove", event);
+    assert.equal(received[0], event);
+    session.beginPointerDrag(owner, 9, 2, 3);
+    assert.equal(document.listenerCount("pointermove"), 1);
+    assert.equal(window.listenerCount("blur"), 1);
+    document.emit("pointercancel", {pointerId: 9});
+    assert.equal(session.dragPointerId, null);
+    assert.equal(document.listenerCount("pointermove"), 0);
+    assert.equal(document.listenerCount("pointerup"), 0);
+    assert.equal(document.listenerCount("pointercancel"), 0);
+    assert.equal(window.listenerCount("blur"), 0);
+    session.beginPointerDrag(owner, 2, 0, 0);
+    window.emit("blur");
+    assert.equal(session.dragOwner, null);
+    session.beginPointerDrag(null, 3, 0, 0);
+    document.emit("pointermove", {pointerId: 3});
+    document.emit("pointerup", {pointerId: 3});
+    window.emit("blur");
+    assert.equal(received.length, 1);
+    session.endPointerDrag();
+    let item = {};
+    session.setDraggingItem(item);
+    assert.equal(session.getDraggingItem(), item);
+    session.setLastPointerCoordinate(17);
+    assert.equal(session.getLastPointerCoordinate(), 17);
+    session.setScrollPosition(23);
+    assert.equal(session.getScrollPosition(), 23);
+    session.setDragThresholdPassed(true);
+    assert.equal(session.hasPassedDragThreshold(), true);
+    session.setDragOwner(owner);
+    assert.equal(session.dragOwner, owner);
+    session.cacheItemPosition(item, 45);
+    assert.equal(session.getItemPosition(item), 45);
+    session.removeItemPosition(item);
+    assert.equal(session.getItemPosition(item), null);
+    session.endPointerDrag();
+    assert.equal(session.hasPassedDragThreshold(), false);
+});
+
+test("compound history records appended edits and restores transaction order in both directions", () => {
+    let {state, makeMemento, CompoundHistoryMemento, NullHistoryMemento, BitmapHistoryMementoData} = historyFixture();
+    let compound = new CompoundHistoryMemento("Batch", "batch.png", [makeMemento(0), makeMemento(10)]);
+    compound.push(makeMemento(20));
+    state.value = 30;
+    let reverse = compound.performUndo();
+    assert.equal(state.value, 0);
+    assert.equal(reverse.getName(), "Batch");
+    assert.equal(reverse.getImage(), "batch.png");
+    assert.equal(reverse.actions.length, 3);
+    reverse.performUndo();
+    assert.equal(state.value, 30);
+    assert.throws(() => new NullHistoryMemento("Original", "original.png").performUndo(), /not undoable/);
+    assert.equal(state.value, 30);
+    let image = {pixels: new Uint8Array([1, 2, 3, 4])};
+    let region = {bounds: [0, 0, 1, 1]};
+    let data = new BitmapHistoryMementoData(image, region);
+    assert.equal(data.undoImage, image);
+    assert.equal(data.savedRegion, region);
 });

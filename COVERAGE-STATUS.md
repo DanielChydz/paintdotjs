@@ -1,64 +1,116 @@
 # Runtime coverage handoff
 
-## Resume checkpoint
+## Current resumed checkpoint (2026-10-14)
 
-Resumed at the user's request on 2026-10-14. The user now explicitly requests
-ongoing commits after verified batches. This supersedes the earlier pause and
-the instruction to defer all commits until 100% coverage.
+The user resumed the task and explicitly requires **ongoing commits after
+verified batches**. The earlier pause and instruction to defer all commits
+until 100% are superseded. For unimplemented stubs/TODOs, the user says to
+**choose implementation without asking again**. Preserve intentional abstract
+base contracts; implement concrete missing functionality.
 
-The task is **not complete**. The user's target is **100% line and branch
-coverage of all first-party application runtime sources**, meaningful
-regressions, fixes for demonstrated bugs, and a commit after verification.
-Do not declare completion at the current percentages.
+The target is **100% line and branch coverage of all first-party runtime
+sources**, meaningful regressions, fixes for demonstrated bugs, and verified
+commits. **The target is not complete.** All functions are now covered, but
+line and branch coverage still fail the strict 100% gate.
 
 Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,006 | 41,417 | 96.59% | 1,411 |
-| Branches | 8,515 | 9,180 | 92.75% | 665 |
-| Functions | 2,454 | 2,528 | 97.07% | 74 |
+| Lines/statements | 40,806 | 41,436 | 98.47% | 630 |
+| Branches | 9,162 | 9,648 | 94.96% | 486 |
+| Functions | 2,529 | 2,529 | 100% | 0 |
 
-- **135 tests passed; zero failures.**
-- All **254 runtime source files** are included.
+- **178 tests passed; zero failures.**
+- All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
-- The last command completed successfully; no task-owned process remains running.
-- Counts can change as additional V8 branches become observable. Use a fresh
-  complete measurement rather than extrapolating percentages.
+- Full source/test lint, source headers, version checks and `git diff --check`
+  passed for this checkpoint.
+- `npx c8 report --check-coverage --lines 100 --branches 100` correctly fails.
+  A successful measurement is not satisfaction of the target.
+- V8 may expose additional branches after new scenarios; always measure fresh.
 
-Reports:
+Reports: `coverage/coverage-summary.json`, `coverage/coverage-final.json`,
+`coverage/index.html`. Latest full-run log: `/tmp/paintdotjs-coverage-current.log`.
+Strict-gate log: `/tmp/paintdotjs-strict-coverage-current.log`.
+Generated reports and bundles are not committed sources.
 
-- [Coverage summary](./coverage/coverage-summary.json)
-- [Detailed coverage](./coverage/coverage-final.json)
-- [HTML report](./coverage/index.html)
-- Latest full-run log: `/tmp/paintdotjs-coverage-resume.log`
+## Commits and verification
 
-Coverage reports and build outputs are generated artifacts, not committed sources.
+Branch: `master`. The previous dirty worktree was preserved and verified, then
+committed as `adfeb59`. Further verified batches were committed as `189caf9`,
+`d290185`, `dcf9ff3`, `af5cb23`, `34136f2`, `7a13c2c`, `e58e95d`, `f391874`,
+and `0d52f4c`; use `git log` for newer checkpoint commits. Continue committing
+verified batches, not only when the overall 100% target passes.
 
-## Git and unfinished verification
+The DEB from the earlier session is
+`dist/paintdotjs-2.1.16-linux-amd64.deb`. It predates the document-action dispatcher
+and all resumed-session fixes. Rebuild and inspect it after final verification.
+Do not run coverage and packaging/build commands concurrently.
 
-- Branch: `master`.
-- HEAD: `f30aa6d` (`test: expand interactive and platform runtime regressions`).
-- The production/test/documentation changes described below were verified again
-  and are being committed as the resume baseline.
-- The earlier pause created no commit. The resumed work preserves those changes.
-- Source lint, source headers and version checks passed after the latest
-  production changes. Test lint also passed during the work; full source/test lint, headers and version checks passed again on resume.
-- The latest complete coverage run includes all current production fixes and
-  test additions and has no known failing test.
-- The strict 100% gate is not satisfied. An earlier strict run failed correctly;
-  do not confuse a successful measurement command with satisfying the target.
+This environment's sandbox causes `spawnSync ... EPERM` (even after producing
+partial child output), obscuring test failures. Tests/coverage/header checks
+were run successfully through approved `require_escalated` tool calls. Git
+metadata is read-only inside the sandbox, so commits also need escalation.
+No automatic approval review rejected these authorized actions.
 
-The DEB was built successfully and its Ubuntu `t64` dependencies were inspected:
+## Resumed-session production fixes
 
-`dist/paintdotjs-2.1.16-linux-amd64.deb`
+- `AppSettingsStore.load`: validate persisted JSON root; `null` no longer aborts
+  application initialization. Cover migration, storage failures and theme updates.
+- `MoveTool.onPasteMouseDown`: implement and call it from `onLift`; transfer the
+  floating source and underlay, preserve overflow, and release temporary canvases.
+  Native regressions assert transparent pixels, moved output and complete undo/redo.
+- `AppWorkspace.isInitialWorkspaceUntouched`: require an actual active tool
+  before inspecting its pending transaction. No tool now permits replacement of
+  an untouched startup image and release of its original canvas.
+- `AppFile.exists`: Node `fs/promises.access`; `ENOENT`/`ENOTDIR` return false;
+  permission/I/O/other errors propagate. Test real temporary files and directories.
+- `DocumentIO.readPdn`: legacy JSON `null` reports the documented unsupported
+  format error instead of a stray TypeError.
+- `SelectorMenuItem.selectNextEntry` and `ToolOptionDropdown.cycle`: guard empty
+  choices so cycling does not dereference an unavailable entry.
+- `ColorSliderItem`: default provider returns a `Color` (opaque black), allowing
+  default construction and actual spectrum rendering.
+- `FileAction.performAction`: preserve the inherited explicit abstract-action
+  error; an unimplemented concrete file action no longer silently succeeds.
+- `PaintBrushTool` and `EraserTool`: clear the cached hover point outside the
+  canvas so a width change cannot revive a stale preview. Assert unchanged pixels.
 
-That build includes the ellipse, Move history, nonseparable blend, Windows-link
-and font-transaction fixes. It **predates the shared document-action dispatcher
-fix**. Rebuild the DEB after the final coverage verification.
-Build log: `/tmp/paintdotjs-deb-current.log`.
+## Additional resumed-session test coverage
 
-## Approved production fixes after HEAD
+New root tests: `app-settings-store.test.js`, `font-manager.test.js`,
+`tool-settings.test.js`. New native scenarios: `checkDocumentContracts.js`,
+`checkBrushContracts.js`, `checkMoveModes.js` (registered in `desktop.test.cjs`).
+
+Expanded meaningful regressions include:
+
+- History navigation, compound undo/redo ordering, tool restoration and listener
+  ownership/cleanup for list dragging.
+- Font metadata caches, real native corrupt-font rejection, 21-row chunked UI
+  rendering, lazy-load/storage failures, failed deletion and successful retry.
+- Scoped web cache/service-worker update cleanup, cancellation and error recovery;
+  language changes, reload callback and WebGL-unavailable contexts.
+- Clipboard pixel identity, digests, narrow/offscreen viewport positions, missing
+  clipboard images, reentrant close locks and failure cleanup.
+- GIF dictionary growth/reset with 32,768 independently generated palette pixels
+  decoded by the portable codec; native JPEG fallback and unsupported formats.
+- Gamma-space filtering and CPU Gaussian fallback on native canvas failures.
+- Real History window buttons/rows, visible-layer fallback, numeric/text controls,
+  empty selectors, missing local icons, footer measurement/zoom controls,
+  remembered effect icons, Help routing, tool-grid selection and dialog cancellation.
+- Late/out-of-order save success/failure generations with genuine encoded images,
+  KB/MB labels and stale close callbacks.
+- Native pointer errors, stopped auto-scroll/capture state, preserved pixels and
+  error routing without weakening the global renderer error detector.
+- Exact Move scale/90-degree rotation preview, toolbar Finish and full undo/redo.
+
+The native clipboard test in `checkFileWorkflows.js` was flaky because
+`did-finish-load` may run before `ready-to-show`. It now focuses the real window
+through `paintdotjs:test-input` and waits for `document.hasFocus()` before
+clipboard operations. No clipboard implementation was replaced or stubbed.
+
+## Earlier approved production fixes (preserved from the previous session)
 
 These changes were discussed with and approved by the user. Keep them.
 
@@ -159,46 +211,43 @@ Ellipse tests measure chord error through 16,000px dimensions.
 
 ## Remaining coverage priorities
 
-The latest report's largest gaps, not an exhaustive list:
+Inspect original-source statement and branch ranges in the latest detailed
+report. All functions have executed with behavioral or contract assertions;
+remaining gaps are mostly alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [SettingsDialog](./js/src/interface/window/dialog/SettingsDialog.js) | 100 | 32 |
-| [DocumentIO](./js/src/io/DocumentIO.js) | 76 | 45 |
-| [MoveToolBase](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 64 | 10 |
-| [MoveTool](./js/src/engine/document/tool/tool/move/MoveTool.js) | 57 | 24 |
-| [AppView](./js/src/engine/AppView.js) | 47 | 42 |
-| [PreviewShapeTool](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 45 | 37 |
-| [DrawingTool](./js/src/engine/document/tool/tool/DrawingTool.js) | 41 | 18 |
-| [EffectConfigDialog](./js/src/interface/window/dialog/EffectConfigDialog.js) | 41 | 31 |
-| [FontManager](./js/src/engine/util/FontManager.js) | 40 | 24 |
-| [ToolOptionDropdown](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 36 | 20 |
-| [DocumentWorkspace](./js/src/engine/document/DocumentWorkspace.js) | 31 | 9 |
-| [WebWindow](./js/src/interface/window/window/WebWindow.js) | 31 | 14 |
-| [AppWorkspace](./js/src/engine/AppWorkspace.js) | 29 | 18 |
-| [BitmapEffectEngine](./js/src/engine/document/effect/BitmapEffectEngine.js) | 27 | 18 |
-| [SaveImageDialog](./js/src/interface/window/dialog/SaveImageDialog.js) | 25 | 19 |
-| [AppSettingsStore](./js/src/interface/window/settings/AppSettingsStore.js) | 24 | 8 |
+| [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 45 | 37 |
+| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 41 | 31 |
+| [DocumentIO.js](./js/src/io/DocumentIO.js) | 34 | 32 |
+| [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 31 | 16 |
+| [AppView.js](./js/src/engine/AppView.js) | 26 | 32 |
+| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 23 | 11 |
+| [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
+| [ScrollList.js](./js/src/interface/item/layout/ScrollList.js) | 20 | 9 |
+| [WebWindow.js](./js/src/interface/window/window/WebWindow.js) | 16 | 9 |
+| [AppWorkspace.js](./js/src/engine/AppWorkspace.js) | 15 | 13 |
+| [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 15 | 11 |
+| [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
+| [LayerForm.js](./js/src/interface/window/form/LayerForm.js) | 15 | 2 |
+| [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
+| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
+| [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 13 | 7 |
+| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 12 | 13 |
+| [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 12 | 7 |
+| [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 12 | 4 |
+| [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 10 | 2 |
 
-Investigate actual remaining statement/branch ranges in the detailed report.
-Do not assume these totals are unexecuted methods; most of these methods already
-have meaningful execution coverage.
+Known audit points:
 
-Known unexecuted function candidates:
-
-- SettingsDialog: reload callback at line 320; font IntersectionObserver
-  callback around line 904.
-- DocumentIO: `button.onclick` around line 151 and `pasteFromClipboard` around 964.
-- BitmapEffectEngine: `blurDefinition` around 432.
-- MoveTool: `onPasteMouseDown` at 199 is an empty TODO method.
-  A fresh search found **only its definition**, no callers. Do not add a test
-  asserting that this unimplemented paste API returns `undefined`. Clarify with
-  the user whether to remove it or integrate an implementation. Real paste
-  currently uses the pending surface/origin/underlay path in `onLift`.
-- GraphicsPath.combine contains nested defaults that may be unreachable after
-  outer enum dispatch. Do not mutate enums to manufacture coverage.
-- AppFile.exists is an empty stub from the earlier investigation. Do not invent
-  an implementation or bless its missing return without understanding the contract.
+- `GraphicsPath.combine` has redundant nested defaults unreachable after outer
+  enum validation. Do not mutate enums to manufacture coverage.
+- `MoveTool.didPaste` is only initialized/reset to false; a repository search
+  found no assignment of true. Audit obsolete state and valid history semantics.
+- `MoveTool.onPasteMouseDown` and `AppFile.exists` are now implemented and tested;
+  the older instructions about their empty stubs no longer apply.
+- Keep function coverage honest; line/branch gaps still matter even with 100%
+  function coverage. Keep all first-party sources included.
 
 ## Resume commands
 
@@ -268,7 +317,8 @@ node --test --test-name-pattern='desktop document strip|desktop surfaces' tests/
   when a pixel oracle needs the original layer.
 - Keep braces for all control-flow bodies, ordinary locals as `let`, one class
   per source file and existing package organization.
-- Ask for clarification before uncertain behavioral/architectural changes.
+- Implement concrete stubs/TODOs without asking again, as explicitly requested.
+  Clarify only behavior/architecture requirements that genuinely cannot be inferred.
 
 When the target really passes, rebuild/inspect the Ubuntu DEB, rerun the final
 checks and commit the verified work with:

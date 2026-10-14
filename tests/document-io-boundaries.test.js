@@ -826,3 +826,21 @@ test("document close releases its reentry lock after a canceled save or rejected
     assert.equal(await io.closeDocumentWorkspace(workspace), true);
     assert.equal(closes, 1);
 });
+
+test("legacy PDN documents reject null and malformed JSON with the documented format error", async () => {
+    let fixture = documentFixture();
+    let filename = path.resolve(__dirname, "../js/src/io/PdnDocumentCodec.js");
+    vm.runInContext(fs.readFileSync(filename, "utf8"), fixture.context, {filename: pathToFileURL(filename).href});
+    for (let value of ["null", "false", "42", '"text"', "[]", "{broken", "{}",
+        JSON.stringify({format: "paint.js.pdn/1", layers: null})]) {
+        await assert.rejects(fixture.io.readPdn(new Blob([value])), /Unsupported \.pdn document format/);
+    }
+    let decoded = await fixture.io.readPdn(new Blob([JSON.stringify({
+        format: "paint.js.pdn/1", width: 4, height: 3, resolution: 0, activeLayer: 0, layers: []
+    })]));
+    assert.equal(decoded.width, 4);
+    assert.equal(decoded.height, 3);
+    assert.equal(decoded.resolution, 96);
+    assert.equal(decoded.layers.length, 0);
+    assert.equal(fixture.state.created.length, 0, "Reading PDN metadata must not create a workspace");
+});

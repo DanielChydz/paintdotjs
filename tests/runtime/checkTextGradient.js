@@ -207,6 +207,8 @@ module.exports = async function checkTextGradient() {
     text.placeCaretAt(new Point(30 + glyphWidth * 1.1, text.getTextTop() + 1));
     await frame();
     check(text.editor.selectionStart === 1 && !text.caretElement.hidden, "Click did not place the caret between measured glyphs");
+    text.editor.dispatchEvent(new KeyboardEvent("keyup", {key: "ArrowRight", bubbles: true}));
+    check(text.editor.selectionStart === 1 && !text.caretElement.hidden, "Text key release lost its visible caret or changed its selection");
     text.placeCaretAt(new Point(1000, text.getTextTop() + text.getLineHeight() + 1));
     await frame();
     check(text.editor.selectionStart === 7, "Multiline caret placement omitted the newline offset");
