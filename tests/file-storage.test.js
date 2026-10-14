@@ -22,7 +22,7 @@ const {test} = require("node:test");
 function storageFixture(isApp = false) {
     let state = {records: new Map(), operations: []};
     let context = vm.createContext({
-        isApp,
+        isApp, require,
         getObjectStore: async mode => {
             if (state.storeError) {
                 throw state.storeError;
@@ -173,4 +173,39 @@ test("temporary web files skip collisions, stop after 100 attempts and propagate
     let failure = new Error("Temporary store inaccessible");
     state.storeError = failure;
     await assert.rejects(platform.getTempFile(), error => error === failure);
+});
+
+test("desktop file existence checks real files/directories and rejects missing path components", async t => {
+    let {File} = storageFixture(true);
+    let directory = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "paintdotjs-file-exists-"));
+    t.after(() => fs.rmSync(directory, {recursive: true, force: true}));
+    let filename = path.join(directory, "image.png");
+    assert.equal(await File.of(directory).exists(), true);
+    assert.equal(await File.of(filename).exists(), false);
+    fs.writeFileSync(filename, new Uint8Array([0, 42, 255]));
+    assert.equal(await File.of(filename).exists(), true);
+    assert.equal(await File.of(filename, "nested.png").exists(), false);
+    fs.unlinkSync(filename);
+    assert.equal(await File.of(filename).exists(), false);
+    assert.equal(await File.of(directory, "missing", "image.png").exists(), false);
+});
+
+test("desktop file existence preserves permission and filesystem errors instead of reporting absence", async () => {
+    let {File, context} = storageFixture(true);
+    let file = File.of("/images/private.png");
+    for (let code of ["ENOENT", "ENOTDIR", "EACCES", "EPERM", "EIO", undefined]) {
+        let failure = Object.assign(new Error("Filesystem failure"), {code});
+        context.require = module => {
+            assert.equal(module, "node:fs/promises");
+            return {access: async pathname => {
+                assert.equal(pathname, "/images/private.png");
+                throw failure;
+            }};
+        };
+        if (code === "ENOENT" || code === "ENOTDIR") {
+            assert.equal(await file.exists(), false);
+        } else {
+            await assert.rejects(file.exists(), error => error === failure);
+        }
+    }
 });

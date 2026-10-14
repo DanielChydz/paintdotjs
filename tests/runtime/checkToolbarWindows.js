@@ -381,6 +381,54 @@ module.exports = async function checkToolbarWindows() {
         check(invalidConfiguration, "Undefined strip item was accepted");
         check(new StripPanel("runtime-empty", {}).getItemList().length === 0, "An empty strip gained items");
 
+        let text = new TextFieldItem("runtime-text-field");
+        text.setText("Initial text");
+        text.setAutoSelect(true);
+        let changedText = [];
+        let submittedText = [];
+        text.setChangeCallback(value => changedText.push(value));
+        text.setSubmitCallback(value => submittedText.push(value));
+        panel.add(text);
+        await tick();
+        check(document.activeElement === text.getElement() && text.getElement().selectionStart === 0
+            && text.getElement().selectionEnd === 12, "Text auto-selection did not focus/select its initial value");
+        text.getElement().click();
+        check(text.getElement().selectionStart === 12 && text.getElement().selectionEnd === 12,
+            "Initial text click did not place the caret at the end");
+        text.getElement().setSelectionRange(2, 2);
+        text.getElement().click();
+        check(text.getElement().selectionStart === 2, "Later text click forcibly reset the caret");
+        input(text.getElement(), "Changed");
+        text.getElement().dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", bubbles: true}));
+        check(changedText.join() === "Changed" && submittedText.join() === "Changed"
+            && text.getText() === "Changed" && !text.isClickable(), "Text callbacks lost the current value");
+        text.setChangeCallback(null);
+        text.setSubmitCallback(null);
+        input(text.getElement(), "No callback");
+        text.getElement().dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", bubbles: true}));
+        check(text.getText() === "No callback" && changedText.length === 1 && submittedText.length === 1,
+            "Cleared text callbacks were still invoked");
+        let number = new NumberItem("runtime-number-item");
+        number.setMin(-5);
+        number.setMax(20);
+        number.setStep(0.5);
+        number.setValue(3);
+        panel.add(number);
+        number.setMin(-10);
+        number.setMax(30);
+        number.setStep(2);
+        number.setText(7);
+        number.setEnabled(true);
+        check(number.input.min === "-10" && number.input.max === "30" && number.input.step === "2"
+            && number.input.value === "7" && number.getValue() === 7 && !number.input.disabled,
+        "Number item setters did not update its existing input");
+        let numericValues = [];
+        number.setChangeCallback(value => numericValues.push(value));
+        input(number.input, 9);
+        check(number.getValue() === 9 && numericValues[0] === 9, "Number input callback did not convert its value to a number");
+        number.setEnabled(false);
+        check(number.input.disabled && !NumberInput.stepInput(number.input, 1), "Disabled number item accepted stepping");
+
         let form = FormRegistry.list()[0];
         let formWindow = form.getWindow();
         let wasOpen = formWindow.isOpen();

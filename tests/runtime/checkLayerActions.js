@@ -343,6 +343,7 @@ module.exports = async function checkLayerActions() {
     let beforeBottom = new Uint8ClampedArray(pixels(bottom));
     let beforeOverlay = new Uint8ClampedArray(pixels(overlay));
     history.clearAll();
+    history.pushNewMemento(new NullHistoryMemento("Original layers", "assets/icons/menu_file_new_icon.png"));
     app.setActiveToolFromType(ToolType.PENCIL);
     check(DocumentIO.flattenDocument(), "Two-layer flatten did not replace the document");
     let flattenedDocument = workspace.getDocument();
@@ -369,5 +370,67 @@ module.exports = async function checkLayerActions() {
             "Flatten redo did not restore the flattened document/layer");
         check(samePixels(pixels(flattenedLayer), flattenedPixels), "Flatten redo changed composite pixels");
     });
+    phase("actual History window undo, redo and row selection preserve document identity");
+    let waitFor = async predicate => {
+        let deadline = performance.now() + 5000;
+        while (!predicate()) {
+            check(performance.now() < deadline, "Layer/history UI did not settle");
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+    };
+    let historyForm = FormRegistry.get("historyForm");
+    await waitFor(() => historyForm.stripPanel.get("menu.edit.undo").isEnabled());
+    historyForm.stripPanel.get("menu.edit.undo").getElement().click();
+    check(workspace.getDocument() === beforeDocument, "History window Undo did not restore the layered document");
+    await waitFor(() => historyForm.stripPanel.get("menu.edit.redo").isEnabled());
+    historyForm.stripPanel.get("menu.edit.redo").getElement().click();
+    check(workspace.getDocument() === flattenedDocument, "History window Redo did not restore the flattened document");
+    await waitFor(() => historyForm.historyListItem.items.filter(item => item.getType() === ItemType.UNDO).length >= 2);
+    let previousItem = historyForm.historyListItem.items.filter(item => item.getType() === ItemType.UNDO).at(-2);
+    check(previousItem.getMemento() === previousItem.getKey() && previousItem.getText() === null,
+        "History row did not retain its memento identity");
+    previousItem.getElement().click();
+    check(workspace.getDocument() === beforeDocument, "Selecting an earlier history row did not restore its document state");
+    app.closeDocumentWorkspace(workspace, false);
+
+    phase("layer visibility chooses the nearest visible layer and keeps an all-hidden active layer");
+    workspace = app.createBlankDocumentInNewWorkspace(16, 16);
+    workspace.executeFunction(new AddNewBlankLayerFunction());
+    workspace.executeFunction(new AddNewBlankLayerFunction());
+    layers = workspace.getDocument().getLayers();
+    let first = layers.getAt(0);
+    let middle = layers.getAt(1);
+    let last = layers.getAt(2);
+    layerForm = FormRegistry.get("layerForm");
+    let originalPreference = AppSettingsStore.get("ui.autoSelectVisibleLayer", false);
+    let hide = async layer => {
+        await waitFor(() => layerForm.getItemByLayer(layer) !== null);
+        let item = layerForm.getItemByLayer(layer);
+        let input = item.getElement().querySelector("input");
+        input.checked = false;
+        input.dispatchEvent(new Event("input", {bubbles: true}));
+        check(!layer.isVisible(), "Layer checkbox did not hide its own layer");
+    };
+    try {
+        AppSettingsStore.set("ui.autoSelectVisibleLayer", true);
+        await waitFor(() => layerForm.getItemByLayer(middle) !== null);
+        layerForm.getItemByLayer(middle).getElement().click();
+        check(workspace.getActiveLayer() === middle, "Clicking a layer row did not select its actual layer");
+        await hide(middle);
+        check(workspace.getActiveLayer() === first, "Hiding the middle layer did not prefer the visible layer below");
+        first.setVisible(false);
+        middle.setVisible(true);
+        workspace.setActiveLayer(middle);
+        await hide(middle);
+        check(workspace.getActiveLayer() === last, "Hiding a layer with an invisible lower neighbor did not choose the visible upper neighbor");
+        middle.setVisible(true);
+        await hide(last);
+        check(workspace.getActiveLayer() === middle, "Hiding the top layer did not choose its visible lower neighbor");
+        await hide(middle);
+        check(workspace.getActiveLayer() === middle && layers.list().every(layer => !layer.isVisible()),
+            "Hiding every layer selected a missing layer or restored hidden visibility");
+    } finally {
+        AppSettingsStore.set("ui.autoSelectVisibleLayer", originalPreference);
+    }
     app.closeDocumentWorkspace(workspace, false);
 };
