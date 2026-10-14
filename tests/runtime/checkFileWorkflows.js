@@ -347,6 +347,63 @@ module.exports = async function checkFileWorkflows() {
     DocumentIO.finishActiveTool(false);
     equal(pixels(workspace), expected, "Paste without a document changed pixels");
 
+    phase("floating paste mouse-down preserves transparency, overflow and undo/redo");
+    for (let suppliedUnderlay of [true, false]) {
+        closeAll();
+        workspace = app.createBlankDocumentInNewWorkspace(128, 128);
+        workspace.setZoom(1);
+        let surface = workspace.getActiveLayer().getSurface();
+        surface.context.fillStyle = "rgb(0, 128, 0)";
+        surface.context.fillRect(0, 0, 128, 128);
+        let baseline = pixels(workspace);
+        let source = document.createElement("canvas");
+        source.width = 40;
+        source.height = 32;
+        source.getContext("2d").fillStyle = "red";
+        source.getContext("2d").fillRect(0, 0, 20, 32);
+        let blob = await DocumentIO.canvasToBlob(source, "image/png");
+        DocumentIO.internalClipboard = blob;
+        DocumentIO.internalClipboardInfo = {width: 40, height: 32, bounds: new Rectangle(32, 40, 40, 32)};
+        workspace.getHistory().clearAll();
+        check(await DocumentIO.pasteBlob(blob), "Floating paste failed");
+        let tool = app.getActiveTool();
+        let origin = tool.pendingPasteOrigin.clone();
+        let pasted = pixels(workspace);
+        if (!suppliedUnderlay) {
+            tool.setPendingPaste(source, null, origin);
+        }
+        let pendingCanvas = tool.pendingPasteSurface.getCanvas();
+        let underlayCanvas = tool.pendingPasteUnderlay?.getCanvas();
+        tool.onMouseDown(origin.x + 20, origin.y + 16, MouseButton.LEFT);
+        check(tool.context.copying && tool.context.liftedPixels !== null
+            && tool.pendingPasteSurface === null && tool.pendingPasteUnderlay === null
+            && tool.pendingPasteOrigin === null, "Paste mouse-down did not transfer floating pixels");
+        check(pendingCanvas.width === 0 && (!underlayCanvas || underlayCanvas.width === 0),
+            "Paste mouse-down retained temporary canvases");
+        tool.onMouseUp(origin.x + 32, origin.y + 24, MouseButton.LEFT);
+        DocumentIO.finishActiveTool(false);
+        let expectedMoved = new Uint8ClampedArray(suppliedUnderlay ? baseline : pasted);
+        for (let y = origin.y + 8; y < origin.y + 40; ++y) {
+            for (let x = origin.x + 12; x < origin.x + 32; ++x) {
+                expectedMoved.set([255, 0, 0, 255], (y * 128 + x) * 4);
+            }
+        }
+        equal(pixels(workspace), expectedMoved, "Floating paste erased its underlay or lost transparent source pixels");
+        let history = workspace.getHistory();
+        let steps = history.undoStack.length;
+        for (let index = 0; index < steps; ++index) {
+            history.stepBackward();
+        }
+        equal(pixels(workspace), baseline, "Floating paste undo did not restore the pre-paste artwork");
+        DocumentIO.finishActiveTool(false);
+        for (let index = 0; index < steps; ++index) {
+            history.stepForward();
+        }
+        equal(pixels(workspace), expectedMoved, "Floating paste redo did not restore the moved bitmap");
+        source.width = 0;
+        source.height = 0;
+    }
+
     phase("file picker capabilities and actual writable handle bytes");
     let fs = require("node:fs/promises");
     let filePath = require("node:path").join(require("node:process").env.PAINTDOTJS_TEST_USER_DATA, "handle.png");

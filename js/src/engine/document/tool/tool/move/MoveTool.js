@@ -196,38 +196,38 @@ class MoveTool extends MoveToolBase {
         super.onSelectionChanged();
     }
 
-    onPasteMouseDown() {
-        // TODO : Implement the logic for pasting
+    onPasteMouseDown(liftPath) {
+        if (this.pendingPasteSurface === null) {
+            return false;
+        }
+
+        // A pasted bitmap floats above the artwork that preceded the paste.
+        // Keep its complete source, including pixels outside the layer canvas.
+        let underlay = this.pendingPasteUnderlay === null
+            ? this.activeLayer.getSurface() : this.pendingPasteUnderlay;
+        this.scratchSurface.copySurface(underlay);
+        this.context.liftedPixels = new MaskedSurface(
+            this.pendingPasteSurface, liftPath, true, this.pendingPasteOrigin);
+        this.pendingPasteSurface.dispose();
+        this.pendingPasteSurface = null;
+        this.pendingPasteOrigin = null;
+        if (this.pendingPasteUnderlay !== null) {
+            this.pendingPasteUnderlay.dispose();
+            this.pendingPasteUnderlay = null;
+        }
+        return true;
     }
 
     onLift(mouseX, mouseY, button) {
         let liftPath = this.getSelection().createPath();
         let liftRegion = this.getSelection().createRegion();
-        const isPaste = this.pendingPasteSurface !== null;
+        let isPaste = this.onPasteMouseDown(liftPath);
 
         // Keep one immutable pre-lift image. Preview frames are always rebuilt
         // from this snapshot so transparent pixels and resampling artifacts can
         // never accumulate while dragging or rotating.
-        if (isPaste && this.pendingPasteUnderlay !== null) {
-            this.scratchSurface.copySurface(this.pendingPasteUnderlay);
-        } else {
+        if (!isPaste) {
             this.scratchSurface.copySurface(this.activeLayer.getSurface());
-        }
-
-        // A paste may extend beyond the document. Its visible preview is clipped by
-        // the layer canvas, but keep the original source until the floating pixels
-        // are committed so dragging can bring the overflow back into view.
-        if (this.pendingPasteSurface !== null) {
-            this.context.liftedPixels = new MaskedSurface(
-                this.pendingPasteSurface, liftPath, true, this.pendingPasteOrigin);
-            this.pendingPasteSurface.dispose();
-            this.pendingPasteSurface = null;
-            this.pendingPasteOrigin = null;
-            if (this.pendingPasteUnderlay !== null) {
-                this.pendingPasteUnderlay.dispose();
-                this.pendingPasteUnderlay = null;
-            }
-        } else {
             this.context.liftedPixels = new MaskedSurface(this.activeLayer.getSurface(), liftPath, true);
         }
 
