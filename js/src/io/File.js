@@ -75,8 +75,9 @@ class File {
         if (this.segments.length === 0) {
             return null;
         }
-        let parentSegments = this.segments.slice(0, this.segments.length - 1);
-        return File.of(...parentSegments);
+        let parent = File.of(this);
+        parent.segments.pop();
+        return parent;
     }
 
     getName() {

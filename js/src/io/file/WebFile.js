@@ -30,7 +30,7 @@ class WebFile extends File {
     async write(data) {
         let store = await getObjectStore('readwrite');
         let request = store.put({
-            id: this.getPath(),
+            fileName: this.getPath(),
             data: data
         });
 

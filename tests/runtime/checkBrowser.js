@@ -39,6 +39,15 @@ module.exports = async function checkBrowser() {
         "Browser file-system store did not persist its structured-cloned bytes");
     store = await getObjectStore("readwrite");
     await requestResult(store.delete("runtime-test-file"));
+    let webFile = File.of("runtime-test", "image.bin");
+    check(!await webFile.exists(), "A new WebFile unexpectedly exists");
+    await webFile.write(new Uint8Array([0, 42, 255]));
+    check(await webFile.exists(), "WebFile write did not persist its record");
+    let webBytes = await webFile.read();
+    check(webBytes instanceof Uint8Array && webBytes.length === 3 && webBytes[1] === 42,
+        "WebFile did not read its original bytes from IndexedDB");
+    store = await getObjectStore("readwrite");
+    await requestResult(store.delete(webFile.getPath()));
     for (let workspace of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(workspace, false);
     }
@@ -48,7 +57,44 @@ module.exports = async function checkBrowser() {
         "Browser about dialog used desktop styling");
     AboutDialog.open();
     check(document.querySelectorAll(".project-info-about").length === 1, "About dialog was duplicated");
+    WelcomeDialog.open(true);
+    check(document.querySelector(".project-info-welcome") === null, "Welcome replaced an already-open about dialog");
     about.querySelector(".app-dialog-close").click();
+    let savedDismissal = localStorage.getItem(WelcomeDialog.storageKey);
+    try {
+        localStorage.removeItem(WelcomeDialog.storageKey);
+        check(!WelcomeDialog.isDismissed(), "Unset welcome preference was treated as dismissed");
+        WelcomeDialog.open();
+        let welcome = AboutDialog.instance;
+        check(welcome instanceof WelcomeDialog && welcome.welcome
+            && document.querySelector(".project-info-welcome") !== null, "Browser welcome did not build the shared welcome dialog");
+        welcome.dontShowAgain.checked = true;
+        welcome.dialog.querySelector(".project-info-primary-button").click();
+        check(WelcomeDialog.isDismissed() && AboutDialog.instance === null,
+            "Closing welcome did not save its dismissal or release the modal");
+        WelcomeDialog.open();
+        check(AboutDialog.instance === null, "Dismissed welcome reopened without force");
+        WelcomeDialog.open(true);
+        check(AboutDialog.instance instanceof WelcomeDialog, "Forced welcome ignored the saved dismissal");
+        AboutDialog.instance.dialog.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true, cancelable: true}));
+        check(AboutDialog.instance === null, "Escape did not close the forced welcome");
+        let storageDescriptor = Object.getOwnPropertyDescriptor(window, "localStorage");
+        try {
+            Object.defineProperty(window, "localStorage", {configurable: true, get: () => {
+                throw new DOMException("Storage blocked", "SecurityError");
+            }});
+            check(!WelcomeDialog.isDismissed(), "Restricted storage suppressed welcome");
+            WelcomeDialog.dismiss();
+        } finally {
+            Object.defineProperty(window, "localStorage", storageDescriptor);
+        }
+    } finally {
+        if (savedDismissal === null) {
+            localStorage.removeItem(WelcomeDialog.storageKey);
+        } else {
+            localStorage.setItem(WelcomeDialog.storageKey, savedDismissal);
+        }
+    }
     let pending = NewFileDialog.open(32, 16);
     let form = document.querySelector(".new-file-dialog");
     check(!form.parentElement.classList.contains("dialog-backdrop-app"), "Browser new-file styling is wrong");
