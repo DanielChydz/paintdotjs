@@ -1554,6 +1554,9 @@ class DocumentIO {
         ), oldDocument.getBounds());
         if (cropBounds.isEmpty()) {
             selectionPath.dispose();
+            if (activeToolType !== null) {
+                this.app.setActiveToolFromType(activeToolType);
+            }
             return false;
         }
 

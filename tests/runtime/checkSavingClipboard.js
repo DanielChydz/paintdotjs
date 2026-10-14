@@ -273,6 +273,15 @@ module.exports = async function checkSavingClipboard() {
         "Offscreen copy replaced a valid clipboard image or its origin metadata");
     equal(activeSurface.context.getImageData(0, 0, 32, 16).data, beforeOffscreen, "Offscreen cut changed layer pixels");
     check(workspace.getHistory().undoStack.length === beforeHistory, "Offscreen copy/cut recorded a history entry");
+    app.setActiveToolFromType(ToolType.PENCIL);
+    check(app.getActiveTool().isActive(), "Crop regression requires an active pencil tool");
+    let beforeCropDocument = workspace.getDocument();
+    check(DocumentIO.cropToSelection() === false, "Offscreen crop reported a document change");
+    check(app.getActiveTool() !== null && app.getActiveTool().getType() === ToolType.PENCIL,
+        "Offscreen crop disabled the active tool");
+    check(workspace.getDocument() === beforeCropDocument && workspace.getHistory().undoStack.length === beforeHistory,
+        "Offscreen crop replaced the document or recorded history");
+    equal(activeSurface.context.getImageData(0, 0, 32, 16).data, beforeOffscreen, "Offscreen crop changed pixels");
     selection.reset();
 
     phase("dirty document close and modal choice");

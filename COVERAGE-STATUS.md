@@ -17,8 +17,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,821 | 41,436 | 98.51% | 615 |
-| Branches | 9,170 | 9,647 | 95.05% | 477 |
+| Lines/statements | 40,827 | 41,439 | 98.52% | 612 |
+| Branches | 9,169 | 9,644 | 95.07% | 475 |
 | Functions | 2,529 | 2,529 | 100% | 0 |
 
 - **180 tests passed; zero failures.**
@@ -55,6 +55,10 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `DocumentIO.cropToSelection`: a crop entirely outside the canvas returns false
+  and restores the previously active tool. A native regression failed before
+  the fix and now verifies the tool, document identity, pixels and history.
 
 - `ToolHistoryMemento.onUndo`: restore the required tool even when the active tool
   has been cleared. A direct-undo regression demonstrated the previous null
