@@ -41,6 +41,243 @@ function loadPlatform(relative, globals, dependencies) {
     return {context, api: module.exports};
 }
 
+function bootFixture(options = {}) {
+    let state = {now: 1000000, reloads: 0, unregisters: 0, updates: 0, dialogs: [], logs: [],
+        messages: [], modal: false, unsaved: false, saveResult: true, saves: 0, ...options,
+        choices: [...(options.choices || [])]};
+    let worker = new EventEmitter();
+    worker.state = "installing";
+    worker.addEventListener = worker.on;
+    worker.postMessage = message => state.messages.push(JSON.parse(JSON.stringify(message)));
+    let registration = new EventEmitter();
+    registration.addEventListener = registration.on;
+    registration.waiting = options.waiting ? worker : null;
+    registration.installing = options.installing ? worker : null;
+    registration.update = async () => {
+        ++state.updates;
+        if (state.updateError) {
+            throw state.updateError;
+        }
+    };
+    let serviceWorker = new EventEmitter();
+    serviceWorker.addEventListener = serviceWorker.on;
+    serviceWorker.controller = options.controlled === false ? null : {};
+    serviceWorker.register = async (...args) => {
+        state.registrationArgs = args;
+        if (state.registerError) {
+            throw state.registerError;
+        }
+        return registration;
+    };
+    serviceWorker.getRegistrations = async () => [{
+        unregister: async () => {
+            ++state.unregisters;
+            return true;
+        }
+    }];
+    let storage = new Map(options.cleared ? [["paintdotjs-sw-cleared", "1"]] : []);
+    let document = new EventEmitter();
+    document.addEventListener = document.on;
+    document.visibilityState = "visible";
+    document.baseURI = "https://paint.example.test/index.html";
+    document.body = {};
+    document.createElement = tag => ({
+        tag, children: [], append(...children) {
+            this.children.push(...children);
+        }
+    });
+    function MutationObserver(callback) {
+        this.observe = (target, settings) => {
+            assert.equal(target, document.body);
+            assert.equal(settings.childList, true);
+            assert.equal(settings.subtree, true);
+            state.observer = callback;
+        };
+        this.disconnect = () => state.disconnected = true;
+    }
+    let globals = {
+        isApp: false, navigator: {serviceWorker}, document, MutationObserver,
+        location: {hostname: options.hostname || "paint.example.test", reload: () => ++state.reloads},
+        sessionStorage: {getItem: key => storage.get(key) || null,
+            setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key)},
+        Date: {now: () => state.now},
+        setInterval: (callback, delay) => {
+            assert.equal(delay, 3600000);
+            state.interval = callback;
+        },
+        console: {log: error => state.logs.push(error)},
+        fetch: async (url, settings) => {
+            assert.equal(url.origin, "https://paint.example.test");
+            assert.equal(url.pathname, "/assets/update.json");
+            assert.equal(url.searchParams.get("v"), String(state.now));
+            assert.equal(settings.cache, "no-store");
+            if (state.fetchError) {
+                throw state.fetchError;
+            }
+            return {ok: state.httpOk !== false, json: async () => {
+                if (state.jsonError) {
+                    throw state.jsonError;
+                }
+                return state.metadata === undefined ? {version: "2.2.0"} : state.metadata;
+            }};
+        },
+        ModalDialogController: {isActive: () => state.modal},
+        PdjInfo: {formatVersion: version => "formatted:" + version},
+        TaskDialog: {show: async settings => {
+            state.dialogs.push(settings);
+            return state.choices.shift() || "later";
+        }},
+        window: options.noApp ? {} : {app: {hasUnsavedDocuments: () => state.unsaved}},
+        DocumentIO: {saveAll: async () => {
+            ++state.saves;
+            return state.saveResult;
+        }}
+    };
+    if (options.isApp !== undefined) {
+        globals.isApp = options.isApp;
+    }
+    if (options.noServiceWorker) {
+        globals.navigator = {};
+    }
+    if (options.undefinedPlatform) {
+        delete globals.isApp;
+    }
+    loadPlatform("boot_loader.js", globals, {});
+    let flush = async () => {
+        for (let index = 0; index < 4; ++index) {
+            await new Promise(resolve => setImmediate(resolve));
+        }
+    };
+    return {state, worker, registration, serviceWorker, document, storage, flush};
+}
+
+test("browser boot disables stale local workers and avoids reload loops", async () => {
+    for (let hostname of ["localhost", "127.0.0.1", "[::1]"]) {
+        for (let [controlled, cleared] of [[true, false], [true, true], [false, false]]) {
+            let fixture = bootFixture({hostname, controlled, cleared});
+            await fixture.flush();
+            assert.equal(fixture.state.unregisters, 1);
+            assert.equal(fixture.state.reloads, controlled && !cleared ? 1 : 0);
+            assert.equal(fixture.storage.has("paintdotjs-sw-cleared"), controlled && !cleared);
+            assert.equal(fixture.state.registrationArgs, undefined);
+        }
+    }
+    for (let options of [{isApp: true}, {undefinedPlatform: true}, {noServiceWorker: true}]) {
+        let fixture = bootFixture(options);
+        await fixture.flush();
+        assert.equal(fixture.state.registrationArgs, undefined);
+        assert.equal(fixture.state.unregisters, 0);
+    }
+});
+
+test("browser boot throttles update checks and reports registration/update failures", async () => {
+    let fixture = bootFixture();
+    await fixture.flush();
+    assert.equal(fixture.state.registrationArgs[0], "./service_worker.js");
+    assert.equal(fixture.state.registrationArgs[1].updateViaCache, "none");
+    assert.equal(fixture.state.updates, 1);
+    fixture.serviceWorker.emit("controllerchange");
+    assert.equal(fixture.state.reloads, 0);
+    fixture.document.visibilityState = "hidden";
+    fixture.document.emit("visibilitychange");
+    fixture.document.visibilityState = "visible";
+    fixture.document.emit("visibilitychange");
+    fixture.state.interval();
+    await fixture.flush();
+    assert.equal(fixture.state.updates, 1);
+    fixture.state.now += 300000;
+    fixture.document.emit("visibilitychange");
+    await fixture.flush();
+    assert.equal(fixture.state.updates, 2);
+    fixture.state.now += 3600000;
+    fixture.state.updateError = new Error("offline update check");
+    fixture.state.interval();
+    await fixture.flush();
+    assert.equal(fixture.state.updates, 3);
+    assert.equal(fixture.state.logs[0], fixture.state.updateError);
+    let error = new Error("registration denied");
+    fixture = bootFixture({registerError: error});
+    await fixture.flush();
+    assert.equal(fixture.state.logs[0], error);
+    assert.equal(fixture.state.interval, undefined);
+});
+
+test("browser boot prompts safely for installed workers, metadata and unsaved documents", async () => {
+    for (let options of [
+        {choices: ["later"]},
+        {choices: ["now"], noApp: true},
+        {choices: ["now", "discard"], unsaved: true},
+        {choices: ["now", "cancel"], unsaved: true},
+        {choices: ["now", "save"], unsaved: true, saveResult: false},
+        {choices: ["now", "save"], unsaved: true, saveResult: true},
+        {choices: ["now"], httpOk: false},
+        {choices: ["now"], metadata: {version: 123}},
+        {choices: ["now"], fetchError: new Error("metadata unavailable")},
+        {choices: ["now"], jsonError: new Error("invalid metadata")}
+    ]) {
+        let fixture = bootFixture({...options, waiting: true});
+        await fixture.flush();
+        let installed = options.choices[0] === "now" && (!options.unsaved
+            || options.choices[1] === "discard" || options.choices[1] === "save" && options.saveResult);
+        assert.equal(fixture.state.messages.length, installed ? 1 : 0);
+        if (installed) {
+            assert.deepEqual(fixture.state.messages[0], {type: "SKIP_WAITING"});
+        }
+        assert.equal(fixture.state.saves, options.choices[1] === "save" ? 1 : 0);
+        let preview = fixture.state.dialogs[0].preview;
+        assert.equal(preview.children[1].textContent, options.httpOk === false || options.metadata
+            || options.fetchError || options.jsonError ? "A newer version is ready" : "paint.js formatted:2.2.0");
+        assert.equal(preview.children[2].rel, "noopener");
+        fixture.serviceWorker.emit("controllerchange");
+        fixture.serviceWorker.emit("controllerchange");
+        assert.equal(fixture.state.reloads, installed ? 1 : 0);
+    }
+    let fixture = bootFixture({installing: true, controlled: false});
+    await fixture.flush();
+    fixture.worker.state = "installed";
+    fixture.worker.emit("statechange");
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 0);
+    fixture.serviceWorker.controller = {};
+    fixture.worker.state = "installing";
+    fixture.worker.emit("statechange");
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 0);
+    fixture.worker.state = "installed";
+    fixture.worker.emit("statechange");
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 1);
+    fixture.registration.installing = null;
+    fixture.registration.emit("updatefound");
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 1);
+});
+
+test("browser boot waits for free modal slots and deduplicates installation prompts", async () => {
+    let fixture = bootFixture({installing: true, modal: true, choices: ["now"]});
+    await fixture.flush();
+    fixture.worker.state = "installed";
+    fixture.worker.emit("statechange");
+    fixture.worker.emit("statechange");
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 0);
+    assert.equal(typeof fixture.state.observer, "function");
+    fixture.state.observer();
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 0);
+    fixture.state.modal = false;
+    fixture.state.observer();
+    await fixture.flush();
+    assert.equal(fixture.state.disconnected, true);
+    assert.equal(fixture.state.dialogs.length, 1);
+    assert.deepEqual(fixture.state.messages, [{type: "SKIP_WAITING"}]);
+    fixture.registration.waiting = fixture.worker;
+    fixture.registration.emit("updatefound");
+    fixture.worker.emit("statechange");
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 2);
+});
+
 function updaterFixture(packaged, managed) {
     let messages = [];
     let timers = [];
