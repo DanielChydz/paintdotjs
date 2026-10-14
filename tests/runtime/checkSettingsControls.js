@@ -74,6 +74,14 @@ module.exports = async function checkSettingsControls() {
     change(language);
     check(button("Reload now").disabled, "Restored language did not disable reload");
 
+    phase("Windows system links are unavailable on Linux");
+    for (let [section, label] of [["pen", "Open Windows Pen & Ink settings"], ["colorManagement", "Open Windows display settings"]]) {
+        settings.selectSection(section);
+        let systemButton = button(label);
+        check(systemButton.disabled && systemButton.title === "Available in the Windows desktop app",
+            "Linux settings exposed an active Windows-only system link");
+    }
+
     phase("canvas border RGB, wheel, brightness and disabled controls");
     settings.selectSection("canvas");
     let customBorder = [...settings.page.querySelectorAll("input[type=checkbox]")][1];

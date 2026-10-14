@@ -569,7 +569,7 @@ class SettingsDialog {
             : "No compatible pointer input API was detected.");
         this.addButton("Open Windows Pen & Ink settings", () => {
             window.open("ms-settings:pen", "_blank", "noopener");
-        }, {disabled: !isApp, tooltip: "Available in the desktop app"});
+        }, {disabled: !isApp || process.platform !== "win32", tooltip: "Available in the Windows desktop app"});
     }
 
     renderGraphics() {
@@ -593,7 +593,7 @@ class SettingsDialog {
         });
         this.addButton("Open Windows display settings", () => {
             window.open("ms-settings:display", "_blank", "noopener");
-        }, {disabled: !isApp, tooltip: "Available in the desktop app"});
+        }, {disabled: !isApp || process.platform !== "win32", tooltip: "Available in the Windows desktop app"});
         this.addSectionHeading("Status");
         this.addNote("Canvas colors are rendered in the browser's sRGB color space.");
     }
