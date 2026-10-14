@@ -231,6 +231,50 @@ module.exports = async function checkSettingsControls() {
     check(FontManager.getFonts().length === 0 && settings.status.textContent.includes("Removed 1"), "Confirmed font clear did not delete metadata");
     await settings.clearAllFonts();
 
+    phase("font import failures, batched preview rows and storage error recovery");
+    let oldAlert = window.alert;
+    let alerts = [];
+    let openFontDatabase = FontManager.openDatabase;
+    try {
+        window.alert = message => alerts.push(message);
+        let failed = await settings.importFonts([new window.File(["invalid font bytes"], "Broken.ttf", {type: "font/ttf"})]);
+        check(failed.added.length === 0 && failed.errors.length === 1 && FontManager.getFonts().length === 0
+            && settings.status.textContent.includes("could not be added") && alerts.at(-1).includes("Broken.ttf"),
+        "Corrupt font import did not surface its file or left invalid metadata");
+        let batch = Array.from({length: 21}, (_, index) => new window.File([bytes],
+            "Preview" + String(index).padStart(2, "0") + ".ttf", {type: "font/ttf"}));
+        let imported = await settings.importFonts(batch);
+        check(imported.added.length === 21 && settings.status.textContent === "Added 21 fonts.",
+            "Font batch did not report all successfully imported files");
+        await waitFor(() => settings.fontList.querySelectorAll(".settings-font-row").length === 21);
+        await waitFor(() => settings.fontList.querySelector(".settings-font-preview").style.fontFamily.includes("paintjs-"));
+        check([...settings.fontList.querySelectorAll("strong")].map(label => label.textContent).join(",")
+            === batch.map(file => file.name.replace(/\.ttf$/, "")).join(","),
+        "Chunked font rendering lost its alphabetical order or a row");
+        FontManager.openDatabase = async () => {
+            throw new Error("Font database temporarily unavailable");
+        };
+        let remove = settings.fontList.querySelector(".settings-font-remove");
+        remove.click();
+        await waitFor(() => settings.status.textContent.includes("Could not remove"));
+        check(!remove.disabled && FontManager.getFonts().length === 21
+            && alerts.at(-1).includes("temporarily unavailable"), "Failed removal deleted metadata or left its button disabled");
+        let clearing = settings.clearAllFonts();
+        choose("Clear All Fonts");
+        await clearing;
+        check(FontManager.getFonts().length === 21 && !settings.fontClearButton.disabled
+            && settings.status.textContent === "Could not clear the custom fonts.",
+        "Failed clear removed fonts or prevented retry");
+        FontManager.openDatabase = openFontDatabase;
+        clearing = settings.clearAllFonts();
+        choose("Clear All Fonts");
+        await clearing;
+        check(FontManager.getFonts().length === 0, "Retry after a storage failure did not clear fonts");
+    } finally {
+        FontManager.openDatabase = openFontDatabase;
+        window.alert = oldAlert;
+    }
+
     phase("deterministic desktop update bridge outcomes");
     settings.selectSection("updates");
     let updateButton = button("Check now");

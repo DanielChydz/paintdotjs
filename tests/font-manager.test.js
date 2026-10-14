@@ -123,6 +123,7 @@ function fontFixture(options = {}) {
     let filename = path.resolve(__dirname, "../js/src/engine/util/FontManager.js");
     vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
     let manager = vm.runInContext("FontManager", context);
+    let openDatabase = manager.openDatabase.bind(manager);
     manager.openDatabase = async () => {
         if (state.databaseError) {
             throw state.databaseError;
@@ -130,7 +131,7 @@ function fontFixture(options = {}) {
         return database;
     };
     let file = (name, type = "", data = new Uint8Array([1, 2, 3]).buffer) => ({name, type, arrayBuffer: async () => data});
-    return {state, storage, records, fonts, database, manager, context, window, file};
+    return {state, storage, records, fonts, database, manager, context, window, file, openDatabase};
 }
 
 test("font metadata validation rejects damaged caches and omits heavyweight byte buffers", async () => {
@@ -293,4 +294,67 @@ test("font scheduling prefers idle callbacks, then scheduler yield, then animati
     };
     await manager.yieldToBrowser();
     assert.deepEqual(calls, ["idle", "scheduler", "scheduler", "frame"]);
+});
+
+test("font database requests expose native errors and upgrade only a missing store", async () => {
+    let {context, window, openDatabase} = fontFixture();
+    delete window.indexedDB;
+    await assert.rejects(openDatabase(), /Persistent browser storage is not available/);
+    window.indexedDB = {};
+    let request;
+    context.indexedDB = {open: (name, version) => {
+        assert.equal(name, "paintdotjs-user-fonts");
+        assert.equal(version, 1);
+        request = {};
+        return request;
+    }};
+    for (let exists of [true, false]) {
+        let created = [];
+        let database = {objectStoreNames: {contains: name => {
+            assert.equal(name, "fonts");
+            return exists;
+        }}, createObjectStore: (name, options) => created.push([name, options.keyPath])};
+        let opening = openDatabase();
+        request.result = database;
+        request.onupgradeneeded();
+        assert.deepEqual(created, exists ? [] : [["fonts", "id"]]);
+        request.onsuccess();
+        assert.equal(await opening, database);
+    }
+    for (let error of [null, new Error("IndexedDB denied")]) {
+        let opening = openDatabase();
+        request.error = error;
+        request.onerror();
+        await assert.rejects(opening, failure => error ? failure === error : /Could not open font storage/.test(failure.message));
+    }
+});
+
+test("font request failures reject before completion without closing caller-owned databases", async () => {
+    let {manager} = fontFixture();
+    for (let error of [null, new Error("Request failed")]) {
+        let closed = 0;
+        let transaction = {objectStore: () => ({})};
+        let database = {transaction: () => transaction, close: () => ++closed};
+        let request = {error};
+        let running = manager.runRequest(database, "readonly", () => request, false);
+        request.onerror();
+        await assert.rejects(running, failure => error ? failure === error : /operation failed/.test(failure.message));
+        transaction.onabort();
+        assert.equal(closed, 0);
+    }
+});
+
+test("uncached fonts omit deleted records and can be removed without loaded faces or a Text tool", async () => {
+    let {manager, records, context, state} = fontFixture();
+    records.set("missing", undefined);
+    records.set("valid", {id: "valid", name: "Stored", family: "stored-family", size: 4});
+    await manager.initialize();
+    assert.equal(manager.getFonts().length, 1);
+    assert.equal(manager.faces.size, 0);
+    delete context.ToolType;
+    assert.equal(await manager.removeFont("valid"), true);
+    assert.equal(manager.getFonts().length, 0);
+    manager.records = [{id: "legacy", name: "Legacy", family: "legacy-family"}];
+    assert.equal(await manager.removeAllFonts(), 1);
+    assert.equal(state.closed, 3);
 });

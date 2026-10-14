@@ -313,7 +313,26 @@ module.exports = async function checkSurfaceTransactions() {
     tool.restoreSavedRegion();
     check(surface.getColorAt(0, 0).alpha === 255 && tool.savedRegion === null, "Saved-region restore lost its source pixels or retained state");
     region.dispose();
+    phase("saved-region replacement, offscreen saves and deactivation rollback");
+    tool.savedTiles = null;
+    tool.saveRegion(null, new Rectangle(1000, 1000, 2, 2));
+    check(tool.savedTiles === null, "Offscreen save allocated a tile mask");
+    let firstRegion = Region.fromRectangle(new Rectangle(0, 0, 768, 8));
+    let secondRegion = Region.fromRectangle(new Rectangle(256, 0, 256, 8));
+    tool.saveRegion(firstRegion, firstRegion.getBounds());
+    check(tool.savedRegion !== firstRegion, "Saved region retained caller-owned geometry");
+    tool.saveRegion(secondRegion, secondRegion.getBounds());
+    check(tool.savedRegion.getBounds().width === 256, "Replacing a saved region kept its previous extent");
+    tool.beginBitmapTransaction();
+    check(tool.savedRegion === null, "Beginning a transaction retained a stale saved region");
+    tool.saveRegion(secondRegion, secondRegion.getBounds());
+    tool.updateBitmapTransaction(new Rectangle(256, 0, 256, 8), destination => destination.context.clearRect(256, 0, 256, 8));
     tool.onDeactivate();
+    equal(surface.context.getImageData(0, 0, 768, 8).data, before, "Deactivation did not roll back the active bitmap preview");
+    check(tool.bitmapTransaction === null && tool.savedRegion === null && tool.savedTiles === null,
+        "Deactivation retained bitmap transaction state");
+    firstRegion.dispose();
+    secondRegion.dispose();
     check(!tool.isActive(), "Deactivated base tool retained its active state");
     phase("actual paint-bucket dodge/burn boundary pixels");
     for (let [mode, backdrop, paint, expected] of [
