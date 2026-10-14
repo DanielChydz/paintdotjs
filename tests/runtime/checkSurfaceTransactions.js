@@ -152,6 +152,35 @@ module.exports = async function checkSurfaceTransactions() {
         }
     }
     check(blendMismatches.length === 0, "Software blending differs from Canvas: " + JSON.stringify(blendMismatches));
+    phase("software hue, saturation, color and luminosity match native colored compositing");
+    let colorMismatches = [];
+    let mismatchCount = 0;
+    let palette = [[0, 0, 0], [255, 255, 255], [50, 100, 150], [200, 100, 20], [40, 210, 90]];
+    for (let mode of ["hue", "saturation", "color", "luminosity"]) {
+        for (let back of palette) {
+            for (let front of palette) {
+                for (let [backAlpha, frontAlpha] of [[255, 255], [255, 128], [128, 255], [64, 128], [0, 255], [255, 0], [0, 0]]) {
+                    let data = new Uint8ClampedArray([...back, backAlpha]);
+                    tool.blendPixel(data, 0, Color.fromRGBA(...front, frontAlpha), mode);
+                    context.globalCompositeOperation = "copy";
+                    context.fillStyle = `rgba(${back.join(",")},${backAlpha / 255})`;
+                    context.fillRect(0, 0, 1, 1);
+                    context.globalCompositeOperation = mode;
+                    context.fillStyle = `rgba(${front.join(",")},${frontAlpha / 255})`;
+                    context.fillRect(0, 0, 1, 1);
+                    let expected = context.getImageData(0, 0, 1, 1).data;
+                    if (!data.every((value, index) => Math.abs(value - expected[index]) <= 2)) {
+                        ++mismatchCount;
+                        if (colorMismatches.length < 8) {
+                            colorMismatches.push({mode, back, front, backAlpha, frontAlpha,
+                                software: Array.from(data), canvas: Array.from(expected)});
+                        }
+                    }
+                }
+            }
+        }
+    }
+    check(mismatchCount === 0, "Nonseparable software/Canvas mismatch count " + mismatchCount + ": " + JSON.stringify(colorMismatches));
     ToolType.PENCIL.setSetting("blendMode", "unknown");
     check(tool.getCompositeOperation() === "source-over", "Unknown blending mode lost its normal fallback");
     let transparent = new Uint8ClampedArray(4);
@@ -258,6 +287,51 @@ module.exports = async function checkSurfaceTransactions() {
         check(app.getActiveTool().onMouseDown(2, 2, MouseButton.LEFT), "Boundary bucket fill did not start");
         equal(channels(surface.getColorAt(2, 2)), [expected, expected, expected, 255],
             "Actual paint bucket disagrees with Canvas at its " + mode + " boundary");
+    }
+    phase("actual nonseparable bucket fills preserve selection clipping and pixel-exact undo/redo");
+    for (let mode of ["hue", "saturation", "color", "luminosity"]) {
+        for (let backdrop of [[0, 0, 0, 255], [50, 100, 150, 255], [200, 100, 20, 128], [40, 210, 90, 64], [255, 255, 255, 255], [0, 0, 0, 0]]) {
+            for (let paint of [[200, 100, 20, 255], [40, 210, 90, 128], [255, 255, 255, 0]]) {
+                app.setActiveTool(null);
+                workspace.getSelection().reset();
+                workspace.getSelection().setContinuation(new Rectangle(1, 1, 4, 4), CombineMode.REPLACE);
+                workspace.getSelection().commitContinuation();
+                history.clearAll();
+                ToolType.PAINT_BUCKET.resetSettings();
+                ToolType.PAINT_BUCKET.setSetting("blendMode", mode);
+                ToolType.PAINT_BUCKET.setSetting("antialias", false);
+                ToolType.PAINT_BUCKET.setSetting("renderingQuality", "aliased");
+                surface.clear(Color.fromRGBA(...backdrop));
+                let before = surface.context.getImageData(0, 0, 768, 8).data;
+                FormRegistry.get("colorsForm").setMainColor(Color.fromRGBA(...paint));
+                context.globalCompositeOperation = "copy";
+                context.fillStyle = `rgba(${backdrop.slice(0, 3).join(",")},${backdrop[3] / 255})`;
+                context.fillRect(0, 0, 1, 1);
+                context.globalCompositeOperation = mode;
+                context.fillStyle = `rgba(${paint.slice(0, 3).join(",")},${paint[3] / 255})`;
+                context.fillRect(0, 0, 1, 1);
+                let expected = context.getImageData(0, 0, 1, 1).data;
+                app.setActiveToolFromType(ToolType.PAINT_BUCKET);
+                check(app.getActiveTool().onMouseDown(2, 2, MouseButton.LEFT), "Nonseparable bucket fill did not start: " + mode);
+                app.setActiveTool(null);
+                let after = surface.context.getImageData(0, 0, 768, 8).data;
+                for (let y = 0; y < 8; ++y) {
+                    for (let x = 0; x < 768; ++x) {
+                        let offset = (y * 768 + x) * 4;
+                        let selected = x >= 1 && x < 5 && y >= 1 && y < 5;
+                        check(after.slice(offset, offset + 4).every((value, channel) => selected
+                            ? Math.abs(value - expected[channel]) <= 2 : value === before[offset + channel]),
+                        "Actual " + mode + " fill differs from Canvas or changed an unselected pixel");
+                    }
+                }
+                if (history.undoStack.length > 0) {
+                    history.stepBackward();
+                    equal(surface.context.getImageData(0, 0, 768, 8).data, before, "Nonseparable bucket undo did not restore exact source pixels");
+                    history.stepForward();
+                    equal(surface.context.getImageData(0, 0, 768, 8).data, after, "Nonseparable bucket redo did not restore exact filled pixels");
+                }
+            }
+        }
     }
     app.closeDocumentWorkspace(workspace, false);
 };

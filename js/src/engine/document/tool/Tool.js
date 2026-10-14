@@ -171,6 +171,43 @@ class Tool {
         const sourceRgb = [source.red / 255, source.green / 255, source.blue / 255];
         const backdropAlpha = data[index + 3] / 255;
         const sourceAlpha = source.alpha / 255;
+        let blendedRgb = null;
+        if (backdropAlpha > 0 && sourceAlpha > 0
+            && (mode === "hue" || mode === "saturation" || mode === "color" || mode === "luminosity")) {
+            blendedRgb = (mode === "hue" || mode === "color" ? sourceRgb : backdrop).slice();
+            if (mode === "hue" || mode === "saturation") {
+                let saturationSource = mode === "hue" ? backdrop : sourceRgb;
+                let saturation = Math.max(...saturationSource) - Math.min(...saturationSource);
+                let minimum = Math.min(...blendedRgb);
+                let maximum = Math.max(...blendedRgb);
+                let scale = maximum > minimum ? saturation / (maximum - minimum) : 0;
+                for (let channel = 0; channel < 3; ++channel) {
+                    blendedRgb[channel] = (blendedRgb[channel] - minimum) * scale;
+                }
+            }
+
+            // CSS blending uses weighted luminosity, not HSL lightness.
+            let luminosity = rgb => 0.3 * rgb[0] + 0.59 * rgb[1] + 0.11 * rgb[2];
+            let targetLuminosity = luminosity(mode === "luminosity" ? sourceRgb : backdrop);
+            let difference = targetLuminosity - luminosity(blendedRgb);
+            for (let channel = 0; channel < 3; ++channel) {
+                blendedRgb[channel] += difference;
+            }
+            let minimum = Math.min(...blendedRgb);
+            let maximum = Math.max(...blendedRgb);
+            if (minimum < 0) {
+                let scale = targetLuminosity / (targetLuminosity - minimum);
+                for (let channel = 0; channel < 3; ++channel) {
+                    blendedRgb[channel] = targetLuminosity + (blendedRgb[channel] - targetLuminosity) * scale;
+                }
+            }
+            if (maximum > 1) {
+                let scale = (1 - targetLuminosity) / (maximum - targetLuminosity);
+                for (let channel = 0; channel < 3; ++channel) {
+                    blendedRgb[channel] = targetLuminosity + (blendedRgb[channel] - targetLuminosity) * scale;
+                }
+            }
+        }
         const blendChannel = (back, front) => {
             switch (mode) {
                 case "multiply": return back * front;
@@ -195,7 +232,7 @@ class Tool {
         };
         const outputAlpha = sourceAlpha + backdropAlpha * (1 - sourceAlpha);
         for (let channel = 0; channel < 3; ++channel) {
-            const blended = blendChannel(backdrop[channel], sourceRgb[channel]);
+            const blended = blendedRgb === null ? blendChannel(backdrop[channel], sourceRgb[channel]) : blendedRgb[channel];
             const premultiplied = sourceAlpha * (1 - backdropAlpha) * sourceRgb[channel]
                 + sourceAlpha * backdropAlpha * blended
                 + (1 - sourceAlpha) * backdropAlpha * backdrop[channel];
