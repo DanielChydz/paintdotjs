@@ -59,7 +59,9 @@ function loadContext(allocations = []) {
         let absolute = path.join(root, filename);
         vm.runInContext(fs.readFileSync(absolute, "utf8"), context, {filename: pathToFileURL(absolute).href});
     }
-    return vm.runInContext("({BitmapEffectEngine, BitmapHistoryMemento, Rectangle})", context);
+    let api = vm.runInContext("({BitmapEffectEngine, BitmapHistoryMemento, Rectangle})", context);
+    api.context = context;
+    return api;
 }
 
 function pixels(width, height) {
@@ -416,4 +418,225 @@ test("transparent quantization is a no-op and zero-blur shadow-only output has e
     let definition = BitmapEffectEngine.EFFECTS.quantizeEffect;
     assert.deepEqual(BitmapEffectEngine.apply(source, 5, 3, definition,
         BitmapEffectEngine.defaults(definition)).data, source.data);
+});
+
+function effectActionFixture(mode = "success", mask = null) {
+    let {context, BitmapEffectEngine, BitmapHistoryMemento, Rectangle} = loadContext();
+    let source = pixels(8, 6);
+    let displayed = new Uint8ClampedArray(source.data);
+    let state = {mode, workers: [], urls: [], revoked: [], errors: [], busy: false, applied: []};
+    let surface = {
+        getWidth: () => 8, getHeight: () => 6, getBounds: () => new Rectangle(0, 0, 8, 6),
+        context: {
+            getImageData: () => new ImageData(new Uint8ClampedArray(displayed), 8, 6),
+            putImageData: image => displayed = new Uint8ClampedArray(image.data)
+        }
+    };
+    function BitmapLayer() {
+        this.getSurface = () => surface;
+        this.invalidate = () => state.invalidations = (state.invalidations || 0) + 1;
+    }
+    let layer = new BitmapLayer();
+    let workspace = {
+        getActiveLayer: () => layer, getActiveLayerIndex: () => 0,
+        getSelection: () => mask,
+        getApp: () => ({fire: (...args) => state.applied.push(args)})
+    };
+    function Worker(url) {
+        if (state.mode === "create") {
+            throw new Error("worker creation denied");
+        }
+        assert.ok(state.urls.includes(url));
+        state.workers.push(this);
+        this.terminate = () => this.terminated = true;
+        this.postMessage = (message, transfers) => {
+            assert.notEqual(message.sourceBuffer, source.data.buffer);
+            assert.equal(transfers.length, mask === null ? 1 : 2);
+            assert.equal(transfers[0], message.sourceBuffer);
+            if (mask !== null) {
+                assert.notEqual(message.selectionBuffer, mask.buffer);
+                assert.equal(transfers[1], message.selectionBuffer);
+            }
+            if (state.mode === "throw") {
+                throw new Error("postMessage denied");
+            }
+            let delivered = structuredClone(message, {transfer: transfers});
+            this.message = delivered;
+            this.reply = () => {
+                let definition = BitmapEffectEngine.EFFECTS[delivered.effectId];
+                let result = BitmapEffectEngine.apply(
+                    new ImageData(new Uint8ClampedArray(delivered.sourceBuffer), 8, 6),
+                    8, 6, definition, delivered.values,
+                    delivered.selectionBuffer === null ? null : new Uint8Array(delivered.selectionBuffer)
+                );
+                this.onmessage({data: result.data.buffer});
+            };
+            if (state.mode !== "manual") {
+                queueMicrotask(() => {
+                    if (state.mode === "error") {
+                        this.onerror({error: new Error("worker rendering failed")});
+                    } else if (state.mode === "message") {
+                        this.onerror({message: "worker message failure"});
+                    } else if (state.mode === "emptyError") {
+                        this.onerror({});
+                    } else {
+                        this.reply();
+                    }
+                });
+            }
+        };
+    }
+    Object.assign(context, {
+        Worker, BitmapLayer, structuredClone, Blob,
+        i18n: key => key,
+        URL: {
+            createObjectURL: blob => {
+                assert.equal(blob.type, "text/javascript");
+                let url = "blob:effect-" + state.urls.length;
+                state.urls.push(url);
+                return url;
+            },
+            revokeObjectURL: url => state.revoked.push(url)
+        },
+        console: {error: (...args) => state.errors.push(args)},
+        document: {documentElement: {classList: {toggle: (name, busy) => {
+            assert.equal(name, "effect-rendering");
+            state.busy = busy;
+        }}}},
+        EffectConfigDialog: {open: settings => state.open(settings)}
+    });
+    for (let relative of [
+        "engine/util/ShortcutKey.js", "engine/document/history/action/Action.js",
+        "engine/document/history/action/actions/DocumentWorkspaceAction.js",
+        "engine/document/history/action/actions/document/effect/BitmapEffectAction.js"
+    ]) {
+        let filename = path.resolve(root, "js/src", relative);
+        vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    }
+    let BitmapEffectAction = vm.runInContext("BitmapEffectAction", context);
+    let definition = BitmapEffectEngine.EFFECTS.oilPaintingEffect;
+    let values = BitmapEffectEngine.defaults(definition);
+    let flush = () => new Promise(resolve => setImmediate(resolve));
+    return {context, state, source, surface, layer, workspace, BitmapEffectEngine,
+        BitmapHistoryMemento, BitmapEffectAction, definition, values, flush, pixels: () => displayed};
+}
+
+test("effect action workers transfer independent snapshots and report/fallback on each worker failure", async () => {
+    for (let mode of ["success", "error", "message", "emptyError", "throw", "create"]) {
+        for (let selected of [false, true]) {
+            let mask = selected ? Uint8Array.from({length: 48}, (_, index) => index % 2 ? 255 : 0) : null;
+            let fixture = effectActionFixture(mode, mask);
+            let {BitmapEffectAction, BitmapEffectEngine, BitmapHistoryMemento, definition, values, state, workspace, source} = fixture;
+            let before = new Uint8ClampedArray(source.data);
+            let expected = BitmapEffectEngine.apply(source, 8, 6, definition, values, mask).data;
+            let memento = await new BitmapEffectAction(definition).performAction(workspace, values);
+            assert.ok(memento instanceof BitmapHistoryMemento);
+            assert.deepEqual(fixture.pixels(), expected);
+            assert.deepEqual(source.data, before);
+            assert.equal(state.busy, false);
+            assert.deepEqual(state.revoked, state.urls);
+            assert.ok(state.workers.every(worker => worker.terminated));
+            assert.equal(state.errors.length, mode === "success" ? 0 : 1);
+            assert.equal(state.applied.length, 1);
+            let remembered = BitmapEffectAction.getLastEffect();
+            assert.equal(remembered.definition, definition);
+            assert.notEqual(remembered.values, values);
+        }
+    }
+});
+
+test("effect previews cancel stale workers, reject current errors and restore original pixels on dialog cancellation", async () => {
+    let fixture = effectActionFixture("manual");
+    let {state, workspace, definition, values, BitmapEffectAction, source} = fixture;
+    state.open = async settings => {
+        let first = settings.onPreview(values);
+        assert.equal(state.busy, true);
+        let oldWorker = state.workers[0];
+        let second = settings.onPreview({...values, brushSize: 3});
+        assert.equal(oldWorker.terminated, true);
+        await first;
+        oldWorker.reply();
+        oldWorker.onerror({error: new Error("stale failure")});
+        assert.equal(state.busy, true);
+        let current = state.workers[1];
+        current.onerror({message: "current failure"});
+        await assert.rejects(second, /current failure/);
+        let third = settings.onPreview(values);
+        state.workers[2].reply();
+        await third;
+        assert.notDeepEqual(fixture.pixels(), source.data);
+        let fourth = settings.onPreview(values);
+        assert.equal(settings.onPreview(null), null);
+        await fourth;
+        assert.deepEqual(fixture.pixels(), source.data);
+        assert.equal(state.busy, false);
+        return null;
+    };
+    assert.equal(await new BitmapEffectAction(definition).performAction(workspace), null);
+    assert.deepEqual(fixture.pixels(), source.data);
+    assert.deepEqual(state.revoked, state.urls);
+    assert.ok(state.workers.every(worker => worker.terminated));
+    assert.equal(state.applied.length, 0);
+    assert.equal(BitmapEffectAction.getLastEffect(), null);
+});
+
+test("effect actions clone remembered values, skip nonbitmap layers and repeat successfully without a dialog", async () => {
+    let fixture = effectActionFixture();
+    let {context, state, workspace, definition, values, BitmapEffectAction} = fixture;
+    assert.equal(await new BitmapEffectAction(definition).performAction({getActiveLayer: () => ({})}), null);
+    assert.equal(BitmapEffectAction.repeatLast(workspace), null);
+    assert.equal(BitmapEffectAction.getRememberedValues(definition), null);
+    for (let unavailable of [false, true]) {
+        context.structuredClone = unavailable ? undefined : structuredClone;
+        let original = {points: [[1, 2]], flag: true};
+        let copy = BitmapEffectAction.cloneValues(original);
+        assert.notEqual(copy, original);
+        copy.points[0][0] = 9;
+        assert.equal(original.points[0][0], 1);
+        assert.equal(BitmapEffectAction.cloneValues(null), null);
+        assert.equal(BitmapEffectAction.cloneValues(undefined), undefined);
+    }
+    state.open = async settings => {
+        await settings.onPreview(values);
+        return values;
+    };
+    await new BitmapEffectAction(definition).performAction(workspace);
+    let remembered = BitmapEffectAction.getRememberedValues(definition);
+    remembered.brushSize = 999;
+    assert.notEqual(BitmapEffectAction.getRememberedValues(definition).brushSize, 999);
+    state.open = () => {
+        throw new Error("Repeating an effect must not open a dialog");
+    };
+    assert.ok(await BitmapEffectAction.repeatLast(workspace));
+    assert.deepEqual(state.revoked, state.urls);
+});
+
+test("immediate adjustments and worker-free effect previews use the same pixels and history contract", async () => {
+    for (let repeated of [undefined, {}]) {
+        let fixture = effectActionFixture();
+        let {BitmapEffectAction, BitmapEffectEngine, workspace, source, state} = fixture;
+        let definition = BitmapEffectEngine.DEFINITIONS.invertColorsEffect;
+        assert.equal(definition.controls.length, 0);
+        let expected = BitmapEffectEngine.apply(source, 8, 6, definition, {}).data;
+        let memento = await new BitmapEffectAction(definition).performAction(workspace, repeated);
+        assert.ok(memento instanceof fixture.BitmapHistoryMemento);
+        assert.deepEqual(fixture.pixels(), expected);
+        assert.equal(state.workers.length, 0);
+        assert.equal(state.applied.length, 1);
+        assert.equal(BitmapEffectAction.getLastEffect(), null);
+    }
+    let fixture = effectActionFixture();
+    let {context, state, BitmapEffectAction, BitmapEffectEngine, definition, values, source, workspace} = fixture;
+    context.Worker = undefined;
+    state.open = async settings => {
+        assert.equal(settings.onPreview(values), null);
+        assert.deepEqual(fixture.pixels(), BitmapEffectEngine.apply(source, 8, 6, definition, values).data);
+        settings.onPreview(null);
+        assert.deepEqual(fixture.pixels(), source.data);
+        return values;
+    };
+    await new BitmapEffectAction(definition).performAction(workspace);
+    assert.deepEqual(fixture.pixels(), BitmapEffectEngine.apply(source, 8, 6, definition, values).data);
+    assert.equal(state.workers.length, 0);
+    assert.equal(BitmapEffectAction.getRememberedValues(BitmapEffectEngine.EFFECTS.bokehEffect), null);
 });
