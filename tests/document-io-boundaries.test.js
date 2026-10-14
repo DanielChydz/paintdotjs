@@ -701,3 +701,128 @@ test("save-all filters clean workspaces and restores the original selection afte
         assert.equal(fixture.state.workspace, first);
     }
 });
+
+function loadClipboardGeometry(context) {
+    for (let name of ["Point", "Size", "Rectangle"]) {
+        let filename = path.resolve(__dirname, "../js/src/engine/util", name + ".js");
+        vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    }
+    return vm.runInContext("({Point, Rectangle})", context);
+}
+
+test("clipboard entry points report missing images and propagate decoding failures", async () => {
+    let fixture = documentFixture();
+    for (let method of ["pasteFromClipboard", "pasteIntoNewImage", "pasteIntoNewLayer", "copySelection", "cutSelection"]) {
+        assert.equal(await fixture.io[method](), false);
+    }
+    assert.equal(fixture.state.alerts.length, 3);
+    assert.ok(fixture.state.alerts.every(message => message.includes("does not contain an image")));
+    let blob = new Blob(["external image"]);
+    fixture.io.internalClipboard = blob;
+    fixture.io.pasteBlob = async received => {
+        assert.equal(received, blob);
+        return true;
+    };
+    assert.equal(await fixture.io.pasteFromClipboard(), true);
+    let failure = new Error("Image decoder rejected bytes");
+    fixture.io.loadImage = async () => {
+        throw failure;
+    };
+    await assert.rejects(fixture.io.pasteIntoNewImage(), error => error === failure);
+    assert.equal(fixture.state.created.length, 0);
+    fixture.io.internalClipboard = null;
+    fixture.state.workspace = {getActiveLayer: () => null, getSelection: () => ({isEmpty: () => true})};
+    assert.equal(await fixture.io.copySelection(), false);
+    assert.equal(await fixture.io.cutSelection(), false);
+    assert.equal(await fixture.io.pasteIntoNewLayer(), false);
+});
+
+test("clipboard source coordinates follow pixel identity and narrow/offscreen viewport bounds", async () => {
+    let fixture = documentFixture();
+    let {Rectangle} = loadClipboardGeometry(fixture.context);
+    let image = {width: 4, height: 3};
+    let blob = new Blob(["copied"]);
+    let bounds = new Rectangle(12, 8, 4, 3);
+    let coordinates = value => [value.x, value.y, value.width, value.height];
+    fixture.io.internalClipboard = blob;
+    fixture.io.internalClipboardInfo = {width: 4, height: 3, bounds, pixelDigest: "same-pixels"};
+    let result = await fixture.io.getClipboardSourceBounds(blob, image);
+    assert.deepEqual(coordinates(result), [12, 8, 4, 3]);
+    assert.notEqual(result, bounds);
+    result.x = 99;
+    assert.equal(bounds.x, 12);
+    fixture.io.getImagePixelDigest = async () => "same-pixels";
+    result = await fixture.io.getClipboardSourceBounds(new Blob(["re-encoded"]), image);
+    assert.deepEqual(coordinates(result), [12, 8, 4, 3]);
+    fixture.io.getImagePixelDigest = async () => "different-pixels";
+    result = await fixture.io.getClipboardSourceBounds(new Blob(["external"]), image);
+    assert.deepEqual(coordinates(result), [0, 0, 4, 3]);
+    for (let [visible, source, size, expected] of [
+        [[10.1, 20.1, 0.2, 0.2], [0, 0], [1, 1], [10, 20]],
+        [[10, 20, 10, 10], [0, 0], [4, 3], [10, 20]],
+        [[10, 20, 10, 10], [99, 99], [4, 3], [16, 27]],
+        [[0, 0, 200, 200], [98, 98], [4, 3], [96, 97]],
+        [[-10, -10, 20, 20], [-20, -20], [200, 200], [0, 0]]
+    ]) {
+        let workspace = {getVisibleDocumentRect: () => new Rectangle(...visible),
+            getDocument: () => ({getWidth: () => 100, getHeight: () => 100})};
+        let position = fixture.io.getPastePosition(workspace, new Rectangle(...source, ...size), ...size);
+        assert.deepEqual([position.x, position.y], expected);
+    }
+});
+
+test("pixel digest uses SHA-256 when available and a stable byte-sensitive fallback otherwise", async () => {
+    let fixture = documentFixture();
+    let pixels = new Uint8ClampedArray([255, 0, 0, 255, 0, 128, 0, 255]);
+    fixture.context.HTMLCanvasElement = function () {};
+    let source = new fixture.context.HTMLCanvasElement();
+    source.width = 2;
+    source.height = 1;
+    source.getContext = () => ({getImageData: (x, y, width, height) => {
+        assert.deepEqual([x, y, width, height], [0, 0, 2, 1]);
+        return {data: pixels};
+    }});
+    fixture.context.crypto = require("node:crypto").webcrypto;
+    let expected = require("node:crypto").createHash("sha256").update(pixels).digest("hex");
+    assert.equal(await fixture.io.getImagePixelDigest(source, 2, 1), expected);
+    delete fixture.context.crypto;
+    let fallback = await fixture.io.getImagePixelDigest(source, 2, 1);
+    assert.equal(fallback, "650a4d2addfd2a18");
+    assert.equal(await fixture.io.getImagePixelDigest(source, 2, 1), fallback);
+    pixels[1] = 1;
+    assert.notEqual(await fixture.io.getImagePixelDigest(source, 2, 1), fallback);
+    assert.equal(fixture.state.elements.length, 0, "Matching canvas dimensions must reuse the original canvas");
+});
+
+test("document close releases its reentry lock after a canceled save or rejected dialog", async () => {
+    let fixture = savingFixture();
+    let {io, workspace, app, state, context} = fixture;
+    io.createUnsavedChangesPreview = () => "preview";
+    app.setActiveDocumentWorkspace = selected => state.workspace = selected;
+    let closes = 0;
+    app.closeDocumentWorkspace = selected => {
+        assert.equal(selected, workspace);
+        ++closes;
+        return true;
+    };
+    assert.equal(await io.closeDocumentWorkspace(null), false);
+    assert.equal(await io.closeDocumentWorkspace({}), false);
+    let resolveChoice;
+    context.TaskDialog.show = () => new Promise(resolve => resolveChoice = resolve);
+    let first = io.closeDocumentWorkspace(workspace);
+    assert.equal(await io.closeDocumentWorkspace(workspace), false);
+    resolveChoice("save");
+    io.saveActive = async () => false;
+    assert.equal(await first, false);
+    assert.equal(io.closingWorkspaces.size, 0);
+    assert.equal(closes, 0);
+    let failure = new Error("Dialog failed");
+    context.TaskDialog.show = async () => {
+        throw failure;
+    };
+    await assert.rejects(io.closeDocumentWorkspace(workspace), error => error === failure);
+    assert.equal(io.closingWorkspaces.size, 0);
+    context.TaskDialog.show = async () => "discard";
+    assert.equal(await io.closeDocumentWorkspace(workspace), true);
+    assert.equal(closes, 1);
+});
