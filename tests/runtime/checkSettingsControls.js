@@ -182,6 +182,31 @@ module.exports = async function checkSettingsControls() {
     check(FontManager.getFonts().length === 1, "Cancelled clear deleted fonts");
     settings.fontList.querySelector(".settings-font-remove").click();
     await waitFor(() => FontManager.getFonts().length === 0 && settings.status.textContent.includes("Removed"));
+    let originalInputClick = HTMLInputElement.prototype.click;
+    let fontInput = null;
+    try {
+        HTMLInputElement.prototype.click = function () {
+            if (this.type === "file") {
+                fontInput = this;
+            } else {
+                originalInputClick.call(this);
+            }
+        };
+        settings.fontAddButton.click();
+        check(fontInput !== null && fontInput.multiple && fontInput.accept === FontManager.getAcceptedFileTypes(),
+            "Add-fonts button did not request the supported multiple-file picker");
+        let selectedFonts = new DataTransfer();
+        selectedFonts.items.add(fontFile);
+        fontInput.files = selectedFonts.files;
+        fontInput.dispatchEvent(new Event("change", {bubbles: true}));
+        await waitFor(() => !settings.fontImporting && FontManager.getFonts().length === 1 && fontInput.value === "");
+        check(fontInput.files.length === 0, "Successful font import did not reset the picker for repeated selections");
+        settings.fontClearButton.click();
+        choose("Clear All Fonts");
+        await waitFor(() => FontManager.getFonts().length === 0 && settings.status.textContent.includes("Removed 1"));
+    } finally {
+        HTMLInputElement.prototype.click = originalInputClick;
+    }
     let transfer = new DataTransfer();
     transfer.items.add(fontFile);
     let dropZone = settings.fontDropZone;

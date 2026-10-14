@@ -358,12 +358,12 @@ class FontManager {
         return new Promise((resolve, reject) => {
             const transaction = database.transaction(this.storeName, mode);
             const request = callback(transaction.objectStore(this.storeName));
-            request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error || new Error("Font storage operation failed"));
             transaction.oncomplete = () => {
                 if (closeDatabase) {
                     database.close();
                 }
+                resolve(request.result);
             };
             transaction.onabort = () => {
                 if (closeDatabase) {

@@ -202,6 +202,52 @@ module.exports = async function checkControls() {
     check(FontManager.records.length === 1 && FontManager.faces.size === 0, "Metadata reload eagerly decoded a font");
     let [loaded, shared] = await Promise.all([FontManager.ensureLoaded(font.id), FontManager.ensureLoaded(font.family)]);
     check(loaded === shared && loaded.status === "loaded", "Concurrent font requests did not share the loaded face");
+    let fontDatabase = await FontManager.openDatabase();
+    await rejects(() => FontManager.runRequest(fontDatabase, "readwrite", store => {
+        let request = store.put({id: "aborted-font-storage-probe"});
+        request.addEventListener("success", () => store.transaction.abort());
+        return request;
+    }), /Font storage transaction failed/);
+    fontDatabase = await FontManager.openDatabase();
+    let storedFont = await FontManager.runRequest(fontDatabase, "readonly", store => store.get(font.id), false);
+    check(storedFont.id === font.id && storedFont.data.byteLength === fontBytes.length,
+        "Font storage rollback removed an earlier committed font");
+    let committed = false;
+    let probeId = "committed-font-storage-probe";
+    await FontManager.runRequest(fontDatabase, "readwrite", store => {
+        store.transaction.addEventListener("complete", () => {
+            committed = true;
+        });
+        return store.put({...storedFont, id: probeId});
+    }, false);
+    check(committed, "Font storage acknowledged a write before transaction commit");
+    let probe = await FontManager.runRequest(fontDatabase, "readonly", store => store.get(probeId), false);
+    check(probe.id === probeId && probe.data.byteLength === fontBytes.length, "Committed font bytes did not survive a subsequent read");
+    let assert = require("node:assert/strict");
+    await assert.rejects(() => FontManager.runRequest(fontDatabase, "readwrite", store => store.add(storedFont), false),
+        error => error.name === "ConstraintError");
+    await assert.rejects(() => FontManager.runRequest(fontDatabase, "readonly", store => {
+        let request = store.get(font.id);
+        store.transaction.abort();
+        return request;
+    }, false), error => error.name === "AbortError");
+    await FontManager.runRequest(fontDatabase, "readwrite", store => store.delete(probeId));
+    let originalDatabaseName = FontManager.databaseName;
+    let incompatibleDatabaseName = originalDatabaseName + "-version-regression";
+    let settleRequest = request => new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        request.onblocked = () => reject(new Error("Test font database operation was blocked"));
+    });
+    try {
+        let newerDatabase = await settleRequest(indexedDB.open(incompatibleDatabaseName, FontManager.databaseVersion + 1));
+        newerDatabase.close();
+        FontManager.databaseName = incompatibleDatabaseName;
+        await assert.rejects(() => FontManager.openDatabase(), error => error.name === "VersionError");
+    } finally {
+        FontManager.databaseName = originalDatabaseName;
+        await settleRequest(indexedDB.deleteDatabase(incompatibleDatabaseName));
+    }
 
     phase("dropdown selection and font keyboard navigation");
     let changes = [];
