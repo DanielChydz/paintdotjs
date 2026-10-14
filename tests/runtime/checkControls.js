@@ -371,6 +371,48 @@ module.exports = async function checkControls() {
     fontDropdown.close();
     await new Promise(resolve => requestAnimationFrame(resolve));
     check(fontDropdown.fontEntryButtons.size === 0, "Deferred rendering retained closed font rows");
+    phase("font picker chunking, unmatched typeahead and delayed prefix reset");
+    let manyChoices = Array.from({length: 30}, (_, index) => ["preview-family-" + index, "Preview " + index]);
+    fontDropdown.replaceValues(manyChoices);
+    fontDropdown.open();
+    await waitFor(() => fontDropdown.fontEntryButtons.size === 30);
+    key("p");
+    check(fontDropdown.pendingFontJumpValue === null && document.activeElement === fontDropdown.fontEntryButtons.get("preview-family-0"),
+        "Chunked font picker did not focus the first prefix match");
+    key("!");
+    check(fontDropdown.menu !== null && fontDropdown.fontTypeaheadValue === "!",
+        "Unmatched font key closed the picker or failed to begin a new lookup");
+    await waitFor(() => fontDropdown.fontTypeaheadTimer === null);
+    check(fontDropdown.fontTypeaheadValue === "", "Font lookup prefix did not expire");
+    fontDropdown.element.focus();
+    fontDropdown.pendingFontJumpValue = "preview-family-25";
+    fontDropdown.moveFontSelection(1);
+    check(fontDropdown.value === "preview-family-26", "Arrow navigation did not use the pending late-chunk jump");
+    fontDropdown.element.focus();
+    fontDropdown.pendingFontJumpValue = null;
+    fontDropdown.moveFontSelection(-1);
+    check(fontDropdown.value === "preview-family-25", "Arrow navigation did not use its selected fallback");
+    fontDropdown.element.focus();
+    fontDropdown.value = "removed-family";
+    fontDropdown.moveFontSelection(1);
+    check(fontDropdown.value === "preview-family-1", "Missing font selection did not begin navigation at the first row");
+    fontDropdown.replaceValues([]);
+    fontDropdown.moveFontSelection(1);
+    check(fontDropdown.value === null, "An empty font picker gained a selected value");
+    fontDropdown.pendingFontJumpValue = "not-rendered";
+    fontDropdown.focusPendingFontEntry();
+    check(fontDropdown.pendingFontJumpValue === "not-rendered", "Missing font row consumed a pending focus jump");
+    fontDropdown.close();
+    fontDropdown.onFontTypeahead(new KeyboardEvent("keydown", {key: "a"}));
+    check(fontDropdown.menu === null, "Closed font picker reacted to a key");
+    dropdown.options.menuCheckmarks = false;
+    dropdown.options.menuIcons = true;
+    dropdown.replaceValues([["one", "One", "reset_icon.png"], ["two", "Two"]]);
+    dropdown.open();
+    check(dropdown.menu.querySelector("button img").getAttribute("src") === "assets/icons/reset_icon.png",
+        "Icon menu did not show its configured icon");
+    dropdown.cycle();
+    check(dropdown.menu === null && dropdown.value === "two", "Cycling an open dropdown did not close its menu");
     dropdown.close();
     dropdown.element.remove();
     fontDropdown.element.remove();

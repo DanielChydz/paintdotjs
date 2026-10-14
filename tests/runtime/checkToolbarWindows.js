@@ -248,6 +248,20 @@ module.exports = async function checkToolbarWindows() {
     floating.setResizable(true, 120, 90);
     floating.create();
     floating.enablePersistence();
+    let restored = new WebWindow("runtime-restored-test");
+    restored.setSize(120, 90);
+    AppSettingsStore.set("windows.runtime-restored-test", {width: 200, height: 150, anchorX: 0.25, anchorY: 0.5, visible: false});
+    check(!restored.restoreState() && restored.getWidth() === 200 && restored.getHeight() === 150
+        && Math.abs(restored.anchorX - 0.25) < 0.001 && Math.abs(restored.anchorY - 0.5) < 0.001,
+    "Restoring a hidden floating window lost its dimensions, visibility or anchor");
+    AppSettingsStore.set("windows.runtime-restored-test", {width: -1, height: NaN, anchorX: Infinity, anchorY: "bad"});
+    check(restored.restoreState() && restored.width === 200 && restored.height === 150,
+        "Invalid persisted window dimensions replaced valid geometry");
+    AppSettingsStore.set("windows.runtime-restored-test", "invalid");
+    check(restored.restoreState(), "Malformed persisted window state prevented opening");
+    let anonymous = new WebWindow();
+    anonymous.setSize(120, 90);
+    check(anonymous.restoreState(), "A window without a persistence ID failed to open");
     check(floating.isOpen() && floating.windowElement.querySelectorAll(".window-resize-handle").length === 8,
         "Floating window did not create all resize handles");
     floating.setTitle("Updated title");

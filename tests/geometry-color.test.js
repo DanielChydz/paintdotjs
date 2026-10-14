@@ -430,3 +430,30 @@ test("empty and horizontally degenerate polygons have no scanlines", () => {
         assert.equal(Utility.getScans(polygon).length, 0);
     }
 });
+
+test("scan conversion sorts descending edges and follows concave row boundaries", () => {
+    let {Point, Utility, Matrix} = loadGeometry();
+    let polygon = [[4, 4], [4, 0], [0, 0], [0, 2], [2, 2], [2, 4]].map(([x, y]) => new Point(x, y));
+    assert.deepEqual(Array.from(Utility.getScans(polygon), scan => [scan.x, scan.y, scan.length]),
+        [[0, 0, 4], [0, 1, 4], [2, 2, 2], [2, 3, 2]]);
+    let rotation = new Matrix();
+    rotation.rotateAt(-30, new Point(0, 0));
+    assert.equal(rotation.isIdentity(), false);
+    assert.equal(Utility.isTransformFlipped(rotation), false);
+    rotation.scale(-1, 1);
+    assert.equal(Utility.isTransformFlipped(rotation), true);
+});
+
+test("UUID representation retains 64-bit values and random IDs use both independent draws", () => {
+    let values = [0.25, 0.75];
+    let context = vm.createContext({Math: Object.assign(Object.create(Math), {random: () => values.shift()})});
+    let filename = path.resolve(__dirname, "../js/src/engine/util/UUID.js");
+    vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    let UUID = vm.runInContext("UUID", context);
+    assert.equal(new UUID(0, 15).toString(), "0000000000000000-000000000000000f");
+    assert.equal(new UUID(0xffffffffffffffffn, 0x8000000000000000n).toString(), "ffffffffffffffff-8000000000000000");
+    let generated = UUID.randomUUID();
+    assert.equal(generated.mostSigBits, 2251799813685247n);
+    assert.equal(generated.leastSigBits, 6755399441055743n);
+    assert.equal(values.length, 0);
+});

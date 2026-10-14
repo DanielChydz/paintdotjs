@@ -640,3 +640,56 @@ test("immediate adjustments and worker-free effect previews use the same pixels 
     assert.equal(state.workers.length, 0);
     assert.equal(BitmapEffectAction.getRememberedValues(BitmapEffectEngine.EFFECTS.bokehEffect), null);
 });
+
+test("gamma-aware filtering preserves alpha and transforms color in and out of working space", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let source = new ImageData(new Uint8ClampedArray([0, 64, 255, 128, 255, 0, 64, 0]), 2, 1);
+    let before = new Uint8ClampedArray(source.data);
+    let calls = 0;
+    let result = BitmapEffectEngine.withGamma(source, 2, 1, 1, linear => {
+        ++calls;
+        assert.notEqual(linear, source);
+        assert.deepEqual(Array.from(linear.data), [0, 128, 255, 128, 255, 0, 128, 0]);
+        linear.data[0] = 128;
+        linear.data[1] = 255;
+        return linear;
+    });
+    assert.equal(calls, 1);
+    assert.deepEqual(Array.from(result.data), [64, 255, 255, 128, 255, 0, 64, 0]);
+    assert.deepEqual(source.data, before);
+    assert.equal(BitmapEffectEngine.withGamma(source, 2, 1, 0, input => input), source);
+});
+
+test("Gaussian filtering falls back to bounded CPU output when native canvas capabilities fail", () => {
+    let {BitmapEffectEngine, context} = loadContext();
+    let source = pixels(5, 3);
+    let expected = BitmapEffectEngine.gaussianBlur(source, 5, 3, 4);
+    for (let contexts of [
+        [null, {filter: "none"}], [{}, null], [{}, {}],
+        [{}, {filter: "none"}, null]
+    ]) {
+        let index = 0;
+        context.document = {createElement: () => ({getContext: () => contexts[index++]})};
+        assert.deepEqual(BitmapEffectEngine.gaussianBlur(source, 5, 3, 4).data, expected.data);
+    }
+    context.document = {createElement: () => {
+        throw new Error("Canvas allocation rejected");
+    }};
+    assert.deepEqual(BitmapEffectEngine.gaussianBlur(source, 5, 3, 4).data, expected.data);
+    assert.deepEqual(source.data, pixels(5, 3).data);
+});
+
+test("box-blur definitions expose their parameter bounds and execute the configured radius", () => {
+    let {BitmapEffectEngine} = loadContext();
+    let definition = BitmapEffectEngine.blurDefinition("customBlur", "blur.png", "Radius", 0, 10, 2);
+    assert.equal(definition.id, "customBlur");
+    assert.equal(definition.icon, "blur.png");
+    assert.equal(definition.controls.length, 1);
+    assert.equal(definition.controls[0].key, "radius");
+    assert.equal(definition.controls[0].min, 0);
+    assert.equal(definition.controls[0].max, 10);
+    assert.equal(BitmapEffectEngine.defaults(definition).radius, 2);
+    let source = pixels(4, 3);
+    let result = BitmapEffectEngine.apply(source, 4, 3, definition, {radius: 2});
+    assert.deepEqual(result.data, referenceBoxBlur(source, 2));
+});

@@ -73,6 +73,57 @@ module.exports = async function checkDocumentIO() {
     check(DocumentIO.getImageFormat({name: "PICTURE.TIFF"}) === "tiff", "File extension was not normalized");
     check(DocumentIO.getImageFormat({type: "image/avif"}) === "avif", "Image MIME was not recognized");
 
+    phase("GIF code-width growth and dictionary reset preserve every palette pixel");
+    let gifCanvas = document.createElement("canvas");
+    gifCanvas.width = 256;
+    gifCanvas.height = 128;
+    let gifPixels = new ImageData(256, 128);
+    let random = 0x12345678;
+    for (let offset = 0; offset < gifPixels.data.length; offset += 4) {
+        random ^= random << 13;
+        random ^= random >>> 17;
+        random ^= random << 5;
+        let index = random & 255;
+        gifPixels.data.set([Math.round((index >> 5) * 255 / 7),
+            Math.round(((index >> 2) & 7) * 255 / 7), (index & 3) * 85, 255], offset);
+    }
+    gifCanvas.getContext("2d").putImageData(gifPixels, 0, 0);
+    let gif = await ImageEncoder.encode(gifCanvas, "gif");
+    let gifDecoded = await window.portableImageCodec.decode(new Uint8Array(await gif.arrayBuffer()), "gif");
+    check(gifDecoded.width === 256 && gifDecoded.height === 128, "Large GIF lost its dimensions");
+    equal(gifDecoded.rgba, gifPixels.data, "GIF dictionary rollover changed decoded palette pixels");
+    let emptyCodes = ImageEncoder.gifLzw(new Uint8Array());
+    equal(emptyCodes, [0, 3, 2], "Empty GIF LZW stream did not contain the clear and end codes");
+    gifCanvas.width = 0;
+    gifCanvas.height = 0;
+    await rejects(() => ImageEncoder.canvasToBlob(gifCanvas, "image/png"), /Could not encode image\/png/);
+
+    phase("native JPEG fallback flattens transparent pixels onto white without portable codecs");
+    let portable = window.portableImageCodec;
+    let transparent = document.createElement("canvas");
+    transparent.width = 2;
+    transparent.height = 2;
+    try {
+        window.portableImageCodec = undefined;
+        let jpeg = await ImageEncoder.encode(transparent, "jpeg", {quality: 100});
+        check(jpeg.type === "image/jpeg", "Native JPEG fallback returned the wrong MIME");
+        let jpegImage = await createImageBitmap(jpeg);
+        let decodedCanvas = document.createElement("canvas");
+        decodedCanvas.width = 2;
+        decodedCanvas.height = 2;
+        decodedCanvas.getContext("2d").drawImage(jpegImage, 0, 0);
+        check(decodedCanvas.getContext("2d").getImageData(0, 0, 2, 2).data.every(value => value === 255),
+            "Native JPEG fallback retained transparent black instead of opaque white");
+        jpegImage.close();
+        await rejects(() => ImageEncoder.encode(transparent, "jxl"), /JXL encoding is not available/);
+        await rejects(() => ImageEncoder.encode(transparent, "heic"), /HEIC encoding is not available/);
+        check(ImageEncoder.mimeFor("unknown") === "application/octet-stream", "Unknown codec MIME fallback changed");
+    } finally {
+        window.portableImageCodec = portable;
+        transparent.width = 0;
+        transparent.height = 0;
+    }
+
     phase("native PDN");
     workspace.getActiveLayer().properties.name = "Name \u017c <literal>";
     workspace.getActiveLayer().properties.opacity = 117;

@@ -167,3 +167,63 @@ test("failed web or desktop update restores controls and reports a recoverable f
         assert.ok(/failed|Could not clear/.test(fixture.state.statuses.at(-1)));
     }
 });
+
+test("web update settings describe the web cache workflow and expose disabled channel preferences", () => {
+    let {settings} = updateFixture();
+    let controls = [];
+    let notes = [];
+    settings.addHeading = title => assert.equal(title, "Updates");
+    settings.addCheckbox = (key, label, options) => controls.push({key, label, ...options});
+    settings.addButton = (label, callback) => ({label, callback});
+    settings.addNote = text => notes.push(text);
+    settings.renderUpdates();
+    assert.equal(controls.length, 2);
+    assert.ok(controls.every(control => control.disabled));
+    assert.ok(controls[0].note.includes("installed web app"));
+    assert.equal(controls[1].key, "updates.prerelease");
+    assert.equal(notes.length, 1);
+    assert.ok(notes[0].includes("offline cache"));
+});
+
+test("graphics availability tries supported context versions and tolerates allocation errors", () => {
+    let {settings, context} = updateFixture();
+    for (let [available, expected, calls] of [
+        [{webgl2: {}}, true, ["webgl2"]],
+        [{webgl2: null, webgl: {}}, true, ["webgl2", "webgl"]],
+        [{webgl2: null, webgl: null}, false, ["webgl2", "webgl"]]
+    ]) {
+        let requested = [];
+        context.document.createElement = tag => {
+            assert.equal(tag, "canvas");
+            return {getContext: type => {
+                requested.push(type);
+                return available[type];
+            }};
+        };
+        assert.equal(settings.isWebGlAvailable(), expected);
+        assert.deepEqual(requested, calls);
+    }
+    context.document.createElement = () => {
+        throw new Error("Canvas allocation failed");
+    };
+    assert.equal(settings.isWebGlAvailable(), false);
+});
+
+test("version metadata tolerates absent globals and formats only nonempty distribution labels", () => {
+    let window = {};
+    let context = vm.createContext({window});
+    let filename = path.resolve(__dirname, "../js/src/PdjInfo.js");
+    vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    let info = vm.runInContext("PdjInfo", context);
+    assert.equal(info.version(), "Unknown version");
+    assert.equal(info.distribution(), null);
+    window.PDJVERSION = 123;
+    window.PDJDISTRIBUTION = "";
+    assert.equal(info.version(), "Unknown version");
+    assert.equal(info.distribution(), null);
+    window.PDJVERSION = "2.1.16";
+    window.PDJDISTRIBUTION = "Ubuntu";
+    assert.equal(info.version(), "2.1.16 (Ubuntu)");
+    assert.equal(info.formatVersion("3.0.0"), "3.0.0 (Ubuntu)");
+    assert.equal(info.productName(), "paint.js");
+});
