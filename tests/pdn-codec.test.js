@@ -26,6 +26,8 @@ function loadCodec(globals = {}) {
         Uint8Array, Uint8ClampedArray, DataView, TextEncoder, TextDecoder,
         Blob, Response, CompressionStream, DecompressionStream, ...globals
     });
+    let propertiesFile = path.resolve(__dirname, "../js/src/engine/document/layer/LayerProperties.js");
+    vm.runInContext(fs.readFileSync(propertiesFile, "utf8"), context, {filename: pathToFileURL(propertiesFile).href});
     vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
     return vm.runInContext("PdnDocumentCodec", context);
 }
@@ -156,4 +158,181 @@ test("PDN encode/decode surface missing decoder, invalid layer counts and invali
     classWithId[0] = 1;
     assert.equal(codec.findBlendModeValueOffset(classWithId, 0), 9);
     assert.throws(() => codec.findBlendModeValueOffset(new Uint8Array([2]), 0), /Unsupported.*record/);
+});
+
+function templateFetch(url) {
+    let match = /^assets\/pdn\/templates\/(\d+)\.bin$/.exec(url);
+    assert.ok(match, "Unexpected codec fetch: " + url);
+    let bytes = fs.readFileSync(path.resolve(__dirname, "../assets/pdn/templates", match[1] + ".bin"));
+    return Promise.resolve(new Response(bytes));
+}
+
+function codecCanvasGlobals() {
+    return {
+        document: {createElement: () => ({
+            getContext() {
+                return {putImageData: image => this.pixels = image.data};
+            }
+        })},
+        ImageData: function(data, width, height) {
+            this.data = data;
+            this.width = width;
+            this.height = height;
+        }
+    };
+}
+
+test("PDN legacy blend-mode repairs recover real templates for every supported enum and long layer names", async () => {
+    let {deserialize} = await import("ms-nrbf-js");
+    let codec = loadCodec({fetch: templateFetch, Nrbf: {deserialize}, ...codecCanvasGlobals()});
+    for (let count of [1, 3]) {
+        let template = new Uint8Array(fs.readFileSync(path.resolve(__dirname, "../assets/pdn/templates", count + ".bin")));
+        for (let mode = 0; mode <= 13; ++mode) {
+            let layers = Array.from({length: count}, (_, index) => ({properties: {
+                name: index === 0 ? "Long name " + "x".repeat(140) : "Layer " + index,
+                visible: index !== 1, isBackground: index === 0, opacity: index === 0 ? undefined : 127,
+                blendMode: mode
+            }}));
+            let graph = codec.patchTemplate(template, 2, 1, layers);
+            let broken = graph.slice();
+            for (let layer of layers) {
+                let name = new TextEncoder().encode(layer.properties.name);
+                let offset = codec.findByteSequence(broken, name) + name.length + 8;
+                new DataView(broken.buffer).setInt32(offset, mode, true);
+            }
+            let repaired = await codec.repairLegacyBlendModeRecords(broken, count);
+            assert.deepEqual(repaired, graph);
+            let decoded = deserialize(repaired);
+            assert.equal(decoded.members.width, 2);
+            assert.equal(decoded.members.height, 1);
+            assert.equal(decoded.members.layers.members["ArrayList+_size"], count);
+            let entries = decoded.members.layers.members["ArrayList+_items"];
+            for (let index = 0; index < count; ++index) {
+                let properties = entries[index].members["Layer+properties"].members;
+                assert.equal(properties.name, layers[index].properties.name);
+                assert.equal(properties.blendMode.members.value__, mode);
+                assert.equal(properties.opacity, index === 0 ? 255 : 127);
+            }
+            let pixelBytes = Buffer.from([7, 19, 201, 255, 33, 42, 55, 255]);
+            let container = codec.concat([codec.createHeader(2, 1, count), broken,
+                ...Array.from({length: count}, () => pixelBlock(pixelBytes, false))]);
+            let loaded = await codec.decode(container);
+            assert.equal(loaded.layers.length, count);
+            assert.equal(loaded.width, 2);
+            for (let index = 0; index < count; ++index) {
+                assert.equal(loaded.layers[index].name, layers[index].properties.name);
+                assert.deepEqual(loaded.layers[index].canvas.pixels, new Uint8ClampedArray([201, 19, 7, 255, 55, 42, 33, 255]));
+            }
+        }
+    }
+});
+
+test("PDN legacy recovery rejects unrecognized records without altering the supplied graph", async () => {
+    let codec = loadCodec({fetch: templateFetch});
+    for (let count of [0, 65, 1.5, NaN]) {
+        assert.equal(await codec.repairLegacyBlendModeRecords(new Uint8Array(0), count), null);
+    }
+    assert.equal(codec.readLayerCountFromHeader(new TextEncoder().encode("<pdnImage/>")), 0);
+    assert.equal(codec.readLayerCountFromHeader(new TextEncoder().encode('<pdnImage layers="3"/>')), 3);
+    let template = new Uint8Array(fs.readFileSync(path.resolve(__dirname, "../assets/pdn/templates/1.bin")));
+    let marker = new TextEncoder().encode("PDJ_LAYER_0000");
+    let markerOffset = codec.findByteSequence(template, marker);
+    let recordOffset = markerOffset + marker.length + 8;
+    let broken = template.slice();
+    new DataView(broken.buffer).setInt32(recordOffset, 3, true);
+    for (let bytes of [
+        new Uint8Array(0), broken.subarray(0, recordOffset + 3),
+        (() => {
+            let invalid = broken.slice();
+            new DataView(invalid.buffer).setInt32(recordOffset, 14, true);
+            return invalid;
+        })(),
+        (() => {
+            let invalid = broken.slice();
+            new DataView(invalid.buffer).setInt32(recordOffset, -1, true);
+            return invalid;
+        })()
+    ]) {
+        let original = bytes.slice();
+        assert.equal(await codec.repairLegacyBlendModeRecords(bytes, 1), null);
+        assert.deepEqual(bytes, original);
+    }
+    assert.equal(await loadCodec({fetch: async () => new Response("", {status: 404})})
+        .repairLegacyBlendModeRecords(broken, 1), null);
+    for (let mutation of [
+        bytes => bytes.fill(0),
+        bytes => bytes[markerOffset - 6] = 0
+    ]) {
+        let invalid = template.slice();
+        mutation(invalid);
+        assert.equal(await loadCodec({fetch: async () => new Response(invalid)})
+            .repairLegacyBlendModeRecords(broken, 1), null);
+    }
+});
+
+test("PDN decode validates malformed object structures and propagates unrecoverable NRBF failures", async () => {
+    let validRoot = () => ({members: {width: 1, height: 1, layers: {members: {
+        "ArrayList+_size": 1, "ArrayList+_items": [{members: {"Layer+properties": {members: {}}}}]
+    }}}});
+    let header = loadCodec().createHeader(1, 1, 1);
+    let bytes = Buffer.concat([header, pixelBlock(Buffer.from([0, 0, 255, 255]), false)]);
+    let codec = loadCodec({Nrbf: {deserialize: validRoot}, ...codecCanvasGlobals()});
+    await assert.rejects(codec.decode(new Uint8Array(10)), /truncated/);
+    let badMarker = Buffer.from(bytes);
+    badMarker[header.length - 1] = 2;
+    await assert.rejects(codec.decode(badMarker), /Unsupported.*encoding/);
+    let badHeaderLength = Buffer.from(bytes);
+    badHeaderLength[6] = 255;
+    await assert.rejects(codec.decode(badHeaderLength), /Unsupported.*encoding/);
+    for (let [key, value] of [["width", 0], ["width", 1.5], ["width", 32769],
+        ["height", 0], ["height", 1.5], ["height", 32769]]) {
+        let root = validRoot();
+        root.members[key] = value;
+        await assert.rejects(loadCodec({Nrbf: {deserialize: () => root}}).decode(bytes), /Invalid.*structure/);
+    }
+    for (let [count, entries] of [[0, []], [2, [{}]]]) {
+        let root = validRoot();
+        root.members.layers.members["ArrayList+_size"] = count;
+        root.members.layers.members["ArrayList+_items"] = entries;
+        await assert.rejects(loadCodec({Nrbf: {deserialize: () => root}}).decode(bytes), /Invalid.*structure/);
+    }
+    await assert.rejects(codec.decode(header), /Could not decode.*pixels/);
+    for (let entry of [null, undefined]) {
+        let root = validRoot();
+        root.members.layers.members["ArrayList+_items"] = [entry];
+        await assert.rejects(loadCodec({Nrbf: {deserialize: () => root}}).decode(bytes), /Invalid.*entry/);
+    }
+    let decoded = await codec.decode(bytes);
+    assert.equal(decoded.layers[0].name, "Layer 1");
+    assert.equal(decoded.layers[0].opacity, 255);
+    assert.equal(decoded.layers[0].blendMode, "normal");
+    let failure = new Error("bad NRBF stream");
+    codec = loadCodec({Nrbf: {deserialize: () => {
+        throw failure;
+    }}, fetch: templateFetch});
+    await assert.rejects(codec.decode(bytes), actual => actual === failure);
+    await assert.rejects(loadCodec({fetch: async () => new Response("", {status: 404})})
+        .encode({getWidth: () => 1, getHeight: () => 1, getLayers: () => ({list: () => [{}]})}),
+    /Could not load.*template/);
+});
+
+test("PDN blend enum metadata walks each NRBF binary type and rejects multiple members", () => {
+    let codec = loadCodec();
+    let encoder = new TextEncoder();
+    let string = text => Buffer.concat([Buffer.from([text.length]), encoder.encode(text)]);
+    for (let type of [0, 7, 3, 4, 1]) {
+        let extra = type === 0 || type === 7 ? Buffer.from([8])
+            : type === 3 ? string("System.Int32")
+            : type === 4 ? Buffer.concat([string("EnumType"), Buffer.alloc(4)]) : Buffer.alloc(0);
+        let bytes = Buffer.concat([
+            Buffer.from([5]), Buffer.alloc(4), string("BlendMode"),
+            Buffer.from([1, 0, 0, 0]), string("value__"), Buffer.from([type]), extra,
+            Buffer.from([1, 0, 0, 0]), Buffer.from([13, 0, 0, 0])
+        ]);
+        let offset = codec.findBlendModeValueOffset(bytes, 0);
+        assert.equal(offset, bytes.length - 4);
+        assert.equal(bytes.readInt32LE(offset), 13);
+    }
+    let malformed = Buffer.concat([Buffer.from([5]), Buffer.alloc(4), string("BlendMode"), Buffer.from([2, 0, 0, 0])]);
+    assert.throws(() => codec.findBlendModeValueOffset(malformed, 0), /Invalid.*enum/);
 });

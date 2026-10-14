@@ -67,6 +67,31 @@ module.exports = async function checkFileWorkflows() {
     check(!await DocumentIO.resizeImage() && !await DocumentIO.changeCanvasSize()
         && !await DocumentIO.saveActive() && !await DocumentIO.printActive(), "Empty workspace accepted a document command");
 
+    phase("application action dispatcher creates a real document and preserves canceled defaults");
+    await navigator.clipboard.writeText("No clipboard image");
+    app.performAction(new NewFileAction());
+    await waitFor(() => document.querySelector(".new-file-dialog") !== null);
+    let newForm = document.querySelector(".new-file-dialog");
+    let newNumbers = [...newForm.querySelectorAll('input[type="number"]')];
+    check(newNumbers[0].value === "800" && newNumbers[1].value === "600", "New-document action lost its empty-workspace defaults");
+    input(newNumbers[0], 32);
+    input(newNumbers[1], 16);
+    input(newNumbers[2], 72);
+    newForm.requestSubmit();
+    await waitFor(() => app.getDocumentWorkspaces().length === 1);
+    let createdWorkspace = app.getActiveDocumentWorkspace();
+    check(createdWorkspace.getDocument().getWidth() === 32 && createdWorkspace.getDocument().getHeight() === 16
+        && createdWorkspace.getDocument().getResolution() === 72, "Application dispatcher lost the actual submitted dimensions/resolution");
+    app.performAction(new NewFileAction());
+    await waitFor(() => document.querySelector(".new-file-dialog") !== null);
+    newForm = document.querySelector(".new-file-dialog");
+    newNumbers = [...newForm.querySelectorAll('input[type="number"]')];
+    check(newNumbers[0].value === "32" && newNumbers[1].value === "16", "New-document defaults did not inherit the active image dimensions");
+    newForm.querySelector(".app-dialog-close").click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    check(app.getActiveDocumentWorkspace() === createdWorkspace && app.getDocumentWorkspaces().length === 1,
+        "Canceled new-document action replaced or added a workspace");
+
     phase("actual image and layered PDN imports");
     let canvas = document.createElement("canvas");
     canvas.width = 4;
@@ -78,6 +103,18 @@ module.exports = async function checkFileWorkflows() {
     context.fillRect(2, 0, 2, 2);
     let expected = context.getImageData(0, 0, 4, 2).data;
     let png = await ImageEncoder.encode(canvas, "png");
+    await navigator.clipboard.write([new ClipboardItem({"image/png": png})]);
+    app.performAction(new NewFileAction());
+    await waitFor(() => document.querySelector(".new-file-dialog") !== null);
+    newForm = document.querySelector(".new-file-dialog");
+    newNumbers = [...newForm.querySelectorAll('input[type="number"]')];
+    check(newNumbers[0].value === "4" && newNumbers[1].value === "2",
+        "Actual clipboard image dimensions did not override the active 32x16 document defaults");
+    newForm.querySelector(".app-dialog-close").click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    check(app.getActiveDocumentWorkspace() === createdWorkspace, "Canceled clipboard-sized document lost the previous workspace");
+    await navigator.clipboard.writeText("No clipboard image");
+    closeAll();
     let file = new window.File([png], "Source.PNG", {type: "image/png"});
     let workspace = await DocumentIO.openImage(file);
     check(workspace.fileName === "Source.PNG" && workspace.getActiveLayer().properties.name === "Source"
@@ -141,6 +178,74 @@ module.exports = async function checkFileWorkflows() {
     phase("resize and canvas dialogs preserve pixels and undo state");
     closeAll();
     workspace = await DocumentIO.openImage(file);
+    let sizeOptions = {width: 600, height: 300, resolution: 100, layerCount: 2};
+    let configuring = ImageSizeDialog.open("resize", sizeOptions);
+    check(ImageSizeDialog.open("resize", sizeOptions) === configuring, "Repeated size dialog created a second modal");
+    let sizeForm = document.querySelector(".image-size-dialog");
+    let sizeNumbers = [...sizeForm.querySelectorAll('input[type="number"]')];
+    let resolutionUnit = [...sizeForm.querySelectorAll("select")]
+        .find(select => [...select.options].some(option => option.value === "centimeter"));
+    let printUnit = [...sizeForm.querySelectorAll("select")]
+        .find(select => [...select.options].some(option => option.value === "centimeters"));
+    let sizeMaintain = sizeForm.querySelector(".image-size-maintain input");
+    sizeMaintain.checked = true;
+    sizeMaintain.dispatchEvent(new Event("change", {bubbles: true}));
+    change(resolutionUnit, "centimeter");
+    check(sizeNumbers[3].value === "39.37", "Resolution unit did not convert 100 pixels/inch to pixels/cm");
+    input(sizeNumbers[3], 50);
+    change(printUnit, "centimeters");
+    check(sizeNumbers[4].value === "12.00" && sizeNumbers[5].value === "6.00",
+        "Print dimensions do not preserve pixels across resolution/measurement units");
+    input(sizeNumbers[4], 24);
+    check(sizeNumbers[1].value === "1200" && sizeNumbers[2].value === "600", "Print width did not preserve the locked aspect ratio");
+    input(sizeNumbers[5], 9);
+    check(sizeNumbers[1].value === "900" && sizeNumbers[2].value === "450", "Print height did not preserve the locked aspect ratio");
+    sizeMaintain.checked = false;
+    sizeMaintain.dispatchEvent(new Event("change", {bubbles: true}));
+    input(sizeNumbers[4], 14);
+    input(sizeNumbers[5], 8);
+    check(sizeNumbers[1].value === "700" && sizeNumbers[2].value === "400", "Unlocked print dimensions changed the opposite axis");
+    let percentChoice = sizeForm.querySelector('input[type="radio"][value="percent"]');
+    percentChoice.checked = true;
+    percentChoice.dispatchEvent(new Event("change", {bubbles: true}));
+    check(!sizeNumbers[0].disabled && sizeNumbers.slice(1).every(number => number.disabled)
+        && resolutionUnit.disabled && printUnit.disabled && sizeMaintain.disabled, "Percentage mode left absolute-size controls enabled");
+    input(sizeNumbers[0], 150);
+    check(sizeNumbers[1].value === "900" && sizeNumbers[2].value === "450", "Percentage mode did not scale both original dimensions");
+    input(sizeNumbers[0], 5000);
+    check(sizeNumbers[1].value === "12000" && sizeNumbers[2].value === "6000", "Percentage input did not enforce its 2000% limit");
+    let absoluteChoice = sizeForm.querySelector('input[type="radio"][value="absolute"]');
+    absoluteChoice.checked = true;
+    absoluteChoice.dispatchEvent(new Event("change", {bubbles: true}));
+    check(!sizeNumbers[1].disabled && sizeNumbers[0].disabled && !resolutionUnit.disabled,
+        "Returning to absolute mode did not restore its editable controls");
+    change(sizeForm.querySelector(".image-size-resampling-row select"), "nearestNeighbor");
+    let gamma = sizeForm.querySelector(".image-size-gamma input");
+    gamma.checked = false;
+    sizeForm.querySelector(".image-size-reset").click();
+    check(gamma.checked && sizeForm.querySelector(".image-size-resampling-row select").value === "adaptiveHighQuality",
+        "Resampling reset did not restore adaptive quality and gamma correction");
+    let oldClose = sizeForm.querySelector(".app-dialog-close");
+    sizeForm.requestSubmit();
+    let configured = await configuring;
+    check(configured.width === 12000 && configured.height === 6000 && Math.abs(configured.resolution - 127) < 1e-8
+        && configured.resolutionUnit === "centimeter" && configured.printUnit === "centimeters"
+        && configured.resampling === "adaptiveHighQuality" && configured.gammaCorrect,
+    "Size dialog result lost its dimensions, physical units or reset preferences");
+    configuring = ImageSizeDialog.open("canvas", {width: 16, height: 8, resolution: 96});
+    sizeForm = document.querySelector(".image-size-dialog");
+    oldClose.click();
+    check(sizeForm.isConnected, "A stale size-dialog close callback closed a newer modal");
+    let anchorButtons = [...sizeForm.querySelectorAll(".image-size-anchor-chooser button")];
+    for (let button of anchorButtons) {
+        button.click();
+        check(button.getAttribute("aria-checked") === "true" && button.classList.contains("selected")
+            && anchorButtons.filter(candidate => candidate.getAttribute("aria-checked") === "true").length === 1,
+        "Canvas anchor button did not maintain a single accessible selection");
+    }
+    [...sizeForm.querySelectorAll("button")].find(button => button.textContent === "Cancel").click();
+    check(await configuring === null && workspace.getDocument().getWidth() === 4 && workspace.getDocument().getHeight() === 2,
+        "Canceled size configuration changed the actual image");
     for (let command of ["resizeImage", "changeCanvasSize"]) {
         let pending = DocumentIO[command]();
         document.querySelector(".image-size-dialog .app-dialog-close").click();
