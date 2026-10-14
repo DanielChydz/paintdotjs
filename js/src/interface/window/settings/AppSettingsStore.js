@@ -61,6 +61,9 @@ class AppSettingsStore {
         let saved = {};
         try {
             saved = JSON.parse(localStorage.getItem(this.storageKey) || "{}");
+            if (saved === null || typeof saved !== "object" || Array.isArray(saved)) {
+                saved = {};
+            }
 
             // Paint.NET 5 uses 75% for the checkerboard. Migrate the old port's
             // 100% default once, while still allowing 100% to be chosen later.
