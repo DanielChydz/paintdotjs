@@ -179,3 +179,112 @@ test("UI base contracts preserve IDs/parents and release document mouse listener
     assert.deepEqual(received, [[8, 9, 2], [10, 11, 2]]);
     assert.equal(document.listenerCount("mousemove"), 0);
 });
+
+function historyFixture() {
+    let context = vm.createContext({});
+    for (let relative of [
+        "event/EventHandler", "history/HistoryMemento", "history/memento/ToolHistoryMemento", "history/HistoryStack"
+    ]) {
+        let filename = path.resolve(__dirname, "../js/src/engine/document", relative + ".js");
+        vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    }
+    let {HistoryStack, HistoryMemento, ToolHistoryMemento} = vm.runInContext(
+        "({HistoryStack, HistoryMemento, ToolHistoryMemento})", context);
+    let state = {value: 0, type: "brush", notifications: [], switches: []};
+    let app = {
+        getActiveTool: () => state.type === null ? null : {getType: () => state.type},
+        setActiveToolFromType: type => {
+            state.switches.push(type);
+            state.type = type;
+        },
+        fire: (...args) => state.notifications.push(args)
+    };
+    let workspace = {getApp: () => app};
+    let history = new HistoryStack(app, workspace);
+    let makeMemento = (value, tool = false) => {
+        let memento = tool ? new ToolHistoryMemento(workspace, "Edit", "icon") : new HistoryMemento("Edit", "icon");
+        let undo = () => {
+            let previous = state.value;
+            state.value = value;
+            let reverse = makeMemento(previous, tool);
+            return reverse;
+        };
+        if (tool) {
+            memento.onToolUndo = undo;
+        } else {
+            memento.onUndo = undo;
+        }
+        return memento;
+    };
+    return {state, workspace, history, makeMemento, ToolHistoryMemento};
+}
+
+test("history navigation restores intermediate values and branches after undo", () => {
+    let {state, workspace, history, makeMemento} = historyFixture();
+    let executing = 0;
+    let executed = 0;
+    history.executing.add(received => {
+        assert.equal(received, history);
+        ++executing;
+    });
+    history.executed.add(received => {
+        assert.equal(received, history);
+        ++executed;
+    });
+    let baseline = makeMemento(0);
+    history.pushNewMemento(baseline);
+    history.stepTo(baseline);
+    assert.equal(executing, 1);
+    assert.equal(state.value, 0);
+    for (let value of [10, 20, 30]) {
+        history.pushNewMemento(makeMemento(state.value));
+        state.value = value;
+    }
+    let first = history.getUndoStack()[1];
+    history.stepTo(first);
+    assert.equal(state.value, 10);
+    assert.equal(history.getUndoStack().length, 2);
+    assert.equal(history.getRedoStack().length, 2);
+    let future = history.getRedoStack().at(-1);
+    history.stepTo(future);
+    assert.equal(state.value, 30);
+    assert.equal(history.getRedoStack().length, 0);
+    history.stepTo(history.getUndoStack().at(-1));
+    assert.equal(state.value, 20);
+    let before = executing;
+    history.stepTo(makeMemento(999));
+    assert.equal(executing, before);
+    assert.equal(state.value, 20);
+    history.pushNewMemento(makeMemento(20));
+    state.value = 40;
+    assert.equal(history.getRedoStack().length, 0);
+    history.clearAll();
+    assert.equal(history.getUndoStack().length, 0);
+    assert.equal(history.getRedoStack().length, 0);
+    assert.equal(executing, executed);
+    assert.equal(state.notifications.length, executed);
+    assert.ok(state.notifications.every(([event, target]) => event === "document:history_changed" && target === workspace));
+});
+
+test("tool history navigation restores the required tool before undo and redo", () => {
+    let {state, workspace, history, makeMemento, ToolHistoryMemento} = historyFixture();
+    let memento = makeMemento(0, true);
+    assert.equal(memento.getDocumentWorkspace(), workspace);
+    assert.equal(memento.getToolType(), "brush");
+    history.pushNewMemento(memento);
+    state.value = 10;
+    state.type = "eraser";
+    history.stepBackward();
+    assert.equal(state.value, 0);
+    assert.equal(state.type, "brush");
+    state.type = null;
+    history.stepForward();
+    assert.equal(state.value, 10);
+    assert.equal(state.type, "brush");
+    assert.deepEqual(state.switches, ["brush", "brush"]);
+    state.type = "eraser";
+    memento.performUndo();
+    assert.equal(state.value, 0);
+    assert.equal(state.type, "brush");
+    assert.throws(() => new ToolHistoryMemento(workspace, "Abstract", "").performUndo(), /Not implemented/);
+});
