@@ -117,8 +117,7 @@ class DocumentContextMenu {
 
     static async copyPath(filePath) {
         if (window.desktopFileActions !== undefined) {
-            window.desktopFileActions.copyText(filePath);
-            return;
+            return window.desktopFileActions.copyText(filePath);
         }
         await navigator.clipboard.writeText(filePath);
     }

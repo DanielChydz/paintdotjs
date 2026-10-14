@@ -277,6 +277,9 @@ class GraphicsPath {
 
         const scans = region.getRectangles(); // TODO GetRegionScansReadOnlyInt
 
+        if (scans.length === 0) {
+            return new GraphicsPath();
+        }
         if (scans.length === 1) {
             const path = new GraphicsPath();
             path.addRectangle(scans[0]);
@@ -321,6 +324,10 @@ class GraphicsPath {
         }
 
         const ret = new GraphicsPath();
+        const pixelStencil = bounds.x === 0 && bounds.y === 0
+            && bounds.width === stencil.width && bounds.height === stencil.height
+            ? {width: stencil.width, height: stencil.height, data: new Uint8Array(stencil.bitArray)}
+            : null;
         const boundsLeft = bounds.getLeft();
         const boundsTop = bounds.getTop();
         const boundsRight = bounds.getRight();
@@ -413,10 +420,7 @@ class GraphicsPath {
             ret.closeFigure();
         }
 
-        if (bounds.x === 0 && bounds.y === 0
-            && bounds.width === stencil.width && bounds.height === stencil.height) {
-            ret.setPixelStencil(stencil);
-        }
+        ret.pixelStencil = pixelStencil;
         return ret;
     }
 }

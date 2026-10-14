@@ -25,6 +25,16 @@ const desktopScenarios = [
     {name: "desktop save previews, native file writing, clipboard and close confirmation", file: "checkSavingClipboard.js"},
     {name: "desktop color palettes, font storage, dropdown navigation and error recovery", file: "checkControls.js"},
     {name: "desktop native pointer routing, interrupted strokes, viewport and transform controls", file: "checkPointerRouting.js"},
+    {name: "desktop file import, resizing, paste overflow and save-all workflows", file: "checkFileWorkflows.js"},
+    {name: "desktop settings mutations, shortcuts, font management and update outcomes", file: "checkSettingsControls.js"},
+    {name: "desktop effect sliders, curves, levels and native rotation/pan controls", file: "checkEffectControls.js"},
+    {name: "desktop transform handles, selection history, color sampling and zoom tools", file: "checkTransformTools.js"},
+    {name: "desktop geometry set operations, viewport caches, number inputs and scroll reordering", file: "checkGeometryLayout.js"},
+    {name: "desktop layer commands, selection fill/inversion and reversible history functions", file: "checkLayerActions.js"},
+    {name: "desktop text caret, paste protection, keyboard commands and gradient shader oracles", file: "checkTextGradient.js",
+        extraArgs: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]},
+    {name: "desktop document strip, context commands, menu lifecycle and movable dialog bounds", file: "checkDocumentChrome.js"},
+    {name: "desktop surfaces, blend modes, hatch patterns and sparse bitmap transaction restoration", file: "checkSurfaceTransactions.js"},
     {name: "browser runtime without Node integration and real PWA updates", file: "checkBrowser.js", browser: true}
 ];
 
@@ -315,6 +325,9 @@ if (process.versions.electron) {
     let {spawnSync} = require("node:child_process");
     for (let scenario of desktopScenarios) {
         test(scenario.name, () => {
+        if (scenario.file !== "") {
+            assert.equal(typeof require("./runtime/" + scenario.file), "function");
+        }
         let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintdotjs-desktop-test-"));
         try {
             let result = spawnSync("xvfb-run", [
@@ -326,7 +339,7 @@ if (process.versions.electron) {
                 encoding: "utf8",
                 timeout: 90000
             });
-            assert.ifError(result.error);
+            assert.equal(result.error, undefined, result.stdout + result.stderr);
             assert.equal(result.status, 0, result.stdout + result.stderr);
             assert.match(result.stdout, /Desktop regression checks passed/);
         } finally {

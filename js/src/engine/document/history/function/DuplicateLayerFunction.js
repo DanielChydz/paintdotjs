@@ -27,8 +27,7 @@ class DuplicateLayerFunction extends HistoryFunction {
             throw new Error("layerIndex = " + this.layerIndex + ", expected [0, " + layers.size() + ")");
         }
 
-        // Duplicate the active layer
-        let newLayer = documentWorkspace.getActiveLayer().clone();
+        let newLayer = layers.getAt(this.layerIndex).clone();
         newLayer.getProperties().isBackground = false;
         let newLayerIndex = this.layerIndex + 1;
 
@@ -36,7 +35,7 @@ class DuplicateLayerFunction extends HistoryFunction {
             i18n("duplicateLayer.historyMementoName"),
             "assets/icons/menu_layers_duplicate_layer_icon.png",
             documentWorkspace,
-            this.layerIndex
+            newLayerIndex
         );
 
         layers.insertLayerAt(newLayerIndex, newLayer);

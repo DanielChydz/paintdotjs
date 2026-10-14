@@ -291,10 +291,10 @@ class Surface {
         }
 
         let imageData = this.context.getImageData(x, y, 1, 1);
-        imageData.data[0] = color.r;
-        imageData.data[1] = color.g;
-        imageData.data[2] = color.b;
-        imageData.data[3] = color.a;
+        imageData.data[0] = color.red;
+        imageData.data[1] = color.green;
+        imageData.data[2] = color.blue;
+        imageData.data[3] = color.alpha;
         this.context.putImageData(imageData, x, y);
     }
 

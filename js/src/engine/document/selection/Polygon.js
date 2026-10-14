@@ -15,7 +15,12 @@
 class Polygon {
 
     constructor(bounds = [], holes = []) {
-        this.gpcPolygon = window.GPC.Polygon.fromVertices({bounds, holes});
+        let polygon = window.GPC.Polygon;
+        this.gpcPolygon = polygon.fromVertices({bounds, holes: []});
+        if (holes.length > 0) {
+            let cutouts = polygon.fromVertices({bounds: holes, holes: []});
+            this.gpcPolygon = polygon.difference(this.gpcPolygon, cutouts);
+        }
     }
 
     toGraphicsPath() {

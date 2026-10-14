@@ -1,0 +1,235 @@
+/*
+ * paint.js, an unofficial JavaScript port of Paint.NET 3.36.7
+ *
+ * Original Paint.NET source:
+ * Copyright (C) dotPDN LLC, Rick Brewster, and contributors.
+ *
+ * JavaScript port and port-specific changes:
+ * Copyright (C) 2024-present LabyStudio.
+ * https://github.com/LabyStudio
+ *
+ * The interface design and behavior target Paint.NET 5.1.12+.
+ * Licensed under LICENSE.md. See NOTICE.md for full attribution.
+ */
+
+module.exports = async function checkSettingsControls() {
+    let check = (condition, message) => {
+        if (!condition) {
+            throw new Error(message);
+        }
+    };
+    let phase = name => require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+    let input = (element, value) => {
+        element.value = String(value);
+        element.dispatchEvent(new Event("input", {bubbles: true}));
+    };
+    let change = element => element.dispatchEvent(new Event("change", {bubbles: true}));
+    let waitFor = async predicate => {
+        let deadline = performance.now() + 5000;
+        while (!predicate()) {
+            check(performance.now() < deadline, "Settings control timed out");
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+    };
+    let choose = title => {
+        let button = [...document.querySelectorAll(".task-dialog-choice")]
+            .find(candidate => candidate.querySelector("strong")?.textContent === title);
+        check(button !== undefined, "Missing settings choice: " + title);
+        button.click();
+    };
+    let button = title => [...SettingsDialog.instance.page.querySelectorAll("button")]
+        .find(candidate => candidate.textContent === title);
+    for (let workspace of [...app.getDocumentWorkspaces()]) {
+        app.closeDocumentWorkspace(workspace, false);
+    }
+    app.createBlankDocumentInNewWorkspace(16, 16);
+
+    phase("settings UI preferences and language persistence");
+    SettingsDialog.open("ui");
+    let settings = SettingsDialog.instance;
+    settings.dialog.querySelector('[data-section="canvas"]')?.click();
+    settings.selectSection("invalid");
+    check(settings.activeSection === "ui", "Unknown settings section did not use UI");
+    let checkboxes = [...settings.page.querySelectorAll("input[type=checkbox]")];
+    for (let [index, path] of [
+        [0, "ui.animations"], [1, "ui.translucentWindows"], [2, "ui.overscroll"],
+        [3, "ui.autoScrollWhileDrawing"], [4, "ui.autoSelectVisibleLayer"]
+    ]) {
+        checkboxes[index].checked = !checkboxes[index].checked;
+        change(checkboxes[index]);
+        check(AppSettingsStore.get(path) === checkboxes[index].checked, "Checkbox did not persist: " + path);
+    }
+    let selects = [...settings.page.querySelectorAll("select")];
+    for (let scheme of ["blue", "light", "dark", "default"]) {
+        selects[0].value = scheme;
+        change(selects[0]);
+        check(document.documentElement.dataset.colorSchemePreference === scheme, "Color scheme did not reach the document");
+    }
+    let language = selects[1];
+    language.value = [...language.options].find(option => option.value !== Language.preference).value;
+    change(language);
+    check(AppSettingsStore.get("ui.language") === language.value && !button("Reload now").disabled
+        && settings.status.textContent.includes("Reload"), "Pending language change did not enable reload");
+    language.value = Language.preference;
+    change(language);
+    check(button("Reload now").disabled, "Restored language did not disable reload");
+
+    phase("canvas border RGB, wheel, brightness and disabled controls");
+    settings.selectSection("canvas");
+    let customBorder = [...settings.page.querySelectorAll("input[type=checkbox]")][1];
+    let editor = settings.page.querySelector(".settings-canvas-color-editor");
+    let wheel = editor.querySelector(".settings-canvas-color-wheel");
+    customBorder.checked = true;
+    change(customBorder);
+    check(!editor.classList.contains("disabled") && AppSettingsStore.get("canvas.customBorder"),
+        "Custom border controls stayed disabled");
+    let rgb = [...editor.querySelectorAll("input[type=number]")];
+    for (let [index, value] of [300, -10, 34].entries()) {
+        input(rgb[index], value);
+    }
+    check(AppSettingsStore.get("canvas.borderColor") === "#ff0022", "Border RGB channels were not clamped/persisted");
+    let swatch = editor.querySelector("input[type=color]");
+    input(swatch, "#336699");
+    check(AppSettingsStore.get("canvas.borderColor") === "#336699", "Color swatch did not persist");
+    let brightness = editor.querySelector("input[type=range]");
+    input(brightness, 200);
+    check(AppSettingsStore.get("canvas.borderColor") !== "#336699", "Border brightness did not change its color");
+    let bounds = wheel.getBoundingClientRect();
+    for (let offset of [[bounds.width, bounds.height / 2], [bounds.width / 2, 0]]) {
+        wheel.dispatchEvent(new PointerEvent("pointerdown", {clientX: bounds.left + offset[0],
+            clientY: bounds.top + offset[1], bubbles: true}));
+    }
+    check(/^#[0-9a-f]{6}$/.test(AppSettingsStore.get("canvas.borderColor")), "Wheel produced an invalid color");
+    editor.querySelector(".settings-inline-reset").click();
+    check(AppSettingsStore.get("canvas.borderColor") === "#808080", "Border reset did not restore neutral gray");
+    customBorder.checked = false;
+    change(customBorder);
+    wheel.dispatchEvent(new PointerEvent("pointerdown", {clientX: bounds.left, clientY: bounds.top, bubbles: true}));
+    check(AppSettingsStore.get("canvas.borderColor") === "#808080" && swatch.disabled, "Disabled wheel changed the border color");
+    let checkerboard = settings.page.querySelector(".settings-canvas-brightness");
+    input(checkerboard.querySelector("input[type=range]"), 0.5);
+    check(AppSettingsStore.get("canvas.checkerboardBrightness") === 50
+        && document.documentElement.style.getPropertyValue("--checkerboard-brightness") === "0.5",
+    "Checkerboard slider did not reach the renderer style");
+    let output = checkerboard.querySelector("input[type=number]");
+    output.value = 2;
+    change(output);
+    check(AppSettingsStore.get("canvas.checkerboardBrightness") === 100, "Checkerboard upper bound was not clamped");
+    output.value = 0.1;
+    change(output);
+    check(AppSettingsStore.get("canvas.checkerboardBrightness") === 25, "Checkerboard lower bound was not clamped");
+    checkerboard.querySelector(".settings-inline-reset").click();
+    check(AppSettingsStore.get("canvas.checkerboardBrightness") === 75, "Checkerboard reset did not restore its default");
+
+    phase("tool defaults and shortcut editing");
+    settings.selectSection("tools");
+    ToolType.PAINT_BRUSH.setSetting("width", 13);
+    app.setActiveToolFromType(ToolType.PAINT_BRUSH);
+    let defaults = settings.page.querySelector("select");
+    defaults.value = ToolType.PENCIL.getId();
+    change(defaults);
+    check(AppSettingsStore.get("tools.defaultTool") === ToolType.PENCIL.getId(), "Default tool setting did not persist");
+    button("Reset tool settings").click();
+    check(ToolType.PAINT_BRUSH.getSetting("width") !== 13 && settings.status.textContent.includes("reset"),
+        "Tool reset did not clear a modified option");
+    settings.selectSection("keyboard");
+    input(settings.search, "file.new");
+    let row = settings.shortcutList.querySelector(".shortcut-settings-row");
+    check(row !== null, "Shortcut search did not find File/New");
+    let id = row.querySelector("label").title;
+    let capture = row.querySelector("input");
+    capture.focus();
+    check(capture.value === "Press shortcut…", "Shortcut focus did not enter capture mode");
+    capture.dispatchEvent(new KeyboardEvent("keydown", {key: "F9", ctrlKey: true, bubbles: true, cancelable: true}));
+    row = settings.shortcutList.querySelector(".shortcut-settings-row");
+    check(row.querySelector("input").value.includes("F9"), "Shortcut capture did not register its key");
+    row.querySelector("button").click();
+    row = settings.shortcutList.querySelector(".shortcut-settings-row");
+    capture = row.querySelector("input");
+    capture.focus();
+    capture.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true, cancelable: true}));
+    check(document.activeElement !== capture && settings.backdrop !== null, "Shortcut Escape closed settings instead of capture");
+    capture.dispatchEvent(new KeyboardEvent("keydown", {key: "Delete", bubbles: true, cancelable: true}));
+    check(settings.status.textContent.includes("cleared") && ActionRegistry.getActionList()
+        .find(action => action.getActionId() === id).getShortcutKey().isEmpty(), "Delete did not clear its shortcut");
+    button("Reset all shortcuts").click();
+    check(settings.status.textContent.includes("defaults"), "Reset-all shortcut action did not report completion");
+
+    phase("actual font import, progress, drag/drop and removal");
+    settings.selectSection("fonts");
+    await FontManager.initialize();
+    let fs = require("node:fs");
+    let path = require("node:child_process").execFileSync("fc-match", ["--format=%{file}", "sans-serif"], {encoding: "utf8"}).trim();
+    let bytes = fs.readFileSync(path);
+    let fontFile = new window.File([bytes], "SettingsFont.ttf", {type: "font/ttf"});
+    check(await settings.importFonts([new window.File(["x"], "ignored.png")]) === null
+        && settings.status.textContent.includes("Choose"), "Invalid font selection did not explain accepted formats");
+    let adding = settings.importFonts([fontFile]);
+    check(settings.fontImporting && settings.fontAddButton.disabled && !settings.fontImportPanel.hidden,
+        "Font progress did not reflect an in-flight import");
+    check(await settings.importFonts([fontFile]) === null && settings.status.textContent.includes("Wait"),
+        "Concurrent font import was accepted");
+    let result = await adding;
+    check(result.added.length === 1 && !settings.fontImporting && settings.fontImportPanel.hidden,
+        "Font import did not settle progress state");
+    await waitFor(() => settings.fontList.querySelector(".settings-font-row") !== null);
+    check(settings.fontList.querySelector("strong").textContent === "SettingsFont", "Font settings did not show imported metadata");
+    check(settings.formatFileSize(10) === "10 B" && settings.formatFileSize(1536) === "1.5 KB"
+        && settings.formatFileSize(1572864) === "1.5 MB", "Font-size display used incorrect units");
+    let clearing = settings.clearAllFonts();
+    choose("Cancel");
+    await clearing;
+    check(FontManager.getFonts().length === 1, "Cancelled clear deleted fonts");
+    settings.fontList.querySelector(".settings-font-remove").click();
+    await waitFor(() => FontManager.getFonts().length === 0 && settings.status.textContent.includes("Removed"));
+    let transfer = new DataTransfer();
+    transfer.items.add(fontFile);
+    let dropZone = settings.fontDropZone;
+    dropZone.dispatchEvent(new DragEvent("dragenter", {dataTransfer: transfer, bubbles: true, cancelable: true}));
+    check(dropZone.classList.contains("drag-over"), "Font drag did not show hover feedback: "
+        + dropZone.className + "; effect=" + transfer.dropEffect);
+    dropZone.dispatchEvent(new DragEvent("dragleave", {dataTransfer: transfer, bubbles: true, cancelable: true}));
+    check(!dropZone.classList.contains("drag-over"), "Font drag exit retained its feedback");
+    dropZone.dispatchEvent(new DragEvent("drop", {dataTransfer: transfer, bubbles: true, cancelable: true}));
+    await waitFor(() => !settings.fontImporting && FontManager.getFonts().length === 1);
+    clearing = settings.clearAllFonts();
+    choose("Clear All Fonts");
+    await clearing;
+    check(FontManager.getFonts().length === 0 && settings.status.textContent.includes("Removed 1"), "Confirmed font clear did not delete metadata");
+    await settings.clearAllFonts();
+
+    phase("deterministic desktop update bridge outcomes");
+    settings.selectSection("updates");
+    let updateButton = button("Check now");
+    let oldUpdater = window.desktopUpdater;
+    try {
+        for (let [outcome, expected] of [
+            [{supported: false, managed: false}, "packaged desktop"],
+            [{supported: false, managed: true, updateAvailable: true, version: "9.0.0"}, "available"],
+            [{supported: false, managed: true, updateAvailable: false}, "manually"],
+            [{supported: true, version: "9.0.0"}, "Downloading"],
+            [{supported: true, version: window.PDJVERSION}, "latest"],
+            [{supported: true}, "latest"]
+        ]) {
+            window.desktopUpdater = {check: async () => outcome};
+            await settings.checkForUpdates(updateButton);
+            check(settings.status.textContent.includes(expected) && !updateButton.disabled && updateButton.textContent === "Check now",
+                "Update outcome did not restore controls or communicate status: " + expected);
+        }
+    } finally {
+        window.desktopUpdater = oldUpdater;
+    }
+    phase("diagnostic clipboard and settings cleanup");
+    settings.selectSection("diagnostics");
+    button("Copy to clipboard").click();
+    await waitFor(() => settings.status.textContent.includes("copied"));
+    check((await navigator.clipboard.readText()).includes("Logical processors:"), "Copied diagnostics omitted runtime information");
+    settings.dialog.querySelector(".app-dialog-close").click();
+    check(settings.backdrop === null, "Title-bar close leaked settings");
+    settings.close();
+    settings.selectSection("canvas");
+    settings.setStatus("closed");
+    SettingsDialog.open("ui");
+    settings.dialog.querySelector("footer button").click();
+    check(settings.backdrop === null, "Footer close leaked settings");
+};

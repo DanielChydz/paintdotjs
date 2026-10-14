@@ -198,10 +198,41 @@ menus. Geometry tests cover clipping, degenerate polygons, region inflation,
 affine transforms, and color conversion.
 Transform handles remain static; no pulse timer is scheduled.
 
+Further desktop scenarios cover file/layer imports, resize and canvas anchors,
+oversized paste choices, save-all failure recovery, settings and shortcut changes,
+font management, curve/levels controls, all eight selection scale handles with
+Shift/Alt modifiers, and rotated-selection history. History tests verify both undo
+and redo when the active tool has been deactivated, plus layer identity and pixels
+after duplication, deletion, swapping, merging, translucent fills and inversion.
+Polygon conversion preserves holes, and contour tracing retains the original
+pixel stencil; empty regions convert to empty paths.
+
+Gradient tests run real WebGL2 shaders with SwiftShader and compare each gradient
+shape/repeat mode against independent geometric color expectations. Text tests
+exercise measured multiline caret placement, middle-button paste suppression,
+keyboard finishing, viewport focus and native right-button editor dragging.
+Document-strip tests cover thumbnails, navigation, ordering, context commands and
+menu/listener cleanup; dialog movement tests verify clamping and persisted positions.
+Surface tests verify exact `Color` channel writes, clipped transfers, subwindows
+and disposal. Sparse bitmap transaction tests restore previously saved tiles on
+cancel, undo and redo. All hatch patterns are checked against their rendered
+tiles, and separable software paint blends are compared with native Canvas.
+Color Dodge/Burn preserve black/white backdrop boundary cases consistently between
+the paint bucket and Canvas-based tools.
+
+Desktop clipboard text and images use Chromium's `navigator.clipboard` APIs.
+Electron's removed renderer `clipboard` module is not used. Regressions verify
+actual text and image clipboard contents, not just a mocked desktop helper.
+Node-side platform tests use isolated Electron/HTTP boundary fixtures and real
+temporary files to check updater events, managed-release version comparisons,
+setup retry/quit, staged-asset cleanup, protocol routing and window persistence.
+They do not contact release servers, open external pages or install updates.
+
 The browser scenario runs without Node integration in an isolated, sandboxed
 window served over loopback HTTP. It exercises real service-worker installation
 and update lifecycles, update postponement, and unsaved-work protection using a
-small deterministic worker fixture rather than a mocked browser-mode flag.
+small deterministic worker fixture rather than a mocked browser-mode flag, and
+round-trips structured-cloned bytes through the browser file-system IndexedDB store.
 
 Final CPU resampling uses the same 4x4 rectangular selection coverage as WebGL,
 including its aliased mode, without allocating an intermediate mask canvas.

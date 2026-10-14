@@ -12,7 +12,7 @@
  * Licensed under LICENSE.md. See NOTICE.md for full attribution.
  */
 
-const {app, autoUpdater: nativeAutoUpdater, BrowserWindow, Menu, ipcMain, net, protocol, screen} = require('electron');
+const {app, autoUpdater: nativeAutoUpdater, BrowserWindow, dialog, Menu, ipcMain, net, protocol, screen} = require('electron');
 const {setupTitlebar} = require('custom-electron-titlebar/main');
 const fs = require('node:fs');
 const path = require('node:path');

@@ -1,0 +1,262 @@
+/*
+ * paint.js, an unofficial JavaScript port of Paint.NET 3.36.7
+ *
+ * Original Paint.NET source:
+ * Copyright (C) dotPDN LLC, Rick Brewster, and contributors.
+ *
+ * JavaScript port and port-specific changes:
+ * Copyright (C) 2024-present LabyStudio.
+ * https://github.com/LabyStudio
+ *
+ * The interface design and behavior target Paint.NET 5.1.12+.
+ * Licensed under LICENSE.md. See NOTICE.md for full attribution.
+ */
+
+module.exports = async function checkDocumentChrome() {
+    let check = (condition, message) => {
+        if (!condition) {
+            throw new Error(message);
+        }
+    };
+    let frame = () => new Promise(resolve => requestAnimationFrame(resolve));
+    let waitFor = async predicate => {
+        let deadline = performance.now() + 5000;
+        while (!predicate()) {
+            check(performance.now() < deadline, "Document chrome timed out");
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+    };
+    let phase = name => require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+    for (let workspace of [...app.getDocumentWorkspaces()]) {
+        app.closeDocumentWorkspace(workspace, false);
+    }
+    let strip = PanelRegistry.get("documentStrip");
+    strip.showDocumentList();
+    check(!strip.documentListOpen, "Empty document strip opened a list");
+    let workspaces = [];
+    for (let index = 0; index < 14; ++index) {
+        workspaces.push(app.createBlankDocumentInNewWorkspace(index % 2 === 0 ? 16 : 8, index % 2 === 0 ? 8 : 16));
+    }
+    await frame();
+    phase("document-list selection, thumbnail refresh and reordered workspace identity");
+    strip.documentListButton.click();
+    await frame();
+    check(strip.documentListOpen && strip.documentListPopup.querySelectorAll(".document-list-entry").length === 14,
+        "Open-image list omitted documents");
+    let entries = strip.documentListPopup.querySelectorAll(".document-list-entry");
+    check(entries[13].classList.contains("selected") && entries[13].getAttribute("aria-selected") === "true",
+        "Document list did not expose active selection");
+    entries[2].click();
+    check(app.getActiveDocumentWorkspace() === workspaces[2] && !strip.documentListOpen, "Document-list click did not activate and close");
+    strip.toggleDocumentList();
+    strip.toggleDocumentList();
+    check(!strip.documentListOpen, "Document-list toggle did not close");
+    strip.showDocumentList();
+    document.dispatchEvent(new KeyboardEvent("keydown", {key: "a", bubbles: true}));
+    check(strip.documentListOpen, "Ordinary key closed document list");
+    document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+    check(!strip.documentListOpen && document.activeElement === strip.documentListButton, "Escape did not close/focus document-list button");
+    strip.showDocumentList();
+    document.body.dispatchEvent(new PointerEvent("pointerdown", {bubbles: true}));
+    check(!strip.documentListOpen, "Outside pointer retained document list");
+    strip.showDocumentList();
+    let named = workspaces[0];
+    named.setFileInfo("<literal-name>.png", null, null, "png", {});
+    check(strip.documentListPopup.textContent.includes("<literal-name>.png") && strip.documentListPopup.querySelector("literal-name") === null,
+        "Document-list name was interpreted as markup");
+    let item = strip.getItemByDocumentWorkspace(named);
+    named.setDirty(true);
+    check(item.dirtyIndicator.style.visibility === "visible", "Dirty document lost its strip marker");
+    named.setDirty(false);
+    check(item.dirtyIndicator.style.visibility === "hidden", "Saved document retained its dirty marker");
+    let layer = named.getActiveLayer();
+    layer.getSurface().context.fillStyle = "lime";
+    layer.getSurface().context.fillRect(0, 0, 16, 8);
+    layer.invalidate();
+    await new Promise(resolve => setTimeout(resolve, 120));
+    strip.updatePopupThumbnail(named);
+    let preview = strip.documentListPopup.querySelector(".document-list-entry canvas");
+    check(preview.getContext("2d").getImageData(2, 2, 1, 1).data[1] === 255, "Popup thumbnail did not refresh changed pixels");
+    let second = strip.documentsListItem.items[1];
+    strip.documentsListItem.itemSwapper(item, second);
+    check(app.getDocumentWorkspaces()[1] === named && strip.documentsListItem.items[1].getDocumentWorkspace() === named,
+        "Strip reordering did not reorder its workspaces");
+    strip.hideDocumentList();
+    let list = strip.documentsListItem.getElement();
+    list.scrollLeft = 0;
+    strip.updateNavigation();
+    check(strip.previousButton.hidden && !strip.nextButton.hidden, "Overflow navigation did not expose the next document");
+    strip.nextButton.click();
+    await new Promise(resolve => setTimeout(resolve, 350));
+    strip.updateNavigation();
+    check(list.scrollLeft > 0 && !strip.previousButton.hidden, "Next-document navigation did not scroll");
+    strip.previousButton.click();
+    strip.scheduleNavigationUpdate();
+    strip.scheduleNavigationUpdate();
+    await frame();
+
+    phase("context commands use the clicked workspace and restore previous focus after closing");
+    let fs = require("node:fs");
+    let filePath = require("node:path").join(require("node:process").env.PAINTDOTJS_TEST_USER_DATA, "context-save.png");
+    named.setFileInfo("context-save.png", null, filePath, "png", {});
+    app.setActiveDocumentWorkspace(workspaces[2]);
+    item = strip.getItemByDocumentWorkspace(named);
+    item.element.dispatchEvent(new MouseEvent("contextmenu", {clientX: 10000, clientY: 10000, bubbles: true, cancelable: true}));
+    check(app.getActiveDocumentWorkspace() === named && document.querySelector(".document-context-menu") !== null,
+        "Tab context menu did not activate its clicked document");
+    let commands = () => [...document.querySelectorAll(".document-context-menu .drop-entry")];
+    commands()[0].click();
+    await frame();
+    check(await navigator.clipboard.readText() === filePath && DocumentContextMenu.popup === null, "Copy Path did not copy or close its menu");
+    check(await DocumentIO.getClipboardImageSize() === null, "Text clipboard unexpectedly supplied image dimensions");
+    let clipboardCanvas = named.getActiveLayer().getSurface().getCanvas();
+    let clipboardImage = await new Promise(resolve => clipboardCanvas.toBlob(resolve));
+    await navigator.clipboard.write([new ClipboardItem({"image/png": clipboardImage})]);
+    let clipboardSize = await DocumentIO.getClipboardImageSize();
+    check(clipboardSize !== null && clipboardSize.width === 16 && clipboardSize.height === 8,
+        "Real desktop image clipboard did not supply its dimensions through the shared browser API");
+    let showFolder = window.desktopFileActions.showItemInFolder;
+    let folder = null;
+    try {
+        window.desktopFileActions.showItemInFolder = path => folder = path;
+        DocumentContextMenu.show(10, 10, named);
+        commands()[1].click();
+        check(folder === filePath, "Open Containing Folder used the wrong path");
+    } finally {
+        window.desktopFileActions.showItemInFolder = showFolder;
+    }
+    named.setDirty(true);
+    DocumentContextMenu.show(10, 10, named);
+    commands()[2].click();
+    await waitFor(() => !named.isDirty());
+    check(fs.readFileSync(filePath).subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])),
+        "Context Save did not write a PNG file");
+    let saveActive = DocumentIO.saveActive;
+    let forceSaveAs = null;
+    try {
+        DocumentIO.saveActive = async force => forceSaveAs = force;
+        DocumentContextMenu.show(10, 10, named);
+        commands()[3].click();
+        await frame();
+        check(forceSaveAs === true, "Context Save As did not force its file picker");
+    } finally {
+        DocumentIO.saveActive = saveActive;
+    }
+    for (let action of ["escape", "outside", "close-owner"]) {
+        DocumentContextMenu.show(10, 10, named);
+        document.dispatchEvent(new KeyboardEvent("keydown", {key: "a"}));
+        check(DocumentContextMenu.popup !== null, "Ordinary key dismissed context menu");
+        if (action === "escape") {
+            document.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape"}));
+        } else if (action === "outside") {
+            document.body.dispatchEvent(new PointerEvent("pointerdown", {bubbles: true}));
+        } else {
+            DocumentContextMenu.popup.requestClose();
+        }
+        check(DocumentContextMenu.popup === null && DocumentContextMenu.escapeListener === null,
+            "Context-menu dismissal retained popup/listeners");
+    }
+    named.setDirty(true);
+    DocumentContextMenu.show(10, 10, named, workspaces[2]);
+    commands()[4].click();
+    await waitFor(() => document.querySelector(".unsaved-changes-dialog") !== null);
+    document.querySelectorAll(".unsaved-changes-dialog .task-dialog-choice")[2].click();
+    await frame();
+    check(app.getDocumentWorkspaces().includes(named), "Cancelled context Close lost its document");
+    named.setDirty(false);
+    DocumentContextMenu.show(10, 10, named, workspaces[2]);
+    commands()[4].click();
+    await waitFor(() => !app.getDocumentWorkspaces().includes(named));
+    check(app.getActiveDocumentWorkspace() === workspaces[2], "Closing a context tab did not restore previous workspace");
+    let called = false;
+    await DocumentContextMenu.runForWorkspace(named, () => called = true);
+    check(!called, "Context operation ran for a closed document");
+
+    phase("top-level hover switching, effect submenus and popup anchoring");
+    let main = PanelRegistry.get("mainMenu");
+    let file = main.get("menu.file");
+    let view = main.get("menu.view");
+    let effects = main.get("menu.effects");
+    file.element.click();
+    file.open();
+    view.element.dispatchEvent(new MouseEvent("mouseenter"));
+    check(view.isOpen() && !file.isOpen() && main.openDropMenu === view, "Hover switching retained its old top-level menu");
+    for (let unit of ["pixel", "inch", "centimeter"]) {
+        app.setMeasurementUnit(unit);
+        view.updateMeasurementUnitChecks();
+        check(view.get("measurementUnit." + unit).classNames.includes("checked-drop-entry"), "View menu did not check its selected unit");
+    }
+    effects.element.dispatchEvent(new MouseEvent("mouseenter"));
+    check(effects.isOpen() && !view.isOpen(), "Effects menu did not replace View menu");
+    let firstCategory = effects.effectEntries[0];
+    let secondCategory = effects.effectEntries[1];
+    firstCategory.element.dispatchEvent(new MouseEvent("mouseenter"));
+    check(firstCategory.submenuElement !== null && firstCategory.element.getAttribute("aria-expanded") === "true",
+        "Effect category hover did not open its submenu");
+    firstCategory.open();
+    secondCategory.element.click();
+    check(firstCategory.submenuElement === null && secondCategory.submenuElement !== null, "Effect submenu did not close its sibling");
+    effects.close();
+    check(secondCategory.submenuElement === null && DropMenuPopup.activePopup === null, "Closing Effects retained a nested submenu");
+    let popup = new DropMenuPopup("runtime-position", {className: "runtime-popup"});
+    popup.positionAt(100, 100);
+    popup.positionAtAnchor({left: 0, right: 1, top: 0, bottom: 1});
+    let label = document.createElement("span");
+    label.textContent = "Popup";
+    popup.open([label]);
+    popup.positionAtAnchor({left: 30, right: 80, top: 50, bottom: 70}, {alignEnd: true, dropUp: true});
+    check(parseFloat(popup.element.style.left) >= 2 && parseFloat(popup.element.style.top) >= 2, "Popup anchor escaped viewport bounds");
+    let replacement = new DropMenuPopup("runtime-replacement");
+    replacement.open([]);
+    check(popup.element === null && DropMenuPopup.activePopup === replacement, "Exclusive popup did not close its predecessor");
+    replacement.requestClose();
+
+    phase("dialog dragging ignores controls, clamps and persists position");
+    let host = document.createElement("div");
+    host.style.cssText = "position:fixed;left:100px;top:100px;width:300px;height:200px;z-index:10000";
+    document.body.appendChild(host);
+    {
+        let dialog = document.createElement("div");
+        dialog.style.cssText = "position:fixed;left:140px;top:140px;width:100px;height:80px";
+        host.appendChild(dialog);
+        {
+            let handle = document.createElement("div");
+            handle.style.height = "20px";
+            dialog.appendChild(handle);
+            {
+                let button = document.createElement("button");
+                button.textContent = "Close";
+                handle.appendChild(button);
+                let mover = new DialogMover(dialog, handle, host, "runtime-mover");
+                button.dispatchEvent(new MouseEvent("mousedown", {button: 0, bubbles: true}));
+                handle.dispatchEvent(new MouseEvent("mousedown", {button: 2, bubbles: true}));
+                check(!mover.dragging, "Dialog drag intercepted a control or right mouse button");
+                mover.move({clientX: 1000, clientY: 1000});
+                handle.dispatchEvent(new MouseEvent("mousedown", {button: 0, clientX: 150, clientY: 150, bubbles: true, cancelable: true}));
+                document.dispatchEvent(new MouseEvent("mousemove", {clientX: 1000, clientY: 1000, cancelable: true}));
+                check(dialog.style.left === "300px" && dialog.style.top === "220px", "Dialog escaped its lower bounds");
+                document.dispatchEvent(new MouseEvent("mouseup"));
+                check(!mover.dragging && AppSettingsStore.get("dialogs.runtime-mover").left === 300, "Dialog drag did not stop/persist");
+                mover.setPosition(-100, -100);
+                check(dialog.style.left === "100px" && dialog.style.top === "100px", "Dialog escaped its upper bounds");
+                window.dispatchEvent(new Event("resize"));
+                mover.destroy();
+                check(!handle.classList.contains("movable-dialog-handle"), "Destroying dialog drag retained its handle");
+                let restored = new DialogMover(dialog, handle, host, "runtime-mover");
+                check(dialog.style.left === "300px" && dialog.style.top === "220px", "Dialog position was not restored");
+                restored.destroy();
+                dialog.style.position = "";
+                let transient = new DialogMover(dialog, handle, host);
+                transient.clampToBounds();
+                transient.destroy();
+            }
+        }
+    }
+    host.remove();
+    for (let workspace of [...app.getDocumentWorkspaces()]) {
+        app.closeDocumentWorkspace(workspace, false);
+    }
+    strip.updateNavigation();
+    check(strip.documentListButton.hidden && strip.element.style.width === "0px", "Empty strip retained document controls/space");
+    return {ok: true};
+};

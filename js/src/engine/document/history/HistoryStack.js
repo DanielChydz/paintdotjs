@@ -36,7 +36,7 @@ class HistoryStack {
         let topMemento = this.redoStack[0];
         let app = this.documentWorkspace.getApp();
 
-        if (topMemento instanceof ToolHistoryMemento && app.getActiveTool().getType() !== topMemento.getToolType()) {
+        if (topMemento instanceof ToolHistoryMemento && app.getActiveTool()?.getType() !== topMemento.getToolType()) {
             // Change tool and step forward again
             app.setActiveToolFromType(topMemento.getToolType());
             this.stepForward();
@@ -62,7 +62,7 @@ class HistoryStack {
         let topMemento = this.undoStack[this.undoStack.length - 1];
         let app = this.documentWorkspace.getApp();
 
-        if (topMemento instanceof ToolHistoryMemento && app.getActiveTool().getType() !== topMemento.getToolType()) {
+        if (topMemento instanceof ToolHistoryMemento && app.getActiveTool()?.getType() !== topMemento.getToolType()) {
             // Change tool and step backward again
             app.setActiveToolFromType(topMemento.getToolType());
             this.stepBackward();

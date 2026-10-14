@@ -178,8 +178,8 @@ class Tool {
                 case "overlay": return back <= 0.5 ? 2 * back * front : 1 - 2 * (1 - back) * (1 - front);
                 case "darken": return Math.min(back, front);
                 case "lighten": return Math.max(back, front);
-                case "colorDodge": return front >= 1 ? 1 : Math.min(1, back / (1 - front));
-                case "colorBurn": return front <= 0 ? 0 : 1 - Math.min(1, (1 - back) / front);
+                case "colorDodge": return back <= 0 ? 0 : front >= 1 ? 1 : Math.min(1, back / (1 - front));
+                case "colorBurn": return back >= 1 ? 1 : front <= 0 ? 0 : 1 - Math.min(1, (1 - back) / front);
                 case "hardLight": return front <= 0.5 ? 2 * back * front : 1 - 2 * (1 - back) * (1 - front);
                 case "softLight":
                     if (front <= 0.5) {

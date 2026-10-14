@@ -13,18 +13,14 @@
  */
 
 const {CustomTitlebar, TitlebarColor} = require('custom-electron-titlebar')
-const {ipcRenderer, clipboard, shell, webUtils} = require('electron');
+const {ipcRenderer, shell, webUtils} = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 
 const localFilePaths = new WeakMap();
 
 window.desktopFileActions = {
-    copyText: text => clipboard.writeText(text),
-    getClipboardImageSize: () => {
-        const image = clipboard.readImage();
-        return image.isEmpty() ? null : image.getSize();
-    },
+    copyText: text => navigator.clipboard.writeText(text),
     getPathForFile: file => localFilePaths.get(file) || webUtils.getPathForFile(file),
     writeFile: async (filePath, data) => {
         await fs.promises.writeFile(filePath, Buffer.from(data));

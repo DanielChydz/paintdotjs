@@ -27,6 +27,18 @@ module.exports = async function checkBrowser() {
     };
     check(typeof require === "undefined" && isApp === false, "Browser test accidentally used desktop mode");
     check(window.isSecureContext && "serviceWorker" in navigator, "Secure browser APIs are unavailable");
+    let requestResult = request => new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+    let store = await getObjectStore("readwrite");
+    await requestResult(store.put({fileName: "runtime-test-file", bytes: new Uint8Array([1, 2, 3])}));
+    store = await getObjectStore("readonly");
+    let saved = await requestResult(store.get("runtime-test-file"));
+    check(saved.fileName === "runtime-test-file" && saved.bytes[2] === 3,
+        "Browser file-system store did not persist its structured-cloned bytes");
+    store = await getObjectStore("readwrite");
+    await requestResult(store.delete("runtime-test-file"));
     for (let workspace of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(workspace, false);
     }
