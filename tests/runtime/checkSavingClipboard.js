@@ -258,6 +258,23 @@ module.exports = async function checkSavingClipboard() {
     app.closeDocumentWorkspace(pasted, false);
     app.setActiveDocumentWorkspace(workspace);
 
+    phase("fully offscreen copy/cut preserves clipboard identity, pixels and history");
+    let savedClipboard = DocumentIO.internalClipboard;
+    let savedClipboardInfo = DocumentIO.internalClipboardInfo;
+    let activeSurface = workspace.getActiveLayer().getSurface();
+    let beforeOffscreen = activeSurface.context.getImageData(0, 0, 32, 16).data;
+    selection.reset();
+    selection.setContinuation(new Rectangle(100, 100, 4, 4), CombineMode.REPLACE);
+    selection.commitContinuation();
+    let beforeHistory = workspace.getHistory().undoStack.length;
+    check(!await DocumentIO.copySelection() && !await DocumentIO.cutSelection(),
+        "Copy/cut accepted a selection with no pixels inside the canvas");
+    check(DocumentIO.internalClipboard === savedClipboard && DocumentIO.internalClipboardInfo === savedClipboardInfo,
+        "Offscreen copy replaced a valid clipboard image or its origin metadata");
+    equal(activeSurface.context.getImageData(0, 0, 32, 16).data, beforeOffscreen, "Offscreen cut changed layer pixels");
+    check(workspace.getHistory().undoStack.length === beforeHistory, "Offscreen copy/cut recorded a history entry");
+    selection.reset();
+
     phase("dirty document close and modal choice");
     workspace.setDirty(true);
     pending = DocumentIO.closeDocumentWorkspace(workspace);

@@ -35,7 +35,7 @@ class ToolHistoryMemento extends HistoryMemento {
     }
 
     onUndo() {
-        if (this.app.getActiveTool().getType() !== this.toolType) {
+        if (this.app.getActiveTool()?.getType() !== this.toolType) {
             this.app.setActiveToolFromType(this.toolType);
         }
 

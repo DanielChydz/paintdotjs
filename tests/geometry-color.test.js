@@ -457,3 +457,10 @@ test("UUID representation retains 64-bit values and random IDs use both independ
     assert.equal(generated.leastSigBits, 6755399441055743n);
     assert.equal(values.length, 0);
 });
+
+test("scan conversion advances past a completed roof into the next pair of side edges", () => {
+    let {Point, Utility} = loadGeometry();
+    let vertices = [[0, 0], [2, 1], [2, 4], [-2, 4], [-2, 1]].map(([x, y]) => new Point(x, y));
+    assert.deepEqual(Array.from(Utility.getScans(vertices), scan => [scan.x, scan.y, scan.length]),
+        [[0, 0, 0], [-2, 1, 4], [-2, 2, 4], [-2, 3, 4]]);
+});

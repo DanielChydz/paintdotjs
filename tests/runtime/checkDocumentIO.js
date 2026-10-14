@@ -124,6 +124,21 @@ module.exports = async function checkDocumentIO() {
         transparent.height = 0;
     }
 
+    phase("empty legacy PDN layer lists receive a background and invalid dimensions fail before creation");
+    let countBeforeInvalid = app.getDocumentWorkspaces().length;
+    for (let [width, height] of [[0, 3], [4.5, 3], [4, 0], [4, Infinity]]) {
+        await rejects(() => DocumentIO.createWorkspaceFromPdnData({width, height, layers: []}, "invalid.pdn"), /Invalid \.pdn canvas size/);
+        check(app.getDocumentWorkspaces().length === countBeforeInvalid, "Invalid PDN dimensions created a workspace");
+    }
+    let emptyPdn = await DocumentIO.createWorkspaceFromPdnData({width: 4, height: 3, layers: [], activeLayer: 99}, "empty-legacy.pdn");
+    check(emptyPdn.getDocument().getLayers().size() === 1 && emptyPdn.getActiveLayer().properties.isBackground
+        && emptyPdn.getActiveLayerIndex() === 0 && emptyPdn.getDocument().getResolution() === 96
+        && !emptyPdn.isDirty(), "Empty PDN did not receive a saved background layer");
+    check(emptyPdn.getActiveLayer().getSurface().context.getImageData(0, 0, 4, 3).data.every(value => value === 255),
+        "Fallback PDN background was not opaque white");
+    app.closeDocumentWorkspace(emptyPdn, false);
+    app.setActiveDocumentWorkspace(workspace);
+
     phase("native PDN");
     workspace.getActiveLayer().properties.name = "Name \u017c <literal>";
     workspace.getActiveLayer().properties.opacity = 117;

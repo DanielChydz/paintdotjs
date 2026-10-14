@@ -17,11 +17,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,806 | 41,436 | 98.47% | 630 |
-| Branches | 9,162 | 9,648 | 94.96% | 486 |
+| Lines/statements | 40,821 | 41,436 | 98.51% | 615 |
+| Branches | 9,170 | 9,647 | 95.05% | 477 |
 | Functions | 2,529 | 2,529 | 100% | 0 |
 
-- **178 tests passed; zero failures.**
+- **180 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -55,6 +55,13 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `ToolHistoryMemento.onUndo`: restore the required tool even when the active tool
+  has been cleared. A direct-undo regression demonstrated the previous null
+  dereference; undo/redo now preserve the operation and restore the tool.
+- Additional regressions cover off-canvas copy/cut preserving pixels, clipboard
+  identity and history; empty legacy PDN layers and invalid dimensions; even brush
+  sprite sizes; and scan conversion switching from roof edges to vertical sides.
 
 - `AppSettingsStore.load`: validate persisted JSON root; `null` no longer aborts
   application initialization. Cover migration, storage failures and theme updates.

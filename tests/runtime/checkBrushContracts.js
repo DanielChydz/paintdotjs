@@ -95,6 +95,13 @@ module.exports = async function checkBrushContracts() {
     check(sprite.canvas.width % 2 === 1 && sprite.canvas.width >= 33,
         "Brush sprite did not retain its odd centered supersampling extent");
     check(brush.getBrushSprite(33, 1, new Color(255, 0, 0)) === sprite, "Brush sprite cache failed to reuse an unchanged profile");
+    let evenSprite = brush.getBrushSprite(32, 1, new Color(255, 0, 0));
+    check(evenSprite.canvas.width % 2 === 1 && evenSprite.canvas.width >= 32,
+        "Even brush diameter did not retain an odd centered sprite");
+    let center = Math.floor(evenSprite.canvas.width / 2);
+    check(same(evenSprite.canvas.getContext("2d").getImageData(center, center, 1, 1).data, [255, 0, 0, 255])
+        && evenSprite.canvas.getContext("2d").getImageData(0, 0, 1, 1).data[3] === 0,
+        "Hard brush sprite did not retain its opaque center and transparent corner");
     phase("brush and eraser setting changes preserve hover visibility outside the canvas");
     for (let type of [ToolType.PAINT_BRUSH, ToolType.ERASER]) {
         app.setActiveToolFromType(type);

@@ -373,3 +373,16 @@ test("compound history records appended edits and restores transaction order in 
     assert.equal(data.undoImage, image);
     assert.equal(data.savedRegion, region);
 });
+
+test("direct tool memento undo restores its tool after the active tool has been cleared", () => {
+    let {state, makeMemento} = historyFixture();
+    let memento = makeMemento(0, true);
+    state.value = 10;
+    state.type = null;
+    let reverse = memento.performUndo();
+    assert.equal(state.type, "brush");
+    assert.equal(state.value, 0);
+    assert.deepEqual(state.switches, ["brush"]);
+    reverse.performUndo();
+    assert.equal(state.value, 10);
+});
