@@ -58,3 +58,112 @@ test("Windows system settings links are disabled outside the Windows desktop", (
         ] : []);
     }
 });
+
+function updateFixture(options = {}) {
+    let state = {dirty: false, choice: "reload", scopes: [], cacheNames: [], unregistered: [],
+        deleted: [], errors: [], statuses: [], ...options};
+    let scope = "https://paint.example.test/editor/";
+    let window = {
+        addEventListener() {},
+        app: {hasUnsavedDocuments: () => state.dirty},
+        location: {href: scope + "?document=example&v=old#canvas", replace: url => state.reloaded = url},
+        caches: {},
+        desktopUpdater: {check: async () => {
+            throw new Error("Network unavailable");
+        }}
+    };
+    let context = vm.createContext({
+        isApp: !!options.isApp, window, URL, Date: {now: () => 123456789},
+        console: {error: (...args) => state.errors.push(args)},
+        document: {baseURI: scope + "index.html"},
+        AppSettingsStore: {apply() {}, watchSystemColorScheme() {}},
+        TaskDialog: {show: async settings => {
+            state.dialog = settings;
+            return state.choice;
+        }},
+        navigator: {serviceWorker: {getRegistrations: async () => {
+            if (state.workerError) {
+                throw state.workerError;
+            }
+            return state.scopes.map(registrationScope => ({scope: registrationScope, unregister: async () => {
+                state.unregistered.push(registrationScope);
+                return true;
+            }}));
+        }}},
+        caches: {
+            keys: async () => state.cacheNames,
+            delete: async name => {
+                if (state.cacheError) {
+                    throw state.cacheError;
+                }
+                state.deleted.push(name);
+                return true;
+            }
+        }
+    });
+    let filename = path.resolve(__dirname, "../js/src/interface/window/dialog/SettingsDialog.js");
+    vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    let settings = vm.runInContext("new SettingsDialog()", context);
+    settings.setStatus = message => state.statuses.push(message);
+    return {settings, state, context, window, scope, button: {textContent: "Check now", disabled: false}};
+}
+
+test("web update cancellation keeps unsaved work, registrations and caches intact", async () => {
+    let {settings, state, button} = updateFixture({dirty: true, choice: "cancel"});
+    await settings.checkForUpdates(button);
+    assert.equal(state.dialog.cancelValue, "cancel");
+    assert.ok(state.dialog.message.includes("Save your changes"));
+    assert.equal(state.reloaded, undefined);
+    assert.equal(state.unregistered.length, 0);
+    assert.equal(state.deleted.length, 0);
+    assert.equal(button.disabled, false);
+    assert.equal(button.textContent, "Check now");
+});
+
+test("web update clears only this app's registrations and caches before a cache-busting reload", async () => {
+    for (let dirty of [true, false]) {
+        let fixture = updateFixture({dirty});
+        let {settings, state, scope, button} = fixture;
+        state.scopes = [scope, "https://paint.example.test/other/", scope + "nested/"];
+        state.cacheNames = ["paintdotjs-shell-v1", "other-app", "PAINTDOTJS-assets-v2"];
+        await settings.checkForUpdates(button);
+        assert.deepEqual(state.unregistered, [scope]);
+        assert.deepEqual(state.deleted, ["paintdotjs-shell-v1", "PAINTDOTJS-assets-v2"]);
+        let target = new URL(state.reloaded);
+        assert.equal(target.pathname, "/editor/");
+        assert.equal(target.searchParams.get("document"), "example");
+        assert.equal(target.searchParams.get("v"), "123456789");
+        assert.equal(target.hash, "#canvas");
+        assert.equal(button.disabled, true);
+        assert.equal(button.textContent, "Checking...");
+    }
+    let fixture = updateFixture();
+    delete fixture.context.navigator.serviceWorker;
+    delete fixture.window.caches;
+    delete fixture.window.app;
+    await fixture.settings.checkForUpdates(fixture.button);
+    assert.ok(fixture.state.reloaded);
+});
+
+test("failed web or desktop update restores controls and reports a recoverable failure", async () => {
+    for (let failure of ["worker", "cache", "reload", "desktop"]) {
+        let fixture = updateFixture({isApp: failure === "desktop"});
+        let error = new Error("Update failed");
+        if (failure === "worker") {
+            fixture.state.workerError = error;
+        } else if (failure === "cache") {
+            fixture.state.cacheNames = ["paintdotjs-shell"];
+            fixture.state.cacheError = error;
+        } else if (failure === "reload") {
+            fixture.window.location.replace = () => {
+                throw error;
+            };
+        }
+        await fixture.settings.checkForUpdates(fixture.button);
+        assert.equal(fixture.button.disabled, false);
+        assert.equal(fixture.button.textContent, "Check now");
+        assert.equal(fixture.state.reloaded, undefined);
+        assert.equal(fixture.state.errors.length, 1);
+        assert.ok(/failed|Could not clear/.test(fixture.state.statuses.at(-1)));
+    }
+});
