@@ -68,7 +68,12 @@ class RectangleSelectTool extends SelectionTool {
             else {
                 width = height * ratioWidth / ratioHeight;
             }
-            rect = Rectangle.absolute(a.x, a.y, a.x + Math.sign(dx || 1) * width, a.y + Math.sign(dy || 1) * height);
+            const endX = a.x + Math.sign(dx || 1) * width;
+            const endY = a.y + Math.sign(dy || 1) * height;
+            rect = Rectangle.absolute(
+                Math.min(a.x, endX), Math.min(a.y, endY),
+                Math.max(a.x, endX), Math.max(a.y, endY)
+            );
         } else if (isShiftKeyDown) {
             rect = Utility.pointsToConstrainedRectangle(a, b);
         } else {

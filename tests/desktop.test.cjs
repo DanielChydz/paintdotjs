@@ -35,6 +35,8 @@ const desktopScenarios = [
         extraArgs: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]},
     {name: "desktop document strip, context commands, menu lifecycle and movable dialog bounds", file: "checkDocumentChrome.js"},
     {name: "desktop surfaces, blend modes, hatch patterns and sparse bitmap transaction restoration", file: "checkSurfaceTransactions.js"},
+    {name: "desktop pending shape edits and selection combination/origin history", file: "checkPendingSelections.js",
+        extraArgs: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]},
     {name: "browser runtime without Node integration and real PWA updates", file: "checkBrowser.js", browser: true}
 ];
 

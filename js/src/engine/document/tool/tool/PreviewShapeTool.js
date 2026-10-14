@@ -416,13 +416,16 @@ class PreviewShapeTool extends DrawingTool {
             this.app.setCursor(directions[index] + "-resize");
         } else if (this.interactionMode === MoveToolBaseMode.SCALE) {
             const localPoint = point.clone();
+            const localStart = this.interactionStart.clone();
             const inverse = this.originalTransform.clone();
             if (inverse.isInvertible()) {
                 inverse.invert();
             }
-            inverse.transformPoints([localPoint]);
-            localPoint.x = Math.round(localPoint.x);
-            localPoint.y = Math.round(localPoint.y);
+            inverse.transformPoints([localPoint, localStart]);
+            const delta = new Point(
+                Math.round(localPoint.x - localStart.x),
+                Math.round(localPoint.y - localStart.y)
+            );
 
             let left = Math.min(this.originalStartPoint.x, this.originalEndPoint.x);
             let top = Math.min(this.originalStartPoint.y, this.originalEndPoint.y);
@@ -432,16 +435,16 @@ class PreviewShapeTool extends DrawingTool {
             const originalHeight = Math.max(1, bottom - top);
             const edge = this.interactionEdge;
             if ([MoveToolBaseEdge.TOP_LEFT, MoveToolBaseEdge.LEFT, MoveToolBaseEdge.BOTTOM_LEFT].includes(edge)) {
-                left = localPoint.x;
+                left += delta.x;
             }
             if ([MoveToolBaseEdge.TOP_RIGHT, MoveToolBaseEdge.RIGHT, MoveToolBaseEdge.BOTTOM_RIGHT].includes(edge)) {
-                right = localPoint.x;
+                right += delta.x;
             }
             if ([MoveToolBaseEdge.TOP_LEFT, MoveToolBaseEdge.TOP, MoveToolBaseEdge.TOP_RIGHT].includes(edge)) {
-                top = localPoint.y;
+                top += delta.y;
             }
             if ([MoveToolBaseEdge.BOTTOM_LEFT, MoveToolBaseEdge.BOTTOM, MoveToolBaseEdge.BOTTOM_RIGHT].includes(edge)) {
-                bottom = localPoint.y;
+                bottom += delta.y;
             }
 
             const isCorner = [MoveToolBaseEdge.TOP_LEFT, MoveToolBaseEdge.TOP_RIGHT,
@@ -682,10 +685,11 @@ class PreviewShapeTool extends DrawingTool {
             }
         } else {
             if (aliasedRectangle) {
-                const left = Math.floor(this.startPoint.x);
-                const top = Math.floor(this.startPoint.y);
-                const right = Math.ceil(this.endPoint.x);
-                const bottom = Math.ceil(this.endPoint.y);
+                const bounds = Utility.pointsToRectangle(this.startPoint, this.endPoint);
+                const left = Math.floor(bounds.getLeft());
+                const top = Math.floor(bounds.getTop());
+                const right = Math.ceil(bounds.getRight());
+                const bottom = Math.ceil(bounds.getBottom());
                 const fillButton = ["both", "fillOutline"].includes(drawType)
                     ? (this.button === MouseButton.RIGHT ? MouseButton.LEFT : MouseButton.RIGHT)
                     : this.button;
@@ -726,7 +730,7 @@ class PreviewShapeTool extends DrawingTool {
                     context.fill(catalogPath, "evenodd");
                 }
             }
-            if (["outline", "both", "fillOutline"].includes(drawType)) {
+            if (!aliasedRectangle && ["outline", "both", "fillOutline"].includes(drawType)) {
                 // Filling the separately inset interior replaced the current
                 // canvas path, so restore the outline geometry before stroking.
                 if (rectangleOutline !== null && rectangleInterior !== null) {
