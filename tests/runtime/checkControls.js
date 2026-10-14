@@ -52,6 +52,10 @@ module.exports = async function checkControls() {
     let colors = FormRegistry.get("colorsForm");
     colors.setExpanded(true);
     check(colors.expanded && colors.sliderPanel.style.display === "block", "Expanded color controls stayed hidden");
+    colors.moreLessButtonElement.click();
+    check(!colors.expanded && colors.sliderPanel.style.display === "none", "Less button did not hide extended color controls");
+    colors.moreLessButtonElement.click();
+    check(colors.expanded && colors.sliderPanel.style.display === "block", "More button did not restore extended color controls");
     colors.setMainColor(new Color(20, 40, 60, 80));
     colors.setSecondaryColor(new Color(90, 110, 130, 150));
     colors.secondaryColorItem.getElement().click();
@@ -123,6 +127,17 @@ module.exports = async function checkControls() {
     check(!colors.setPalette(null) && !colors.setPalette([]), "Empty palette replaced the current palette");
     check(colors.setPalette(palette, "QA"), "Valid palette was rejected");
     check(colors.loadCurrentPalette()[0].toPacked() === palette[0].toPacked(), "Saved palette did not reload");
+    colors.setSelectedIsPrimary(true);
+    for (let [index, button] of [[0, MouseButton.LEFT], [32, MouseButton.RIGHT]]) {
+        let press = new MouseEvent("mousedown", {button, bubbles: true, cancelable: true});
+        colors.paletteElements[index].dispatchEvent(press);
+        check(press.defaultPrevented, "Palette mousedown did not suppress enclosing drag/default behavior");
+        check(packed(button === MouseButton.LEFT ? colors.mainColor : colors.secondaryColor) === packed(palette[index]),
+            "Actual palette event selected the wrong color or paint button");
+        let menu = new MouseEvent("contextmenu", {bubbles: true, cancelable: true});
+        colors.paletteElements[index].dispatchEvent(menu);
+        check(menu.defaultPrevented, "Palette context menu was not suppressed");
+    }
     colors.onPaletteColorClick(0, MouseButton.LEFT);
     check(packed(colors.mainColor) === packed(palette[0]), "Left palette selection chose the wrong color");
     colors.onPaletteColorClick(1, MouseButton.RIGHT);
@@ -146,6 +161,63 @@ module.exports = async function checkControls() {
     check(await colors.importPaletteFiles(files) === 2, "Palette import did not filter invalid files");
     check(await colors.importPaletteFiles([files[2], files[3]]) === 0, "Empty import reported success");
     check(Object.keys(colors.getUserPalettes()).length === 2, "Imported palettes were not persisted");
+    let directoryPicker = Object.getOwnPropertyDescriptor(window, "showDirectoryPicker");
+    let inputClick = HTMLInputElement.prototype.click;
+    try {
+        window.showDirectoryPicker = async options => {
+            check(options.mode === "read", "Palette directory requested write access");
+            return {values: async function* () {
+                yield {kind: "directory", name: "Nested"};
+                yield {kind: "file", name: "Ignored.png"};
+                yield {kind: "file", name: "Folder Palette.TXT", getFile: async () => new window.File(["FF123456"], "Folder Palette.TXT")};
+            }};
+        };
+        await colors.openPalettesFolder();
+        check(colors.parsePalette(colors.getUserPalettes()["Folder Palette"])[0].toHex() === "#123456ff",
+            "Directory palette import lost its filename/color or included unsupported entries");
+        window.showDirectoryPicker = async () => {
+            throw new DOMException("Canceled directory", "AbortError");
+        };
+        await colors.openPalettesFolder();
+        window.showDirectoryPicker = async () => {
+            throw new Error("Directory permission denied");
+        };
+        await rejects(() => colors.openPalettesFolder(), /Directory permission denied/);
+        window.showDirectoryPicker = undefined;
+        let folderInput = null;
+        HTMLInputElement.prototype.click = function () {
+            if (this.type === "file") {
+                folderInput = this;
+            } else {
+                inputClick.call(this);
+            }
+        };
+        await colors.openPalettesFolder();
+        check(folderInput !== null && folderInput.webkitdirectory && folderInput.multiple
+            && folderInput.accept === ".txt,text/plain", "Fallback palette picker lost its directory/type configuration");
+        let transfer = new DataTransfer();
+        folderInput.files = transfer.files;
+        await folderInput.onchange();
+        transfer.items.add(files[2]);
+        folderInput.files = transfer.files;
+        let importing = folderInput.onchange();
+        await waitFor(() => document.querySelector(".task-dialog-message")?.textContent.includes("does not contain any valid palette files"));
+        choose("OK");
+        await importing;
+        transfer = new DataTransfer();
+        transfer.items.add(new window.File(["FF654321"], "Fallback Palette.txt"));
+        folderInput.files = transfer.files;
+        await folderInput.onchange();
+        check(colors.parsePalette(colors.getUserPalettes()["Fallback Palette"])[0].toHex() === "#654321ff",
+            "Fallback directory picker did not import its actual FileList");
+    } finally {
+        HTMLInputElement.prototype.click = inputClick;
+        if (directoryPicker === undefined) {
+            delete window.showDirectoryPicker;
+        } else {
+            Object.defineProperty(window, "showDirectoryPicker", directoryPicker);
+        }
+    }
     for (let name of [null, "", "QA <b>Palette</b>.txt"]) {
         let saving = colors.saveCurrentPaletteAs();
         let nameInput = document.querySelector(".task-dialog input");
