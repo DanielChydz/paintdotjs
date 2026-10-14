@@ -169,7 +169,15 @@ class DocumentWorkspace extends DocumentView {
 
     performAction(action) {
         let memento = action.performAction(this);
-        if (memento !== null) {
+        if (memento !== null && memento !== undefined && typeof memento.then === "function") {
+            memento.then(result => {
+                if (result instanceof HistoryMemento) {
+                    this.history.pushNewMemento(result);
+                }
+            }).catch(error => this.app.handleError(error));
+            return;
+        }
+        if (memento instanceof HistoryMemento) {
             this.history.pushNewMemento(memento);
         }
     }

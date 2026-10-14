@@ -32,18 +32,7 @@ class DocumentWorkspaceAction extends Action {
         let app = window.app;
         let documentWorkspace = app.getActiveDocumentWorkspace();
         if (documentWorkspace !== null && this.isActionExecutable(documentWorkspace)) {
-            const memento = this.performAction(documentWorkspace);
-            if (memento !== null && memento !== undefined && typeof memento.then === "function") {
-                memento.then(result => {
-                    if (result instanceof HistoryMemento) {
-                        documentWorkspace.getHistory().pushNewMemento(result);
-                    }
-                }).catch(error => app.handleError(error));
-                return;
-            }
-            if (memento instanceof HistoryMemento) {
-                documentWorkspace.getHistory().pushNewMemento(memento);
-            }
+            documentWorkspace.performAction(this);
         }
     }
 

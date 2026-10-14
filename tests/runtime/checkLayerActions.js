@@ -48,10 +48,11 @@ module.exports = async function checkLayerActions() {
     original.getSurface().context.fillStyle = "#123456";
     original.getSurface().context.fillRect(0, 0, 8, 8);
     let originalPixels = new Uint8ClampedArray(pixels(original));
-    new AddNewLayerAction().runPerformAction();
+    workspace.performAction(new AddNewLayerAction());
     check(layers.size() === 2 && workspace.getActiveLayer() !== original, "New layer was not inserted and activated");
     let blank = workspace.getActiveLayer();
-    check(pixels(blank).every(value => value === 0), "New layer is not transparent");
+    check(pixels(blank).every(value => value === 0) && history.undoStack.length === 1,
+        "New layer is not transparent or its action added a duplicate/undefined history entry");
     undoRedo(
         () => check(layers.size() === 1 && layers.getAt(0) === original, "Adding-layer undo removed the wrong layer"),
         () => check(layers.size() === 2, "Adding-layer redo lost the new layer")
@@ -133,6 +134,123 @@ module.exports = async function checkLayerActions() {
         () => check(layers.size() === 4 && samePixels(pixels(layers.getAt(1)), requestedPixels), "Indexed duplicate redo lost its source pixels")
     );
 
+    phase("actual layer-properties preview, cancellation and single history commit");
+    workspace.setActiveLayerIndex(0);
+    for (let outcome of ["cancel", "unchanged", "save"]) {
+        let layer = workspace.getActiveLayer();
+        let before = layer.properties.clone();
+        let previousCount = history.undoStack.length;
+        workspace.performAction(new LayerPropertiesAction());
+        let dialog = document.querySelector(".layer-properties-dialog");
+        check(dialog !== null, "Layer-properties action did not open its dialog");
+        if (outcome !== "unchanged") {
+            let name = dialog.querySelector('input[type="text"]');
+            name.value = "Previewed layer";
+            name.dispatchEvent(new Event("input", {bubbles: true}));
+            let opacity = dialog.querySelector('input[type="range"]');
+            opacity.value = "127";
+            opacity.dispatchEvent(new Event("input", {bubbles: true}));
+            check(layer.properties.name === "Previewed layer" && layer.properties.opacity === 127,
+                "Properties dialog did not preview the actual layer");
+        }
+        if (outcome === "cancel") {
+            dialog.querySelector(".app-dialog-close").click();
+        } else {
+            dialog.requestSubmit();
+        }
+        await new Promise(resolve => setTimeout(resolve, 0));
+        let memento = history.undoStack.length > previousCount ? history.undoStack.at(-1) : null;
+        if (outcome === "save") {
+            check(memento instanceof LayerPropertiesHistoryMemento && history.undoStack.length === previousCount + 1,
+                "Changed properties did not commit exactly one history entry through the shared dispatcher");
+            undoRedo(
+                () => check(LayerProperties.areEqual(layer.properties, before), "Properties action undo lost its original state"),
+                () => check(layer.properties.name === "Previewed layer" && layer.properties.opacity === 127,
+                    "Properties action redo lost its committed state")
+            );
+        } else {
+            check(memento === null && LayerProperties.areEqual(layer.properties, before),
+                "Cancelled/unchanged properties modified the layer or created history");
+        }
+    }
+
+    phase("shared action dispatcher propagates synchronous errors and reports rejected asynchronous actions");
+    let previousCount = history.undoStack.length;
+    let originalHandleError = app.handleError;
+    let handledErrors = [];
+    try {
+        app.handleError = error => handledErrors.push(error);
+        let failure = new Error("Asynchronous document action failed");
+        workspace.performAction({performAction: () => Promise.reject(failure)});
+        await new Promise(resolve => setTimeout(resolve, 0));
+        check(handledErrors.length === 1 && handledErrors[0] === failure,
+            "Rejected document action did not reach the application's error reporter exactly once");
+        rejects(() => workspace.performAction({performAction: () => {
+            throw new Error("Synchronous document action failed");
+        }}), /Synchronous document action failed/);
+        check(history.undoStack.length === previousCount, "Failed document action changed history");
+    } finally {
+        app.handleError = originalHandleError;
+    }
+
+    phase("actual layer-row double click selects its target and excludes visibility controls");
+    let layerForm = FormRegistry.get("layerForm");
+    let layerToEdit = layers.getAt(1);
+    let layerItem = layerForm.getItemByLayer(layerToEdit);
+    let previousLayer = workspace.getActiveLayer();
+    layerItem.getElement().querySelector("input").dispatchEvent(new MouseEvent("dblclick", {bubbles: true}));
+    check(document.querySelector(".layer-properties-dialog") === null && workspace.getActiveLayer() === previousLayer,
+        "Visibility checkbox double click opened properties or selected a different layer");
+    layerItem.thumbnail.dispatchEvent(new MouseEvent("dblclick", {bubbles: true}));
+    check(document.querySelector(".layer-properties-dialog") !== null && workspace.getActiveLayer() === layerToEdit,
+        "Layer-row double click did not open properties for its clicked layer");
+    document.querySelector(".layer-properties-dialog .app-dialog-close").click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    check(history.undoStack.length === previousCount, "Canceled layer-row properties added history");
+
+    phase("registered view and layer-navigation commands reach their document targets");
+    let command = id => {
+        let action = ActionRegistry.get(id);
+        check(action !== null && action.runIsActionExecutable(), "Command is unavailable: " + id);
+        action.runPerformAction();
+    };
+    workspace.setZoomToWindow(false);
+    workspace.setZoom(2);
+    command("menu.view.zoomIn");
+    check(workspace.getZoom() === 2.5, "Zoom-in command used the wrong factor");
+    command("menu.view.zoomOut");
+    check(workspace.getZoom() === 2, "Zoom-out command used the wrong factor");
+    command("menu.view.actualSize");
+    check(workspace.getZoom() === 1, "Actual-size command did not reset zoom");
+    command("menu.view.zoomToWindow");
+    check(workspace.isZoomToWindow(), "Fit-to-window command did not enable fitting");
+    workspace.getSelection().setContinuation(new Rectangle(1, 1, 3, 3), CombineMode.REPLACE);
+    workspace.getSelection().commitContinuation();
+    command("menu.view.zoomToSelection");
+    check(workspace.getZoom() > 1, "Zoom-to-selection did not magnify a small selected region");
+    let grid = app.isGridVisible();
+    command("menu.view.grid");
+    check(app.isGridVisible() === !grid && workspace.isGridVisible() === !grid, "Registered grid command did not toggle");
+    command("menu.view.grid");
+    let rulers = app.isRulersVisible();
+    command("menu.view.rulers");
+    check(app.isRulersVisible() === !rulers && workspace.isRulersVisible() === !rulers, "Registered rulers command did not toggle");
+    command("menu.view.rulers");
+    for (let unit of ["inch", "centimeter", "pixel"]) {
+        command("measurementUnit." + unit);
+        check(app.getMeasurementUnit() === unit, "Registered measurement command did not update units");
+    }
+    workspace.setActiveLayerIndex(0);
+    command("menu.layers.goToLayerAbove");
+    check(workspace.getActiveLayerIndex() === 1, "Layer-above command selected the wrong index");
+    command("menu.layers.goToTopLayer");
+    check(workspace.getActiveLayerIndex() === layers.size() - 1, "Top-layer command selected the wrong index");
+    command("menu.layers.goToLayerBelow");
+    check(workspace.getActiveLayerIndex() === layers.size() - 2, "Layer-below command selected the wrong index");
+    command("menu.layers.goToBottomLayer");
+    check(workspace.getActiveLayerIndex() === 0, "Bottom-layer command selected the wrong index");
+    workspace.getSelection().reset();
+
     phase("merged layer pixels and reversible compound history");
     history.clearAll();
     while (layers.size() > 1) {
@@ -207,5 +325,49 @@ module.exports = async function checkLayerActions() {
     selection.setContinuation(new Rectangle(20, 20, 2, 2), CombineMode.REPLACE);
     selection.commitContinuation();
     check(new FillSelectionFunction(color).execute(workspace) === null, "Fully offscreen selection fill created a memento");
+
+    phase("document flatten preserves composite pixels and restores layer identities through undo/redo");
+    check(DocumentIO.flattenDocument() === false, "Flattening a one-layer image changed its document");
+    workspace.getSelection().reset();
+    bottom.properties.opacity = 255;
+    bottom.properties.visible = true;
+    bottom.getSurface().context.fillStyle = "#ff0000";
+    bottom.getSurface().context.fillRect(0, 0, 8, 8);
+    bottom.invalidate();
+    new AddNewLayerAction().runPerformAction();
+    let overlay = workspace.getActiveLayer();
+    overlay.getSurface().context.fillStyle = "rgba(0,0,255,0.5)";
+    overlay.getSurface().context.fillRect(0, 0, 8, 8);
+    overlay.invalidate();
+    let beforeDocument = workspace.getDocument();
+    let beforeBottom = new Uint8ClampedArray(pixels(bottom));
+    let beforeOverlay = new Uint8ClampedArray(pixels(overlay));
+    history.clearAll();
+    app.setActiveToolFromType(ToolType.PENCIL);
+    check(DocumentIO.flattenDocument(), "Two-layer flatten did not replace the document");
+    let flattenedDocument = workspace.getDocument();
+    let flattenedLayer = workspace.getActiveLayer();
+    let flattenedPixels = new Uint8ClampedArray(pixels(flattenedLayer));
+    check(flattenedDocument !== beforeDocument && flattenedDocument.getLayers().size() === 1
+        && flattenedDocument.getWidth() === 8 && flattenedDocument.getHeight() === 8,
+    "Flatten lost image dimensions or retained the source layers");
+    for (let offset = 0; offset < flattenedPixels.length; offset += 4) {
+        check(flattenedPixels[offset] === 127 && flattenedPixels[offset + 1] === 0
+            && flattenedPixels[offset + 2] === 128 && flattenedPixels[offset + 3] === 255,
+        "Flattened pixels differ from the independent source-over composite");
+    }
+    check(workspace.getSelection().isEmpty() && workspace.isDirty()
+        && app.getActiveTool().getType() === ToolType.PENCIL, "Flatten did not clear selection, mark dirty or restore the active tool");
+    undoRedo(() => {
+        check(workspace.getDocument() === beforeDocument && beforeDocument.getLayers().size() === 2
+            && beforeDocument.getLayers().getAt(0) === bottom && beforeDocument.getLayers().getAt(1) === overlay,
+        "Flatten undo lost original layer identities");
+        check(samePixels(pixels(bottom), beforeBottom) && samePixels(pixels(overlay), beforeOverlay),
+            "Flatten undo changed either source layer's pixels");
+    }, () => {
+        check(workspace.getDocument() === flattenedDocument && workspace.getActiveLayer() === flattenedLayer,
+            "Flatten redo did not restore the flattened document/layer");
+        check(samePixels(pixels(flattenedLayer), flattenedPixels), "Flatten redo changed composite pixels");
+    });
     app.closeDocumentWorkspace(workspace, false);
 };
