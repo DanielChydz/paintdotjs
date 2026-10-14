@@ -37,6 +37,7 @@ const desktopScenarios = [
     {name: "desktop surfaces, blend modes, hatch patterns and sparse bitmap transaction restoration", file: "checkSurfaceTransactions.js"},
     {name: "desktop pending shape edits and selection combination/origin history", file: "checkPendingSelections.js",
         extraArgs: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]},
+    {name: "desktop toolbar option mutations and resizable floating-window state", file: "checkToolbarWindows.js"},
     {name: "browser runtime without Node integration and real PWA updates", file: "checkBrowser.js", browser: true}
 ];
 

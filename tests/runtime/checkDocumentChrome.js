@@ -95,6 +95,47 @@ module.exports = async function checkDocumentChrome() {
     strip.scheduleNavigationUpdate();
     await frame();
 
+    phase("native held document navigation repeats and releases its timers");
+    let originalScroll = strip.scrollByDocument;
+    let scrollCalls = 0;
+    let navigationButton = strip.nextButton;
+    let nativeButton = async type => {
+        let bounds = navigationButton.getBoundingClientRect();
+        await require("electron").ipcRenderer.invoke("paintdotjs:test-input", {
+            type, x: Math.round(bounds.left + bounds.width / 2),
+            y: Math.round(bounds.top + bounds.height / 2), button: "left", clickCount: 1
+        });
+    };
+    strip.scrollByDocument = function (direction) {
+        ++scrollCalls;
+        return originalScroll.call(this, direction);
+    };
+    try {
+        list.scrollTo({left: 0, behavior: "instant"});
+        strip.updateNavigation();
+        await nativeButton("mouseDown");
+        await waitFor(() => scrollCalls >= 3);
+        await nativeButton("mouseUp");
+        await frame();
+        let releasedCalls = scrollCalls;
+        await new Promise(resolve => setTimeout(resolve, 180));
+        check(scrollCalls === releasedCalls && list.scrollLeft > 0, "Released document navigation kept repeating or did not scroll");
+        list.scrollTo({left: 0, behavior: "instant"});
+        strip.updateNavigation();
+        scrollCalls = 0;
+        await nativeButton("mouseDown");
+        await waitFor(() => scrollCalls === 1);
+        await nativeButton("mouseUp");
+        await new Promise(resolve => setTimeout(resolve, 550));
+        check(scrollCalls === 1, "Short document-navigation press leaked its delayed repeat");
+        let rightPress = new PointerEvent("pointerdown", {button: 2, bubbles: true, cancelable: true});
+        navigationButton.dispatchEvent(rightPress);
+        check(scrollCalls === 1 && !rightPress.defaultPrevented, "Nonprimary document navigation performed a scroll");
+    } finally {
+        await nativeButton("mouseUp");
+        strip.scrollByDocument = originalScroll;
+    }
+
     phase("context commands use the clicked workspace and restore previous focus after closing");
     let fs = require("node:fs");
     let filePath = require("node:path").join(require("node:process").env.PAINTDOTJS_TEST_USER_DATA, "context-save.png");

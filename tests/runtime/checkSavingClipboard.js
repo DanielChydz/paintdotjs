@@ -94,6 +94,33 @@ module.exports = async function checkSavingClipboard() {
                 "Save result lost JPEG options");
         }
     }
+    phase("rapid save-format changes preserve per-format quality and submit fresh encoded bytes");
+    let switching = SaveImageDialog.open({canvas, encode, initialFormat: "jpeg"});
+    await waitFor(ready);
+    let switchingDialog = form();
+    let formatPicker = [...switchingDialog.querySelectorAll("select")]
+        .find(select => [...select.options].some(option => option.value === "png"));
+    let switchingQuality = switchingDialog.querySelector('input[type="number"]');
+    let chroma = switchingDialog.querySelector(".save-config-chroma");
+    input(switchingQuality, 31);
+    change(formatPicker, "png");
+    check(switchingQuality.closest("[hidden]") !== null && chroma.closest("[hidden]") !== null,
+        "Lossless PNG format retained lossy quality/chroma controls");
+    change(formatPicker, "webp");
+    check(switchingQuality.closest("[hidden]") === null && chroma.closest("[hidden]") !== null,
+        "WebP format did not expose quality independently of JPEG chroma");
+    input(switchingQuality, 57);
+    change(formatPicker, "jpeg");
+    check(switchingQuality.value === "31" && chroma.closest("[hidden]") === null,
+        "Returning to JPEG lost its independent quality or chroma controls");
+    switchingDialog.requestSubmit();
+    let switched = await switching;
+    let signature = new Uint8Array(await switched.blob.arrayBuffer()).slice(0, 2);
+    check(switched.format === "jpeg" && switched.options.quality === 31 && switched.blob.type === "image/jpeg"
+        && signature[0] === 255 && signature[1] === 216, "Immediate format-change submission reused stale format/options/encoded bytes");
+    let switchedImage = await createImageBitmap(switched.blob);
+    check(switchedImage.width === 32 && switchedImage.height === 16, "Switched JPEG encoding lost image dimensions");
+    switchedImage.close();
     phase("save cancellation and failed encoding");
     for (let action of ["escape", "close", "cancel"]) {
         let pending = SaveImageDialog.open({canvas, encode});

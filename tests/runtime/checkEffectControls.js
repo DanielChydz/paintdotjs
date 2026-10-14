@@ -137,6 +137,45 @@ module.exports = async function checkEffectControls() {
     check(result.redPoints.every((point, index) => point[0] === index * 255 && point[1] === index * 255),
         "Curve reset did not restore its identity transfer");
 
+    phase("curve programmatic normalization and canceled native pointer edits");
+    let curveValues = {curve: [[0, 0], [255, 255]]};
+    let curveChanges = [];
+    let editor = new CurveEditor(curveValues, committed => curveChanges.push(committed), () => {});
+    let editorCanvas = editor.buildElement();
+    editorCanvas.style.position = "fixed";
+    editorCanvas.style.left = "20px";
+    editorCanvas.style.top = "200px";
+    editorCanvas.style.width = "354px";
+    editorCanvas.style.height = "312px";
+    editorCanvas.style.zIndex = "100000";
+    document.body.appendChild(editorCanvas);
+    try {
+        editor.setChannels([{key: "curve", color: "#ff0000"}]);
+        let suppliedPoints = [[128.4, "180.1"], [-4, -7], [255.8, 290]];
+        let suppliedSnapshot = JSON.stringify(suppliedPoints);
+        editor.setCurve("curve", suppliedPoints);
+        check(JSON.stringify(curveValues.curve) === "[[0,0],[128,180],[255,255]]"
+            && JSON.stringify(suppliedPoints) === suppliedSnapshot && curveChanges.length === 0,
+        "Programmatic curve update did not sort, round, clamp and copy its points without emitting a user commit");
+        let pointerId = null;
+        editorCanvas.addEventListener("pointerdown", event => {
+            pointerId = event.pointerId;
+        }, {once: true});
+        await native("mouseDown", editorCanvas, 0.5, 0.3);
+        check(pointerId !== null && editor.dragging.length === 1, "Native curve press did not begin a captured edit");
+        let changesBeforeCancel = curveChanges.length;
+        editorCanvas.dispatchEvent(new PointerEvent("pointercancel", {pointerId, bubbles: true}));
+        check(editor.dragging.length === 0 && !editorCanvas.hasPointerCapture(pointerId)
+            && curveChanges.length === changesBeforeCancel, "Pointer cancellation retained capture/an active edit or duplicated its preview");
+        let canceledPoints = JSON.stringify(curveValues.curve);
+        await native("mouseMove", editorCanvas, 0.9, 0.1);
+        await native("mouseUp", editorCanvas, 0.9, 0.1);
+        check(JSON.stringify(curveValues.curve) === canceledPoints, "Canceled curve drag continued changing its transfer points");
+    } finally {
+        await native("mouseUp", editorCanvas, 0.5, 0.3);
+        editorCanvas.remove();
+    }
+
     phase("levels channel switches, automatic extents and draggable gamma");
     pending = open(BitmapEffectEngine.DEFINITIONS.levelsEffect);
     await ready();
