@@ -405,6 +405,113 @@ module.exports = async function checkControls() {
     check(ErrorForm.stringify(circular) === "[object Object]", "Circular error did not use its safe fallback");
     check(ErrorForm.fromConsoleArguments([], "QA").message === "Unknown console error", "Empty console error lost its fallback");
     check(ErrorForm.fromError(null, "QA").message === "null", "Non-Error report lost its value");
+    let clipboard = navigator.clipboard;
+    let clipboardDescriptor = Object.getOwnPropertyDescriptor(clipboard, "writeText");
+    let execCommand = document.execCommand;
+    let textareaCount = document.querySelectorAll("textarea").length;
+    try {
+        Object.defineProperty(clipboard, "writeText", {configurable: true, value: undefined});
+        errorForm.saveStatus.textContent = "Legacy copy pending";
+        let copyBounds = errorForm.copyButton.getBoundingClientRect();
+        for (let type of ["mouseDown", "mouseUp"]) {
+            await require("electron").ipcRenderer.invoke("paintdotjs:test-input", {
+                type, x: Math.round(copyBounds.left + copyBounds.width / 2),
+                y: Math.round(copyBounds.top + copyBounds.height / 2), button: "left", clickCount: 1
+            });
+        }
+        await waitFor(() => errorForm.saveStatus.textContent !== "Legacy copy pending");
+        check(errorForm.saveStatus.textContent === "Error copied to clipboard.",
+            "Legacy clipboard copy did not report its actual success: " + errorForm.saveStatus.textContent);
+        let legacyText = await clipboard.readText();
+        check(legacyText.includes("Second error") && legacyText.includes("No stack trace is available."),
+            "Legacy clipboard contents lost the error or missing-stack explanation");
+        check(document.querySelectorAll("textarea").length === textareaCount, "Legacy clipboard copy leaked its temporary textarea");
+        document.execCommand = () => false;
+        await errorForm.copyError();
+        check(errorForm.saveStatus.textContent.includes("The browser rejected the clipboard request"),
+            "Rejected legacy clipboard request was reported as successful");
+        check(document.querySelectorAll("textarea").length === textareaCount, "Rejected copy leaked its temporary textarea");
+        for (let failure of [new Error("Clipboard denied"), "Clipboard unavailable"]) {
+            Object.defineProperty(clipboard, "writeText", {configurable: true, value: async () => {
+                throw failure;
+            }});
+            await errorForm.copyError();
+            check(errorForm.saveStatus.textContent === "Could not copy the error: " + String(failure.message || failure),
+                "Native clipboard failure lost its error detail");
+        }
+    } finally {
+        document.execCommand = execCommand;
+        if (clipboardDescriptor === undefined) {
+            delete clipboard.writeText;
+        } else {
+            Object.defineProperty(clipboard, "writeText", clipboardDescriptor);
+        }
+    }
+    let saveAll = DocumentIO.saveAll;
+    let originalConsoleError = ErrorForm.originalConsoleError;
+    let diagnostics = [];
+    try {
+        ErrorForm.originalConsoleError = (...args) => diagnostics.push(args);
+        let resolveSave;
+        let calls = 0;
+        DocumentIO.saveAll = includeClean => {
+            check(includeClean === true, "Error recovery did not include clean images");
+            ++calls;
+            return new Promise(resolve => resolveSave = resolve);
+        };
+        let saving = errorForm.saveAll();
+        check(errorForm.saveButton.disabled && errorForm.saveStatus.textContent === "Saving…",
+            "Error recovery did not mark its save operation busy");
+        await errorForm.saveAll();
+        check(calls === 1, "Busy recovery save started a second operation");
+        resolveSave(false);
+        await saving;
+        check(!errorForm.saveButton.disabled && errorForm.saveStatus.textContent === "Saving stopped or was canceled.",
+            "Canceled recovery save did not release its busy state");
+        DocumentIO.saveAll = async () => true;
+        await errorForm.saveAll();
+        let count = app.getDocumentWorkspaces().length;
+        check(errorForm.saveStatus.textContent === count + " image" + (count === 1 ? "" : "s")
+            + " saved. Check the selected folder or Downloads.", "Successful recovery save lost its actual document count");
+        let failure = new Error("Recovery write failed");
+        DocumentIO.saveAll = async () => {
+            throw failure;
+        };
+        await errorForm.saveAll();
+        check(errorForm.report.message === failure.message && errorForm.report.source === "Could not save all images"
+            && !errorForm.saveButton.disabled, "Failed recovery save did not refresh the error or release its button");
+        ErrorForm.install();
+        let priorReport = errorForm.report;
+        ErrorForm.showing = true;
+        ErrorForm.show({source: "Nested", message: "Nested test error", stack: ""});
+        ErrorForm.showing = false;
+        check(errorForm.report === priorReport, "Reentrant reporting replaced the current error form");
+        let initialize = errorForm.initialize;
+        try {
+            errorForm.initialize = () => {
+                throw new Error("Error layout failed");
+            };
+            ErrorForm.show({source: "Layout", message: "Layout test error", stack: ""});
+            check(!ErrorForm.showing && diagnostics.at(-1)[0] === "Could not display the error form",
+                "Recovery form failure was not diagnosed or retained its recursion guard");
+        } finally {
+            errorForm.initialize = initialize;
+        }
+        let unnamed = new Error("");
+        unnamed.name = "FallbackError";
+        unnamed.stack = undefined;
+        check(ErrorForm.fromError(unnamed, "QA").message === "FallbackError"
+            && ErrorForm.fromError(unnamed, "QA").stack === "", "Unnamed error lost its name/stack fallback");
+        unnamed.name = "";
+        check(ErrorForm.fromError(unnamed, "QA").message === "Unknown error", "Completely unnamed error lost its fallback");
+        check(ErrorForm.fromError("", "QA").message === "Unknown error", "Empty string error lost its fallback");
+        check(ErrorForm.fromConsoleArguments([unnamed], "QA").stack === String(unnamed),
+            "Console error without stack did not retain its string representation");
+    } finally {
+        DocumentIO.saveAll = saveAll;
+        ErrorForm.originalConsoleError = originalConsoleError;
+        ErrorForm.showing = false;
+    }
     errorForm.ignoreButton.click();
     check(!errorForm.getWindow().isOpen(), "Ignore did not close the error form");
     errorForm.ignore();

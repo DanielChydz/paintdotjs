@@ -121,6 +121,48 @@ module.exports = async function checkSurfaceTransactions() {
     let surface = layer.getSurface();
     let history = workspace.getHistory();
     history.clearAll();
+    phase("abstract move and selection hooks fail explicitly without changing history");
+    let moveBase = new MoveToolBase(ToolType.MOVE);
+    for (let hook of ["onLift", "onDrop", "preRender", "render", "pushContextHistoryMemento"]) {
+        rejects(() => moveBase[hook](), /Not implemented/);
+    }
+    rejects(() => moveBase.getEdgeVector("unknown-edge"), /Invalid enum/);
+    let selectionBase = new SelectionTool(ToolType.RECTANGLE_SELECT);
+    check(selectionBase.mustMoveForEmit(), "Default selection contract emits without a pointer movement");
+    for (let hook of ["getCursorImgDown", "getCursorImgUp", "getCursorImgUpPlus", "getCursorImgUpMinus"]) {
+        rejects(() => selectionBase[hook](), /Not implemented/);
+    }
+    check(history.undoStack.length === 0 && workspace.getSelection().isEmpty(),
+        "Unimplemented abstract hooks changed selection or history");
+    phase("base tool input, workspace and missing-color-form contracts");
+    check(tool.isActive() && tool.getType() === ToolType.PENCIL && !tool.usesContinuousPointerCoordinates(),
+        "Base tool activation/type/coordinate contract changed");
+    check(tool.getName() === ToolType.PENCIL.getName() && tool.getImage() === ToolType.PENCIL.getIconSrc(),
+        "Base tool did not expose its configured name/icon");
+    check(tool.getDocumentWorkspace() === workspace && tool.getSelection() === workspace.getSelection()
+        && tool.getSurfaceBox() === workspace.getSurfaceBox() && tool.getActiveLayer() === layer,
+    "Base tool lost its active workspace, selection, surface box or layer");
+    tool.setActiveLayerIndex(0);
+    tool.setActiveLayer(layer);
+    check(tool.getActiveLayerIndex() === 0 && workspace.getActiveLayer() === layer, "Base tool layer setters selected a different layer");
+    check(!tool.onKeyPress("Escape") && !tool.onMouseDown(1, 2, MouseButton.LEFT)
+        && !tool.onMouseMove(1, 2) && !tool.onMouseUp(1, 2, MouseButton.LEFT),
+    "Base tool consumed unimplemented input");
+    tool.onModifierKeysChanged();
+    ToolType.PENCIL.setSetting("blendMode", "unrecognized");
+    check(tool.getCompositeOperation() === "source-over", "Unknown paint blend lost its normal-compositing fallback");
+    ToolType.PENCIL.setSetting("blendMode", "normal");
+    let colorForm = FormRegistry.get("colorsForm");
+    FormRegistry.unregister("colorsForm");
+    try {
+        equal(channels(tool.getColor()), [0, 0, 0, 255], "Missing color form lost the primary black fallback");
+        equal(channels(tool.getColor(MouseButton.RIGHT)), [255, 255, 255, 255], "Missing color form lost the secondary white fallback");
+    } finally {
+        FormRegistry.forms.colorsForm = colorForm;
+    }
+    let pickedColor = tool.getColor();
+    check(pickedColor !== colorForm.mainColor, "Base tool returned the mutable color-form instance");
+    equal(channels(pickedColor), channels(colorForm.mainColor), "Base tool color copy changed its channels");
     phase("software paint blending agrees with native Canvas for supported separable modes");
     let canvas = document.createElement("canvas");
     canvas.width = 1;
