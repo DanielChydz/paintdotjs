@@ -20,7 +20,8 @@ class AddNewBlankLayerFunction extends HistoryFunction {
         let name = i18n("addNewBlankLayer.layerName.format", layers.size() + 1);
         let newLayer = Layer.createLayer(documentWorkspace, document.width, document.height, name);
 
-        let newLayerIndex = documentWorkspace.getActiveLayerIndex() + 1;
+        let newLayerIndex = documentWorkspace.getActiveLayer() === null
+            ? 0 : documentWorkspace.getActiveLayerIndex() + 1;
 
         let memento = new NewLayerHistoryMemento(
             i18n("addNewBlankLayer.historyMementoName"),

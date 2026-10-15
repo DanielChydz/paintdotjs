@@ -78,6 +78,6 @@ class MeasurementUnitSelectorItem extends SelectorMenuItem {
 
     getText() {
         let selected = this.getSelectedEntry();
-        return i18n(selected.id + ".abbreviation");
+        return selected === null ? "" : i18n(selected.id + ".abbreviation");
     }
 }

@@ -119,12 +119,51 @@ module.exports = async function checkMoveModes() {
     lifecycleSelection.commitContinuation();
     app.setActiveToolFromType(ToolType.MOVE_SELECTION);
     let lifecycleSelectionMove = app.getActiveTool();
+    let idleSelectionHistory = lifecycleWorkspace.getHistory().undoStack.length;
+    lifecycleSelectionMove.onMouseUp(16, 16, MouseButton.LEFT);
+    check(!lifecycleSelectionMove.tracking && lifecycleWorkspace.getHistory().undoStack.length === idleSelectionHistory,
+        "Idle selection-Move release created an edit");
     lifecycleSelectionMove.onMouseDown(16, 16, MouseButton.LEFT);
+    lifecycleSelectionMove.flushHistoryMementos(null);
+    check(lifecycleWorkspace.getHistory().undoStack.at(-1).getName() === lifecycleSelectionMove.getName(),
+        "Explicitly flushed selection-Move history lost its default tool name");
     lifecycleSelectionMove.onMouseMove(18, 19);
     lifecycleSelection.reset();
     check(!lifecycleSelectionMove.tracking && !lifecycleSelectionMove.context.lifted && lifecycleSelection.isEmpty(),
         "External selection reset retained an active selection-Move gesture");
     app.closeDocumentWorkspace(lifecycleWorkspace, false);
+    phase("Move activation without an active layer retains an empty render destination");
+    app.setActiveTool(null);
+    let emptyWorkspace = app.createBlankDocumentInNewWorkspace(8, 8);
+    app.setActiveTool(null);
+    let removedLayer = emptyWorkspace.getActiveLayer();
+    emptyWorkspace.getDocument().getLayers().removeLayer(removedLayer);
+    app.setActiveToolFromType(ToolType.MOVE);
+    check(emptyWorkspace.getActiveLayer() === null && app.getActiveTool().renderArgs === null
+        && !app.getActiveTool().tracking, "Layerless Move activation retained a stale destination or started tracking");
+    app.setActiveTool(null);
+    check(new AddNewLayerAction().isActionExecutable(emptyWorkspace)
+        && !new DeleteLayerAction().isActionExecutable(emptyWorkspace)
+        && !new DuplicateLayerAction().isActionExecutable(emptyWorkspace)
+        && !new LayerPropertiesAction().isActionExecutable(emptyWorkspace),
+    "Layerless document disabled recovery or enabled commands requiring a layer");
+    for (let id of ["menu.layers.goToTopLayer", "menu.layers.goToLayerAbove", "menu.layers.goToLayerBelow", "menu.layers.goToBottomLayer"]) {
+        let action = ActionRegistry.get(id);
+        check(!action.runIsActionExecutable(), "Layerless document enabled layer navigation: " + id);
+        action.runPerformAction();
+    }
+    new AddNewLayerAction().runPerformAction();
+    check(emptyWorkspace.getDocument().getLayers().size() === 1 && emptyWorkspace.getActiveLayer() !== null,
+        "Add Layer did not recover an empty document");
+    emptyWorkspace.getHistory().stepBackward();
+    check(emptyWorkspace.getDocument().getLayers().size() === 0 && emptyWorkspace.getActiveLayer() === null,
+        "Undoing the first layer did not recover the empty document");
+    emptyWorkspace.getHistory().stepForward();
+    check(emptyWorkspace.getDocument().getLayers().size() === 1 && emptyWorkspace.getActiveLayer() !== null
+        && emptyWorkspace.getActiveLayer().getSurface().context.getImageData(0, 0, 8, 8).data.every(value => value === 0),
+    "Redoing the first layer lost its active layer or transparent pixels");
+    app.closeDocumentWorkspace(emptyWorkspace, false);
+    removedLayer.dispose();
     ToolType.MOVE.setSetting("resampling", "nearest");
     ToolType.MOVE.setSetting("renderingQuality", "aliased");
     for (let [mode, start, end, rectangle, button] of [

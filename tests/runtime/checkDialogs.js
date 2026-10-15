@@ -108,6 +108,9 @@ module.exports = async function checkDialogs() {
         percentage.checked = true;
         change(percentage);
         numbers = [...form.querySelectorAll("input[type=number]")];
+        input(numbers[0], "");
+        check(Number(numbers[1].value) === 120 && Number(numbers[2].value) === 60,
+            "Empty resize percentage did not recover the original dimensions");
         input(numbers[0], 200);
         check(Number(numbers[1].value) === 240 && Number(numbers[2].value) === 120,
             "Percentage resizing returned wrong dimensions");
@@ -120,6 +123,48 @@ module.exports = async function checkDialogs() {
         cancel();
         check(await resultOf(pending) === null, "Image-size cancellation returned a resize");
     }
+
+    phase("absolute resize preserves aspect from height and converts centimeter resolution");
+    pending = ImageSizeDialog.open("resize", {width: 120, height: 60, resolution: 96});
+    form = document.querySelector(".image-size-dialog");
+    let absolute = form.querySelectorAll("input[type=radio]")[1];
+    absolute.checked = true;
+    change(absolute);
+    let maintainResize = form.querySelector("input[type=checkbox]");
+    maintainResize.checked = true;
+    change(maintainResize);
+    numbers = [...form.querySelectorAll("input[type=number]")];
+    input(numbers[2], 30);
+    check(numbers[1].value === "60" && numbers[2].value === "30", "Changing resize height broke the maintained ratio");
+    input(numbers[3], "");
+    let resolutionUnits = [...form.querySelectorAll("select")].find(select =>
+        [...select.options].some(option => option.value === "centimeter"));
+    resolutionUnits.value = "centimeter";
+    change(resolutionUnits);
+    input(numbers[3], 40);
+    maintainResize.checked = false;
+    change(maintainResize);
+    input(numbers[2], "");
+    check(numbers[2].value === "1" && numbers[1].value === "60", "Empty unlinked height did not clamp independently");
+    submit(form);
+    let absoluteResult = await resultOf(pending);
+    check(absoluteResult.width === 60 && absoluteResult.height === 1 && Math.abs(absoluteResult.resolution - 101.6) < .001,
+        "Absolute resize lost clamped dimensions or centimeter-to-inch DPI conversion");
+
+    phase("new image normalizes empty dimensions and resolution through pixel and print fields");
+    AppSettingsStore.set("workspace.newFileMaintainAspectRatio", false);
+    pending = NewFileDialog.open(120, 60);
+    form = document.querySelector(".new-file-dialog");
+    numbers = [...form.querySelectorAll("input[type=number]")];
+    input(numbers[0], "");
+    check(numbers[0].value === "1", "Empty new-image width did not normalize to one pixel");
+    input(numbers[2], "");
+    input(numbers[3], 1);
+    check(numbers[0].value === "96", "Empty new-image resolution did not use 96 DPI for print conversion");
+    submit(form);
+    let normalizedNew = await resultOf(pending);
+    check(normalizedNew.width === 96 && normalizedNew.height === 60 && normalizedNew.resolution === 96,
+        "New-image submission lost its normalized size or fallback resolution");
 
     phase("layer-properties");
     let properties = new LayerProperties("Original", true, false, 255, "normal");

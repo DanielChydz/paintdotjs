@@ -53,6 +53,12 @@ module.exports = async function checkUILifecycle() {
     let icon = new IconItem("lifecycle.noicon", () => {}).withNoIcon();
     icon.appendTo(host, null);
     check(icon.getElement().querySelector("img").style.opacity === "0", "Iconless command showed an image");
+    let unregisteredCalls = 0;
+    let unregisteredIcon = new IconItem(null, () => ++unregisteredCalls).withNoIcon();
+    unregisteredIcon.appendTo(host, null);
+    unregisteredIcon.getElement().click();
+    check(unregisteredCalls === 1 && unregisteredIcon.getElement().querySelector("img").title === unregisteredIcon.getText(),
+        "Unregistered icon lost its callback or fallback tooltip");
     let calls = 0;
     let entry = new DropEntry("lifecycle.entry", () => { ++calls; }).withNoIcon();
     entry.appendTo(host, null);
@@ -90,6 +96,43 @@ module.exports = async function checkUILifecycle() {
     entry.updateParent(submenuParent);
     entry.onPress(new MouseEvent("click"));
     check(calls === 3, "Standalone nested entry failed to traverse an ancestor without a popup");
+    phase("menus remain consistent when optional entries are removed through their public API");
+    let emptyUnits = new MeasurementUnitSelectorItem();
+    emptyUnits.appendTo(host, null);
+    for (let entry of [...emptyUnits.entries]) {
+        emptyUnits.remove(entry);
+    }
+    emptyUnits.setSelectedId("measurementUnit.pixel");
+    check(!emptyUnits.isEnabled() && emptyUnits.getSelectedEntry() === null && emptyUnits.getText() === "",
+        "Empty unit selector did not remain a disabled empty control");
+    let mainMenu = PanelRegistry.get("mainMenu");
+    let viewMenu = mainMenu.get("menu.view");
+    let viewEntries = [...viewMenu.entries];
+    try {
+        viewMenu.remove(viewMenu.get("measurementUnit.pixel"));
+        viewMenu.updateMeasurementUnitChecks();
+        check(viewMenu.get("measurementUnit.pixel") === undefined
+            && viewMenu.get("measurementUnit.inch") !== undefined,
+        "Removing an optional unit entry corrupted the other View commands");
+    } finally {
+        viewMenu.entries = viewEntries;
+        viewMenu.updateMeasurementUnitChecks();
+    }
+    let menuFile = mainMenu.get("menu.file");
+    menuFile.open();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    mainMenu.getElement().click();
+    check(menuFile.isOpen(), "Clicking the top-level menu strip prematurely closed its active menu");
+    menuFile.close();
+    submenu.setEnabled(true);
+    submenu.getElement().style.cssText = "position:fixed;left:20px;top:20px;width:100px";
+    submenu.open();
+    check(submenu.submenuElement !== null && !submenu.submenuElement.classList.contains("submenu-opens-left"),
+        "A submenu with sufficient room failed to open to its right");
+    submenu.close();
+    document.dispatchEvent(new Event("focusin"));
+    check(document.querySelector(".window-focused") === null, "Non-element focus retained a stale floating-window focus marker");
+
     phase("number controls reject unsupported pointer and keyboard gestures without changing value");
     let number = document.createElement("input");
     number.type = "number";

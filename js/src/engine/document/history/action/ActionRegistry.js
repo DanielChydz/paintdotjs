@@ -152,9 +152,10 @@ class ActionRegistry {
             const workspace = activeWorkspace();
             workspace.setActiveLayerIndex(indexSelector(workspace));
         };
-        const canSelectAbove = () => hasWorkspace()
+        const canSelectAbove = () => hasWorkspace() && activeWorkspace().getActiveLayer() !== null
             && activeWorkspace().getActiveLayerIndex() < activeWorkspace().getDocument().getLayers().size() - 1;
-        const canSelectBelow = () => hasWorkspace() && activeWorkspace().getActiveLayerIndex() > 0;
+        const canSelectBelow = () => hasWorkspace() && activeWorkspace().getActiveLayer() !== null
+            && activeWorkspace().getActiveLayerIndex() > 0;
         this.registerCallback("menu.layers.importFromFile", () => DocumentIO.openLayerFilePicker(), () => i18n("menu.layers.importFromFile.text"), hasWorkspace);
         this.registerCallback("menu.layers.goToTopLayer", () => selectLayer(workspace => workspace.getDocument().getLayers().size() - 1), () => i18n("menu.layers.goToTopLayer.text"), canSelectAbove, "Ctrl+Alt+PageUp");
         this.registerCallback("menu.layers.goToLayerAbove", () => selectLayer(workspace => workspace.getActiveLayerIndex() + 1), () => i18n("menu.layers.goToLayerAbove.text"), canSelectAbove, "Alt+PageUp");

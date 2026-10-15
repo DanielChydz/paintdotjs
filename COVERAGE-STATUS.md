@@ -15,8 +15,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,289 | 41,361 | 99.82% | 72 |
-| Branches | 9,779 | 9,957 | 98.21% | 178 |
+| Lines/statements | 41,305 | 41,362 | 99.86% | 57 |
+| Branches | 9,810 | 9,969 | 98.4% | 159 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **198 tests passed; zero failures.**
@@ -90,13 +90,27 @@ No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
 
+- `MeasurementUnitSelectorItem.getText`: removing every entry through the inherited
+  public API no longer dereferences a null selection during reinitialization.
+  Native regression failed before the fix and now verifies a disabled empty
+  control. Other tests cover optional View entries, top-level menu click ownership,
+  right-opening submenus, unregistered icon callbacks/tooltips and non-element focus.
+- Layerless-document regression initially exposed crashes in layer command/menu
+  refresh after removing the final layer. `LayerAction` now requires an active
+  layer by default, with Add Layer explicitly allowing recovery. Navigation guards
+  reject absent active layers; AddNewBlankLayerFunction inserts the first layer at
+  index zero. Native tests cover empty Move activation, disabled commands,
+  transparent first-layer recovery and exact empty/one-layer undo/redo.
+- Dialog tests verify empty resize percentage/dimensions/resolution, aspect from
+  height and centimeter DPI conversion through actual DOM input/submission.
+
 - Implement `MoveToolBaseContext.dispose` TODO: dispose/null owned transforms and
   the start path idempotently. `MoveToolContext` delegates shared cleanup to it.
   Native contracts verify actual resource release and independent history clones;
   transform, pending-shape, Move and document-contract scenarios all pass.
 - Shape edit history delegates cancellation to `restorePendingState`, which owns
   restoring an existing transaction. Existing exact-pixel edit undo/redo passes.
-  The coverage table predates this batch until the next complete measurement.
+  The latest full measurement includes this batch.
 
 - `AppView.cleanCursorImage`: preserve genuine red artwork. The old decoder
   zeroed every opaque red pixel even without edge metadata. Crop the metadata
@@ -400,12 +414,11 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
-| [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 10 | 6 |
-| [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
+| [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 9 | 22 |
+| [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 9 | 5 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 6 | 12 |
+| [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 6 | 3 |
 | [AppView.js](./js/src/engine/AppView.js) | 4 | 9 |
-| [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 2 | 18 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 2 | 15 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 2 | 13 |
@@ -416,10 +429,11 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 2 | 3 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 2 | 2 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 2 | 2 |
-| [DropMenuItem.js](./js/src/interface/item/menu/action/drop/DropMenuItem.js) | 2 | 2 |
 | [FormRegistry.js](./js/src/interface/window/FormRegistry.js) | 2 | 1 |
-| [ViewMenu.js](./js/src/interface/panel/header/main/menu/ViewMenu.js) | 2 | 1 |
-| [MeasurementUnitSelectorItem.js](./js/src/interface/panel/footer/menu/MeasurementUnitSelectorItem.js) | 2 | 1 |
+| [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 1 | 1 |
+| [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 0 | 8 |
+| [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 0 | 6 |
+| [SurfaceBoxBaseRenderer.js](./js/src/engine/document/render/renderer/SurfaceBoxBaseRenderer.js) | 0 | 3 |
 
 Known audit points:
 

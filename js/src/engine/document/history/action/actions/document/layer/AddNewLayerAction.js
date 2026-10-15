@@ -19,7 +19,8 @@ class AddNewLayerAction extends LayerAction {
             "add.new.layer",
             "addNewLayer",
             "addNewLayerButton",
-            "Ctrl+Shift+N"
+            "Ctrl+Shift+N",
+            false
         );
     }
 

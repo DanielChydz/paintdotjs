@@ -18,7 +18,8 @@ class LayerAction extends DocumentWorkspaceAction {
         commandId,
         nameId,
         toolTipId,
-        shortcutKeyCombo
+        shortcutKeyCombo,
+        requiresActiveLayer = true
     ) {
         super(
             "menu.layers." + commandId,
@@ -26,9 +27,13 @@ class LayerAction extends DocumentWorkspaceAction {
             "layerForm." + toolTipId + ".toolTipText",
             shortcutKeyCombo
         );
+        this.requiresActiveLayer = requiresActiveLayer;
     }
 
     isActionExecutable(documentWorkspace) {
+        if (documentWorkspace.getActiveLayer() === null) {
+            return !this.requiresActiveLayer;
+        }
         let index = documentWorkspace.getActiveLayerIndex();
         let size = documentWorkspace.getDocument().getLayers().size();
         return this.isLayerActionExecutable(documentWorkspace, index, size);
