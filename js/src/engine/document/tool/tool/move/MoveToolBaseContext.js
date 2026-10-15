@@ -70,6 +70,11 @@ class MoveToolBaseContext {
     }
 
     dispose() {
-        // TODO dispose
+        for (let property of ["baseTransform", "liftTransform", "deltaTransform", "startPath"]) {
+            if (this[property] !== null) {
+                this[property].dispose();
+                this[property] = null;
+            }
+        }
     }
 }

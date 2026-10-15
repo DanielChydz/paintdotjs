@@ -26,7 +26,6 @@ class ShapeEditHistoryMemento extends ToolHistoryMemento {
         }
 
         const inverseState = tool.capturePendingState();
-        tool.cancelBitmapTransaction();
         tool.restorePendingState(this.state);
         return new ShapeEditHistoryMemento(
             this.documentWorkspace, inverseState, this.name, this.image

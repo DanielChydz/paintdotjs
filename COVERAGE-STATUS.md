@@ -90,6 +90,14 @@ No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
 
+- Implement `MoveToolBaseContext.dispose` TODO: dispose/null owned transforms and
+  the start path idempotently. `MoveToolContext` delegates shared cleanup to it.
+  Native contracts verify actual resource release and independent history clones;
+  transform, pending-shape, Move and document-contract scenarios all pass.
+- Shape edit history delegates cancellation to `restorePendingState`, which owns
+  restoring an existing transaction. Existing exact-pixel edit undo/redo passes.
+  The coverage table predates this batch until the next complete measurement.
+
 - `AppView.cleanCursorImage`: preserve genuine red artwork. The old decoder
   zeroed every opaque red pixel even without edge metadata. Crop the metadata
   row/column without erasing interior pixels. Native regression failed before

@@ -39,18 +39,7 @@ class MoveToolContext extends MoveToolBaseContext {
             this.liftedPixels.dispose();
             this.liftedPixels = null;
         }
-        if (this.baseTransform !== null) {
-            this.baseTransform.dispose();
-        }
-        if (this.liftTransform !== null) {
-            this.liftTransform.dispose();
-        }
-        if (this.deltaTransform !== null) {
-            this.deltaTransform.dispose();
-        }
-        if (this.startPath !== null) {
-            this.startPath.dispose();
-        }
+        super.dispose();
     }
 
 }

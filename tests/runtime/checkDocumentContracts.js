@@ -177,6 +177,28 @@ module.exports = async function checkDocumentContracts() {
     }
     let layerAction = new LayerAction("contract-layer-action", "contract", "contract", null);
     rejects(() => layerAction.runIsActionExecutable(), /No isLayerActionExecutable implementation/);
+    phase("Move contexts dispose owned transforms and paths without invalidating history clones");
+    for (let context of [new MoveToolBaseContext(), new MoveToolContext()]) {
+        context.baseTransform = new Matrix();
+        context.baseTransform.translate(3, 4);
+        context.liftTransform = new Matrix();
+        context.deltaTransform = new Matrix();
+        context.startPath = new GraphicsPath();
+        context.startPath.addRectangle(new Rectangle(1, 2, 3, 4));
+        let resources = [context.baseTransform, context.liftTransform, context.deltaTransform, context.startPath];
+        let historyClone = context.clone();
+        context.dispose();
+        context.dispose();
+        check(context.baseTransform === null && context.liftTransform === null && context.deltaTransform === null
+            && context.startPath === null && resources.slice(0, 3).every(matrix => matrix.elements === null)
+            && resources[3].vertexLists === null,
+        "Disposing a Move context retained owned transforms/path or was not idempotent");
+        let clonePoint = new Point(1, 2);
+        historyClone.baseTransform.transformPoints([clonePoint]);
+        check(clonePoint.x === 4 && clonePoint.y === 6 && historyClone.startPath.getBounds().width === 3,
+            "Disposing a Move context invalidated its independent history clone");
+        historyClone.dispose();
+    }
     phase("typed tool history rejects incompatible active tools before changing pixels");
     app.setActiveToolFromType(ToolType.PENCIL);
     let moveContext = new MoveToolContext();
