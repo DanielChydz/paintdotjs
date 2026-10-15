@@ -15,11 +15,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,241 | 41,364 | 99.7% | 123 |
-| Branches | 9,669 | 9,914 | 97.52% | 245 |
+| Lines/statements | 41,260 | 41,364 | 99.74% | 104 |
+| Branches | 9,706 | 9,929 | 97.75% | 223 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
-- **192 tests passed; zero failures.**
+- **197 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -65,8 +65,16 @@ No automatic approval review rejected these authorized actions.
 - Resumed batch: real pointer exit clears curve coordinates/guides, invalid and
   inaccessible localStorage recovers default palettes, denied persistence retains
   in-memory colors, and missing/invalid settings recover independent defaults.
-- Latest full run passes 192 tests; 123 lines and 245 branches remain uncovered.
-  Function coverage is 100%.
+- Verified effect contracts cover rectangular erosion/linked dilation, legacy RGB
+  curve fallback, boosted saturation, square oil kernels, thin/thick outlines,
+  extreme sketch settings, threshold sharpening and invalid Gaussian quality.
+- Native save tests verify manual zoom survives re-encoding/resizing, double-click
+  returns to fit, and late PNG conversion cannot replace a newer/closed preview.
+- Document tab tests cover stale drags/delayed renders after close, nonbitmap
+  updates, absent context callbacks and browser clipboard Copy Path.
+- The latest successful full run includes these scenarios. Subsequent toolbar
+  validation regression work is separate and not included in that measurement.
+
 
 ## Resumed-session production fixes
 
@@ -337,17 +345,16 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 15 | 7 |
-| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [AppView.js](./js/src/engine/AppView.js) | 12 | 25 |
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 10 | 6 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
+| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 9 | 4 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 6 | 17 |
+| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 6 | 12 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 4 | 4 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
-| [DocumentContextMenu.js](./js/src/interface/panel/header/documents/DocumentContextMenu.js) | 3 | 2 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 2 | 18 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 2 | 13 |
 | [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 2 | 5 |
@@ -357,6 +364,7 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 2 | 3 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 2 | 3 |
 | [DropMenuItem.js](./js/src/interface/item/menu/action/drop/DropMenuItem.js) | 2 | 2 |
+| [FormRegistry.js](./js/src/interface/window/FormRegistry.js) | 2 | 1 |
 
 Known audit points:
 

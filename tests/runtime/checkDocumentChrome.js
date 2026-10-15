@@ -77,6 +77,36 @@ module.exports = async function checkDocumentChrome() {
     strip.updatePopupThumbnail(named);
     let preview = strip.documentListPopup.querySelector(".document-list-entry canvas");
     check(preview.getContext("2d").getImageData(2, 2, 1, 1).data[1] === 255, "Popup thumbnail did not refresh changed pixels");
+    phase("document strip ignores nonbitmap renders and delayed updates for closed documents");
+    let documentOrder = [...app.getDocumentWorkspaces()];
+    app.fire("document:render_layer_region", new Layer(16, 8), new Rectangle(0, 0, 1, 1));
+    check(app.getDocumentWorkspaces().every((workspace, index) => workspace === documentOrder[index]),
+        "Nonbitmap render changed the open document order");
+    let transient = app.createBlankDocumentInNewWorkspace(8, 8);
+    let staleItem = strip.getItemByDocumentWorkspace(transient);
+    transient.getActiveLayer().invalidate();
+    app.closeDocumentWorkspace(transient, false);
+    strip.showDocumentList();
+    strip.updatePopupThumbnail(transient);
+    let orderAfterClose = [...app.getDocumentWorkspaces()];
+    strip.documentsListItem.itemSwapper(staleItem, item);
+    await new Promise(resolve => setTimeout(resolve, 120));
+    check(strip.getItemByDocumentWorkspace(transient) === null
+        && strip.documentListPopup.querySelectorAll(".document-list-entry").length === 14
+        && app.getDocumentWorkspaces().every((workspace, index) => workspace === orderAfterClose[index]),
+    "Stale tab drag or delayed thumbnail update revived or reordered a closed document");
+    await DocumentContextMenu.runForWorkspace(transient, () => {
+        throw new Error("Closed context target executed its callback");
+    });
+    let contextTarget = null;
+    await DocumentContextMenu.runForWorkspace(named, () => contextTarget = app.getActiveDocumentWorkspace());
+    check(contextTarget === named, "Context command did not activate its live target before execution");
+    let independentItem = new DocumentItem(named);
+    independentItem.initialize(null);
+    let inactiveContext = new MouseEvent("contextmenu", {cancelable: true, bubbles: true});
+    independentItem.getElement().dispatchEvent(inactiveContext);
+    check(!inactiveContext.defaultPrevented && DocumentContextMenu.popup === null,
+        "Document tab without a context callback intercepted the native context event");
     let second = strip.documentsListItem.items[1];
     strip.documentsListItem.itemSwapper(item, second);
     check(app.getDocumentWorkspaces()[1] === named && strip.documentsListItem.items[1].getDocumentWorkspace() === named,
@@ -169,6 +199,14 @@ module.exports = async function checkDocumentChrome() {
     let clipboardSize = await DocumentIO.getClipboardImageSize();
     check(clipboardSize !== null && clipboardSize.width === 16 && clipboardSize.height === 8,
         "Real desktop image clipboard did not supply its dimensions through the shared browser API");
+    let desktopActions = window.desktopFileActions;
+    try {
+        window.desktopFileActions = undefined;
+        await DocumentContextMenu.copyPath(filePath);
+        check(await navigator.clipboard.readText() === filePath, "Browser context Copy Path lost the full path");
+    } finally {
+        window.desktopFileActions = desktopActions;
+    }
     let showFolder = window.desktopFileActions.showItemInFolder;
     let folder = null;
     try {

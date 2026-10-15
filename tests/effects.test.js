@@ -717,3 +717,71 @@ test("Gaussian rendering falls back when an existing filter property rejects blu
     assert.match(requestedFilters[0], /^blur\([\d.]+px\)$/);
     assert.deepEqual(source.data, pixels(5, 3).data);
 });
+
+test("legacy shared RGB curves and boosted saturation preserve exact channel and alpha contracts", () => {
+    let {BitmapEffectEngine: effects} = loadContext();
+    let source = new ImageData(new Uint8ClampedArray([192, 64, 64, 73]), 1, 1);
+    let curves = effects.apply(source, 1, 1, effects.DEFINITIONS.curvesEffect,
+        {channel: "rgb", points: [[0, 255], [255, 0]]});
+    assert.deepEqual([...curves.data], [63, 191, 191, 73]);
+    let saturated = effects.apply(source, 1, 1, effects.DEFINITIONS.hueAndSaturationAdjustment,
+        {hue: 0, saturation: 150, lightness: 0});
+    assert.deepEqual([...saturated.data], [255, 1, 1, 73]);
+    assert.deepEqual([...source.data], [192, 64, 64, 73]);
+});
+
+test("effect defaults copy mixed array controls and isolate nested point arrays", () => {
+    let {BitmapEffectEngine: effects} = loadContext();
+    let definition = {controls: [{key: "mixed", defaultValue: [7, [8, 9]]}]};
+    let defaults = effects.defaults(definition);
+    assert.equal(JSON.stringify(defaults.mixed), "[7,[8,9]]");
+    defaults.mixed[0] = 10;
+    defaults.mixed[1][0] = 11;
+    assert.deepEqual(definition.controls[0].defaultValue, [7, [8, 9]]);
+});
+
+test("rectangular erosion and linked dilation use independent neighborhood extrema on every channel", () => {
+    let {BitmapEffectEngine: effects} = loadContext();
+    let source = pixels(5, 4);
+    for (let [mode, linked] of [["erode", false], ["dilate", true]]) {
+        let result = effects.morphology(source, 5, 4, {mode, width: 3, height: 5, linked});
+        for (let y = 0; y < 4; ++y) {
+            for (let x = 0; x < 5; ++x) {
+                for (let channel = 0; channel < 4; ++channel) {
+                    let samples = [];
+                    for (let sy = Math.max(0, y - (linked ? 1 : 2)); sy <= Math.min(3, y + (linked ? 1 : 2)); ++sy) {
+                        for (let sx = Math.max(0, x - 1); sx <= Math.min(4, x + 1); ++sx) {
+                            samples.push(source.data[(sy * 5 + sx) * 4 + channel]);
+                        }
+                    }
+                    assert.equal(result.data[(y * 5 + x) * 4 + channel],
+                        mode === "erode" ? Math.min(...samples) : Math.max(...samples));
+                }
+            }
+        }
+    }
+    assert.deepEqual(source.data, pixels(5, 4).data);
+});
+
+test("sketch extremes, square oil kernels and thin outlines retain constant-image contracts", () => {
+    let {BitmapEffectEngine: effects} = loadContext();
+    let source = new ImageData(new Uint8ClampedArray(Array(12).fill([32, 64, 96, 77]).flat()), 4, 3);
+    assert.deepEqual(effects.oilPaint(source, 4, 3, {brush: 2, granularity: .5, kernel: "square"}).data, source.data);
+    assert.deepEqual(effects.sharpen(source, 4, 3, 2, 1).data, source.data);
+    for (let thickness of [1, 3]) {
+        let outlined = effects.outline(source, 4, 3, {thickness, intensity: 100});
+        assert.deepEqual([...outlined.data], Array(12).fill([0, 0, 0, 77]).flat());
+    }
+    let black = new ImageData(new Uint8ClampedArray([0, 0, 0, 51]), 1, 1);
+    assert.deepEqual([...effects.pencilSketch(black, 1, 1, {tip: 1, range: -1}).data], [255, 255, 255, 51]);
+});
+
+test("invalid Gaussian quality falls back to the documented middle-quality output", () => {
+    let {BitmapEffectEngine: effects} = loadContext();
+    let source = pixels(7, 5);
+    let expected = effects.gaussianBlur(source, 7, 5, 3, 0, 2);
+    for (let quality of [0, "invalid"]) {
+        assert.deepEqual(effects.gaussianBlur(source, 7, 5, 3, 0, quality).data, expected.data);
+    }
+    assert.deepEqual(source.data, pixels(7, 5).data);
+});

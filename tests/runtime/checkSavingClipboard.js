@@ -207,6 +207,78 @@ module.exports = async function checkSavingClipboard() {
     cancel(currentDialog);
     check(await next === null, "The newer save dialog could not be canceled");
 
+    phase("large save previews retain manual zoom on resize and toggle back to fit");
+    let largeCanvas = document.createElement("canvas");
+    largeCanvas.width = 1600;
+    largeCanvas.height = 900;
+    largeCanvas.getContext("2d").fillRect(0, 0, 1600, 900);
+    pending = SaveImageDialog.open({canvas: largeCanvas, initialFormat: "jpeg",
+        encode: (format, options) => ImageEncoder.encode(largeCanvas, format, options)});
+    await waitFor(ready);
+    let zoomDialog = form();
+    let zoomImage = zoomDialog.querySelector(".save-config-preview-stage img");
+    let zoomFrame = zoomDialog.querySelector(".save-config-preview-frame");
+    await waitFor(() => zoomImage.naturalWidth === 1600 && parseFloat(zoomImage.style.width) < 1600);
+    zoomFrame.dispatchEvent(new MouseEvent("dblclick", {bubbles: true, cancelable: true}));
+    check(parseFloat(zoomImage.style.width) === 1600, "Double click did not restore actual image size");
+    let previousPreviewUrl = zoomImage.src;
+    input(zoomDialog.querySelector("input[type=number]"), 71);
+    await waitFor(() => ready() && zoomImage.src !== previousPreviewUrl && zoomImage.complete);
+    check(parseFloat(zoomImage.style.width) === 1600, "Re-encoding the image discarded manual preview zoom");
+    let originalFrameWidth = zoomFrame.style.width;
+    zoomFrame.style.width = "250px";
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    check(parseFloat(zoomImage.style.width) === 1600, "Viewport resize discarded manual save-preview zoom");
+    zoomFrame.style.width = originalFrameWidth;
+    zoomFrame.dispatchEvent(new MouseEvent("dblclick", {bubbles: true, cancelable: true}));
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    let fittedWidth = 1600 * Math.max(.01, Math.min(1,
+        (zoomFrame.clientWidth - 64) / 1600, (zoomFrame.clientHeight - 64) / 900));
+    check(Math.abs(parseFloat(zoomImage.style.width) - fittedWidth) < 1,
+        "Double click did not return a manually zoomed preview to fit");
+    cancel(zoomDialog);
+    check(await pending === null, "Zoomed preview cancellation returned save data");
+
+    phase("late fallback PNG conversion cannot replace a newer preview or revive a closed dialog");
+    let canvasToBlob = ImageEncoder.canvasToBlob;
+    for (let action of ["change-format", "close"]) {
+        let resolveFallback;
+        try {
+            ImageEncoder.canvasToBlob = (input, type) => {
+                check(input === canvas && type === "image/png", "Fallback preview converted the wrong source or type");
+                return new Promise(resolve => resolveFallback = resolve);
+            };
+            pending = SaveImageDialog.open({canvas, initialFormat: "tiff", encode: async () => realPng});
+            await waitFor(() => typeof resolveFallback === "function");
+            let fallbackDialog = form();
+            if (action === "close") {
+                cancel(fallbackDialog);
+                check(await pending === null, "In-flight fallback conversion prevented cancellation");
+            } else {
+                let picker = [...fallbackDialog.querySelectorAll("select")]
+                    .find(select => [...select.options].some(option => option.value === "png"));
+                change(picker, "png");
+                await waitFor(ready);
+                await waitFor(() => fallbackDialog.querySelector("img").complete);
+            }
+            let currentPreview = fallbackDialog.querySelector(".save-config-preview-stage img").src;
+            resolveFallback(await canvasToBlob(canvas, "image/png"));
+            await new Promise(resolve => setTimeout(resolve, 30));
+            check(fallbackDialog.querySelector(".save-config-preview-stage img").src === currentPreview,
+                "Obsolete fallback conversion changed the preview image");
+            if (action === "change-format") {
+                fallbackDialog.requestSubmit();
+                let result = await pending;
+                check(result.format === "png" && result.blob === realPng,
+                    "Obsolete fallback conversion changed the saved format/blob");
+            } else {
+                check(form() === null, "Late fallback conversion revived a closed save dialog");
+            }
+        } finally {
+            ImageEncoder.canvasToBlob = canvasToBlob;
+        }
+    }
+
     phase("native file write");
     let fs = require("node:fs");
     let filePath = require("node:path").join(require("node:process").env.PAINTDOTJS_TEST_USER_DATA, "saved.png");
