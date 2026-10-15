@@ -241,6 +241,11 @@ module.exports = async function checkGeometryLayout() {
     for (let orientation of [ScrollOrientation.HORIZONTAL, ScrollOrientation.VERTICAL]) {
         let session = new ScrollSession();
         let list = new ScrollList(orientation, "runtimeScroll" + orientation, session);
+        list.setScrollPosition(17);
+        list.scrollToSelected();
+        check(list.getScrollPosition() === 17 && list.selectedItem === null,
+            "Unmounted list lost its saved scroll position or selected a nonexistent item");
+        list.setScrollPosition(0);
         let host = document.createElement("div");
         host.style.cssText = "position:fixed;left:100px;top:150px;width:300px;height:150px;z-index:10000";
         let style = document.createElement("style");
@@ -254,6 +259,9 @@ module.exports = async function checkGeometryLayout() {
             layer.properties.name = "Layout " + index;
             list.add(new LayerItem(layer));
         }
+        let readonlyItem = list.items[0];
+        list.startPointerDrag(readonlyItem, {pointerId: 91});
+        check(session.getDraggingItem() === null, "Read-only list began reordering without an item swapper");
         let selected = null;
         list.setSelectCallback(item => selected = item);
         list.setItemSwapper((first, second) => {
@@ -274,6 +282,9 @@ module.exports = async function checkGeometryLayout() {
         let event = (value, buttons = 1) => ({pointerId: 91, button: 0, buttons,
             clientX: orientation === ScrollOrientation.HORIZONTAL ? value : 110,
             clientY: orientation === ScrollOrientation.VERTICAL ? value : 160, preventDefault() {}});
+        first.getElement().dispatchEvent(new PointerEvent("pointerdown", {button: 2, bubbles: true}));
+        first.getElement().querySelector("input").dispatchEvent(new PointerEvent("pointerdown", {button: 0, bubbles: true}));
+        check(session.getDraggingItem() === null, "Right click or visibility checkbox began dragging a row");
         let start = coordinate(first);
         list.startPointerDrag(first, event(start));
         check(session.getDraggingItem() === first && session.dragPointerId === 91, "Scroll drag did not retain its item/pointer");
@@ -285,6 +296,22 @@ module.exports = async function checkGeometryLayout() {
         check(list.items[0] === first, "Reverse drag did not restore ordering");
         list.stopPointerDrag();
         check(session.getDraggingItem() === null && session.dragPointerId === null, "Drag completion retained global handlers");
+        let originalSwapper = list.itemSwapper;
+        let deferredSwaps = 0;
+        list.setItemSwapper(() => { ++deferredSwaps; });
+        list.startPointerDrag(first, event(coordinate(first)));
+        list.continuePointerDrag(event(coordinate(second) + 10));
+        list.continuePointerDrag(event(coordinate(second) + 12));
+        check(deferredSwaps === 1 && session.dragSwapPending, "Pending asynchronous swap was requested twice");
+        list.stopPointerDrag();
+        list.setItemSwapper(originalSwapper);
+        list.startPointerDrag(first, event(coordinate(first)));
+        list.items.shift();
+        list.continuePointerDrag(event(start + 10));
+        check(session.getDraggingItem() === null && session.dragPointerId === null,
+            "Removing a dragged row retained global drag listeners");
+        list.items.unshift(first);
+        list.reinitialize();
         list.setSelected(second);
         check(selected === second && list.selectedItem === second, "Scroll item selection did not notify");
         list.setScrollPosition(10);
@@ -296,6 +323,17 @@ module.exports = async function checkGeometryLayout() {
         list.setScrollSpeed(2);
         list.element.dispatchEvent(new WheelEvent("wheel", {deltaY: -5, cancelable: true}));
         list.element.dispatchEvent(new WheelEvent("wheel", {deltaX: 5, cancelable: true}));
+        await new Promise(resolve => setTimeout(resolve, 110));
+        list.setScrollPosition(0);
+        let rejectedWheel = new WheelEvent("wheel", {deltaY: -1000, cancelable: true});
+        list.element.dispatchEvent(rejectedWheel);
+        check(!rejectedWheel.defaultPrevented && list.getScrollPosition() === 0,
+            "Out-of-bounds wheel input prevented browser handling or scrolled outside the list");
+        let bounds = list.element.getBoundingClientRect();
+        let center = orientation === ScrollOrientation.HORIZONTAL ? (bounds.left + bounds.right) / 2
+            : (bounds.top + bounds.bottom) / 2;
+        list.autoScrollDuringDrag(center);
+        check(list.getScrollPosition() === 0, "Dragging through the center caused edge auto-scrolling");
         list.scrollSession.cacheItemPosition("obsolete", 42);
         list.postInitialize();
         check(session.getItemPosition("obsolete") === null, "Scroll list retained a removed item-position cache");
@@ -310,6 +348,60 @@ module.exports = async function checkGeometryLayout() {
         }
         host.remove();
     }
+    phase("lists tolerate non-draggable items without stable keys");
+    let mixedHost = document.createElement("div");
+    document.body.appendChild(mixedHost);
+    let mixedSession = new ScrollSession();
+    let mixed = new ScrollList(ScrollOrientation.VERTICAL, "runtimeMixedList", mixedSession);
+    let keylessItem = new MenuItem("runtimeStaticListLabel");
+    let keyedItem = new LayerItem(workspace.getActiveLayer());
+    mixed.add(keylessItem);
+    mixed.add(keyedItem);
+    mixed.setItemSwapper(() => {});
+    mixed.appendTo(mixedHost, null);
+    let diagnostics = [];
+    let originalConsoleError = console.error;
+    try {
+        console.error = message => diagnostics.push(message);
+        mixed.postInitialize();
+        mixed.scrollToItem(keylessItem);
+        await frame();
+        check(diagnostics.length === 2 && diagnostics.every(message => message === "Item does not have a getKey function"),
+            "Non-keyed items did not report their unsupported positioning contract");
+    } finally {
+        console.error = originalConsoleError;
+    }
+    check(keylessItem.getElement().isConnected && mixedSession.getItemPosition(keyedItem.getKey()) !== null,
+        "Non-keyed row prevented keyed rows from initializing");
+    mixed.startPointerDrag(keylessItem, {pointerId: 92, clientX: 0, clientY: 0});
+    check(mixedSession.getDraggingItem() === null, "A row without a stable key began a drag");
+    mixed.startPointerDrag(keyedItem, {pointerId: 92, clientX: 0, clientY: 0});
+    check(mixed.getCurrentDraggingItem() === keyedItem, "Non-keyed row interrupted lookup of the dragged row");
+    mixed.scrollToItem(keyedItem);
+    await frame();
+    mixed.stopPointerDrag();
+    mixedHost.remove();
+    phase("actual layer-list reordering records reversible document history");
+    let layerForm = FormRegistry.get("layerForm");
+    let bottomLayer = workspace.getActiveLayer();
+    let topLayer = Layer.createLayer(workspace, bottomLayer.getWidth(), bottomLayer.getHeight(), "Reorder second layer");
+    workspace.getDocument().addLayer(topLayer);
+    await frame();
+    workspace.getHistory().clearAll();
+    let layerItems = layerForm.layerListItem.items;
+    let firstLayerItem = layerItems.find(item => item.getLayer() === bottomLayer);
+    let secondLayerItem = layerItems.find(item => item.getLayer() === topLayer);
+    layerForm.layerListItem.itemSwapper(firstLayerItem, secondLayerItem);
+    check(workspace.getDocument().getLayers().getAt(0) === topLayer
+        && workspace.getDocument().getLayers().getAt(1) === bottomLayer,
+        "Layer drag callback did not reorder actual document layers");
+    workspace.getHistory().stepBackward();
+    check(workspace.getDocument().getLayers().getAt(0) === bottomLayer
+        && workspace.getDocument().getLayers().getAt(1) === topLayer,
+        "Undo did not restore layer ordering");
+    let unmountedRow = new LayerItem(bottomLayer);
+    unmountedRow.renderThumbnail();
+    check(unmountedRow.thumbnail === null, "Unmounted layer row allocated a thumbnail during refresh");
     left.dispose();
     right.dispose();
     donut.dispose();
@@ -318,4 +410,11 @@ module.exports = async function checkGeometryLayout() {
     multiple.dispose();
     none.dispose();
     app.closeDocumentWorkspace(workspace, false);
+    let unmountedForm = new LayerForm();
+    check(unmountedForm.getItemByLayer(bottomLayer) === null, "Unmounted layer form unexpectedly contained rows");
+    let swapWithoutDocument = layerForm.layerListItem.itemSwapper;
+    swapWithoutDocument(firstLayerItem, secondLayerItem);
+    layerForm.openLayerProperties(firstLayerItem);
+    check(app.getActiveDocumentWorkspace() === null && !ModalDialogController.isActive(),
+        "Layer callbacks without a document opened a dialog or created a document");
 };

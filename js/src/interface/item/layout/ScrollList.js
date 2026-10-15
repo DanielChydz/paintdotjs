@@ -114,16 +114,20 @@ class ScrollList extends Item {
         }
     }
 
+    getKeyedItems() {
+        return this.items.filter(item => typeof item.getKey === "function");
+    }
+
     getCurrentDraggingItem() {
         const draggingItem = this.scrollSession.getDraggingItem();
         if (draggingItem === null) {
             return null;
         }
-        return this.items.find(item => item.getKey() === draggingItem.getKey()) || null;
+        return this.getKeyedItems().find(item => item.getKey() === draggingItem.getKey()) || null;
     }
 
     startPointerDrag(item, event) {
-        if (this.itemSwapper === null) {
+        if (this.itemSwapper === null || typeof item.getKey !== "function") {
             return;
         }
         const bounds = item.getElement().getBoundingClientRect();
@@ -291,7 +295,7 @@ class ScrollList extends Item {
         }
 
         // Remove unused item positions
-        let itemKeys = this.items.map(item => item.getKey());
+        let itemKeys = this.getKeyedItems().map(item => item.getKey());
         for (let key of this.scrollSession.itemPositionCache.keys()) {
             if (!itemKeys.includes(key)) {
                 this.scrollSession.removeItemPosition(key);
@@ -367,12 +371,12 @@ class ScrollList extends Item {
     scrollToItem(item) {
         if (this.isInitialized()) {
             this.scrollSession.debounce("scrollToItem", () => {
-                if (item.getKey === undefined) {
+                if (typeof item.getKey !== "function") {
                     console.error("Item does not have a getKey function");
                     return;
                 }
                 // Use key because the instance of the item may change
-                let itemByKey = this.items.find(i => i.getKey() === item.getKey());
+                let itemByKey = this.getKeyedItems().find(i => i.getKey() === item.getKey());
                 if (itemByKey === undefined || !this.isInitialized()) {
                     return;
                 }

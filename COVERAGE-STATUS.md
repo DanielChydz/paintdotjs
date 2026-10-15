@@ -17,9 +17,9 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,911 | 41,439 | 98.72% | 528 |
-| Branches | 9,286 | 9,721 | 95.52% | 435 |
-| Functions | 2,529 | 2,529 | 100% | 0 |
+| Lines/statements | 40,951 | 41,443 | 98.81% | 492 |
+| Branches | 9,315 | 9,740 | 95.63% | 425 |
+| Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **181 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
@@ -55,6 +55,12 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `ScrollList`: existing missing-key guards logged a diagnostic but later
+  unconditionally called `getKey`, crashing mixed lists. Centralize keyed-row
+  lookup; static rows still render, report unsupported positioning, and cannot
+  begin a reorder. Native tests failed before this fix and verify keyed-row
+  lookup, scroll requests, drag cleanup, deferred swaps and actual layer undo.
 
 - `LabelMenuItem.updateText`: update the actual label with or without an icon.
   A new native UI lifecycle scenario reproduces the previous iconless-label
@@ -246,12 +252,10 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 23 | 11 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
-| [ScrollList.js](./js/src/interface/item/layout/ScrollList.js) | 20 | 9 |
 | [WebWindow.js](./js/src/interface/window/window/WebWindow.js) | 16 | 9 |
 | [AppWorkspace.js](./js/src/engine/AppWorkspace.js) | 15 | 13 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 15 | 11 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
-| [LayerForm.js](./js/src/interface/window/form/LayerForm.js) | 15 | 2 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 13 | 7 |
@@ -259,6 +263,8 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 12 | 4 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 10 | 12 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 8 | 6 |
+| [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 8 | 5 |
+| [GraphicsPath.js](./js/src/engine/document/selection/GraphicsPath.js) | 8 | 5 |
 
 Known audit points:
 
