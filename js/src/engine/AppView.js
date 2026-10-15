@@ -538,11 +538,9 @@ class AppView {
                         if (y === canvas.height - 1) {
                             hotspotX = x;
                         }
-                        pixels.data[offset + 3] = 0;
                     }
                 }
 
-                context.putImageData(pixels, 0, 0);
                 const hasMetadata = hotspotX !== null && hotspotY !== null;
                 const cleanCanvas = document.createElement("canvas");
                 cleanCanvas.width = canvas.width - (hasMetadata ? 1 : 0);

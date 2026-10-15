@@ -15,11 +15,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,282 | 41,362 | 99.8% | 80 |
-| Branches | 9,757 | 9,951 | 98.05% | 194 |
+| Lines/statements | 41,289 | 41,361 | 99.82% | 72 |
+| Branches | 9,779 | 9,957 | 98.21% | 178 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
-- **197 tests passed; zero failures.**
+- **198 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -90,13 +90,23 @@ No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
 
+- `AppView.cleanCursorImage`: preserve genuine red artwork. The old decoder
+  zeroed every opaque red pixel even without edge metadata. Crop the metadata
+  row/column without erasing interior pixels. Native regression failed before
+  the fix and now verifies exact dimensions, center/encoded hotspots and alpha
+  for marked/unmarked PNGs. Existing extracted cursor paths remain covered.
+- Additional routing tests verify legacy uncoalesced pen samples, zero pressure,
+  image-cursor restoration after middle-button pan, handled keyboard nudges,
+  top-left auto-scroll/clamping/native subpixel rounding, and interrupted-release
+  error cleanup. The full test run passes with all 254 runtime files included.
+
 - `ColorsForm.getUserPalettes`: reject array JSON roots and normalize valid
   registries to dictionaries with no prototype. Previously array roots silently
   discarded new named palettes and `__proto__.txt` reported a successful import
   without preserving a palette. The new VM regression failed before the fix;
   contract tests and native color controls pass. It verifies round-trips for
   `__proto__`, `constructor` and `toString` through actual File text and storage.
-  The coverage table predates this latest fix until the next full measurement.
+  The latest full coverage measurement includes this fix.
 
 - `EffectConfigDialog`: rely on the existing cancelAnimationFrame/clearTimeout
   ownership for queued preview callbacks, removing two unreachable generation
@@ -382,11 +392,11 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [AppView.js](./js/src/engine/AppView.js) | 12 | 25 |
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 10 | 6 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 6 | 12 |
+| [AppView.js](./js/src/engine/AppView.js) | 4 | 9 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 2 | 18 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 2 | 15 |

@@ -106,6 +106,16 @@ module.exports = async function checkPointerRouting() {
     check(!app.pointerDown && app.autoScrollFrame === null, "Lost capture did not end the stroke");
     await send("mouseUp", 36, 36);
 
+    phase("legacy pointer samples and zero pen pressure retain normalized metadata");
+    let legacyPoint = toClient(32, 32);
+    let legacyMove = new PointerEvent("pointermove", {pointerType: "pen", pressure: 0,
+        clientX: legacyPoint.x, clientY: legacyPoint.y, bubbles: true});
+    Object.defineProperty(legacyMove, "getCoalescedEvents", {value: undefined});
+    app.editor.dispatchEvent(legacyMove);
+    check(receivedInput.pressure === .5 && receivedInput.pointerType === "pen"
+        && receivedInput.samples.length === 1 && receivedInput.samples[0].pointerType === "pen",
+    "Pointer fallback lost its pressure or single legacy sample");
+
     phase("pan cursor restoration and pointer sample transforms");
     app.setCursor("crosshair");
     await send("mouseDown", 32, 32, "middle");
@@ -114,6 +124,11 @@ module.exports = async function checkPointerRouting() {
     await send("mouseUp", 36, 34, "middle");
     check(!app.panTool.isTracking() && app.cursorState.type === "css" && app.cursorState.value === "crosshair",
         "Pan did not restore the previous cursor");
+    app.setCursorImg("hand_open_cursor");
+    await send("mouseDown", 32, 32, "middle");
+    await send("mouseUp", 32, 32, "middle");
+    check(!app.panTool.isTracking() && app.cursorState.type === "image" && app.cursorState.value === "hand_open_cursor",
+        "Pan release did not restore the previous image cursor");
     let point = workspace.toScreenPosition(new Point(12.5, 14.5));
     let sample = {x: point.x, y: point.y, pressure: 0.3, timeStamp: 123};
     let input = {pressure: 0.4, pointerType: "pen", samples: [sample]};
@@ -164,6 +179,12 @@ module.exports = async function checkPointerRouting() {
     for (let key of [KeyButton.RIGHT, KeyButton.LEFT, KeyButton.UP, KeyButton.DOWN]) {
         check(move.onKeyPress(key), "Selection keyboard nudge was ignored");
     }
+    document.activeElement.blur();
+    let keyBounds = workspace.getSelection().getBounds();
+    let routedArrow = new KeyboardEvent("keydown", {key: KeyButton.RIGHT, bubbles: true, cancelable: true});
+    window.dispatchEvent(routedArrow);
+    check(routedArrow.defaultPrevented && workspace.getSelection().getBounds().x === keyBounds.x + 1,
+        "Window keyboard routing did not consume a handled Move selection nudge");
     app.controlKeyDown = true;
     check(move.onKeyPress(KeyButton.RIGHT), "Ctrl selection nudge was ignored");
     app.controlKeyDown = false;
@@ -195,6 +216,18 @@ module.exports = async function checkPointerRouting() {
         x: app.getViewWidth() + 20, y: app.getViewHeight() + 20, pressure: 1, pointerType: "mouse"};
     check(app.autoScrollIfNecessary(0.01), "Outside pointer did not auto-scroll a large viewport");
     check(app.getViewX() > 100 && app.getViewY() > 100, "Auto-scroll did not advance both axes");
+    app.autoScrollPointer = {clientX: viewBounds.getLeft() - 20, clientY: viewBounds.getTop() - 20,
+        x: -20, y: -20, pressure: 1, pointerType: "mouse"};
+    let scrolledX = app.getViewX();
+    let scrolledY = app.getViewY();
+    check(app.autoScrollIfNecessary(.01) && app.getViewX() < scrolledX && app.getViewY() < scrolledY,
+        "Top-left outside pointer did not scroll both axes backwards");
+    app.setViewPosition(0, 0);
+    check(!app.autoScrollIfNecessary(.01) && app.getViewX() === 0 && app.getViewY() === 0,
+        "Auto-scroll moved past the top-left viewport boundary");
+    app.setViewPosition(100, 100);
+    check(!app.autoScrollIfNecessary(.000001) && app.getViewX() === 100 && app.getViewY() === 100,
+        "Subpixel scrolling reported movement without a changed native scroll position");
     AppSettingsStore.set("ui.autoScrollWhileDrawing", false);
     check(!app.autoScrollIfNecessary(0.01), "Disabled auto-scroll changed the viewport");
     AppSettingsStore.set("ui.autoScrollWhileDrawing", true);
@@ -248,6 +281,18 @@ module.exports = async function checkPointerRouting() {
                 app.stopAutoScroll();
             }
         }
+        let interruptedUp = app.onMouseUp;
+        let interruptionFailure = new Error("Injected interrupted release failure");
+        try {
+            app.onMouseUp = () => { throw interruptionFailure; };
+            await send("mouseDown", 32, 32);
+            app.editor.dispatchEvent(new PointerEvent("pointercancel", {pointerId: app.activePointerId, bubbles: true}));
+            check(reports.at(-1) === interruptionFailure && !app.pointerDown && app.autoScrollFrame === null,
+                "Interrupted release failure bypassed error reporting or retained pointer ownership");
+            await send("mouseUp", 32, 32);
+        } finally {
+            app.onMouseUp = interruptedUp;
+        }
         let onResize = app.onResize;
         let resizeFailure = new Error("Injected resize failure");
         app.onResize = () => {
@@ -264,6 +309,30 @@ module.exports = async function checkPointerRouting() {
     } finally {
         app.handleError = originalHandler;
     }
+    phase("unmarked cursor images preserve genuine red artwork and use a centered hotspot");
+    let cursorCanvas = document.createElement("canvas");
+    cursorCanvas.width = 4;
+    cursorCanvas.height = 4;
+    cursorCanvas.getContext("2d").fillStyle = "red";
+    cursorCanvas.getContext("2d").fillRect(1, 1, 1, 1);
+    let cleaned = await app.cleanCursorImage(cursorCanvas.toDataURL("image/png"));
+    let decodedCursor = await createImageBitmap(await (await fetch(cleaned.url)).blob());
+    cursorCanvas.getContext("2d").clearRect(0, 0, 4, 4);
+    cursorCanvas.getContext("2d").drawImage(decodedCursor, 0, 0);
+    check(decodedCursor.width === 4 && decodedCursor.height === 4 && cleaned.hotspot.join(",") === "2,2"
+        && cursorCanvas.getContext("2d").getImageData(1, 1, 1, 1).data[3] === 255,
+        "Unmarked cursor decoding erased red artwork, cropped dimensions or lost its centered hotspot");
+    decodedCursor.close();
+    cursorCanvas.getContext("2d").fillRect(1, 3, 1, 1);
+    cursorCanvas.getContext("2d").fillRect(3, 2, 1, 1);
+    cleaned = await app.cleanCursorImage(cursorCanvas.toDataURL("image/png"));
+    decodedCursor = await createImageBitmap(await (await fetch(cleaned.url)).blob());
+    cursorCanvas.getContext("2d").clearRect(0, 0, 4, 4);
+    cursorCanvas.getContext("2d").drawImage(decodedCursor, 0, 0);
+    check(decodedCursor.width === 3 && decodedCursor.height === 3 && cleaned.hotspot.join(",") === "1,2"
+        && cursorCanvas.getContext("2d").getImageData(1, 1, 1, 1).data[3] === 255,
+        "Cursor metadata cropping removed artwork or lost the encoded hotspot");
+    decodedCursor.close();
     phase("modifier transitions preserve repeated-down state and clear on release");
     for (let [key, getter] of [["Control", "isControlKeyDown"], ["Shift", "isShiftKeyDown"], ["Alt", "isAltKeyDown"]]) {
         for (let repeat of [false, true]) {
