@@ -17,11 +17,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,186 | 41,379 | 99.53% | 193 |
-| Branches | 9,597 | 9,879 | 97.14% | 282 |
+| Lines/statements | 41,210 | 41,364 | 99.62% | 154 |
+| Branches | 9,634 | 9,898 | 97.33% | 264 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
-- **189 tests passed; zero failures.**
+- **191 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -55,6 +55,15 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `DocumentIO.handleDroppedFiles`: snapshot the caller-owned array before async
+  font imports; a regression demonstrated that clearing the caller array could
+  lose its image. Ignore empty drops. The fonts-only path already returns before
+  mixed import, so the redundant post-filter fonts-only block is removed.
+- Remove unused toolbar numeric suffix support (no definition supplied a suffix)
+  and the Settings navigation unimplemented flag (all sections are implemented).
+  Disabled platform-specific settings and unregistered Tools entries retain their
+  existing contracts and native tests.
 
 - `DocumentWorkspace.onLayerRemoving`: preserve an unrelated active layer; when
   removing the active row choose its surviving neighbor, or null for the final
@@ -138,6 +147,11 @@ No automatic approval review rejected these authorized actions.
   canvas so a width change cannot revive a stale preview. Assert unchanged pixels.
 
 ## Additional resumed-session test coverage
+
+- Full-canvas merged copy asserts genuine encoded composition pixels despite a
+  denied system clipboard write; outline replacement releases the old path.
+  Also cover hidden RGB at zero alpha, corrupted per-tool quality migration,
+  unmounted panels, custom-tool option fallbacks and disabled unknown tool rows.
 
 - Verify CPU Gaussian output when a present Canvas filter property rejects blur,
   and unavailable Path2D/DOMMatrix catalog fallbacks in isolated environments.
@@ -310,7 +324,6 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 15 | 7 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
@@ -319,17 +332,18 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 10 | 6 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
-| [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 7 | 9 |
-| [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 6 | 17 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 6 | 16 |
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 6 | 4 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
 | [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 4 | 3 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
 | [DocumentContextMenu.js](./js/src/interface/panel/header/documents/DocumentContextMenu.js) | 3 | 2 |
+| [DocumentIO.js](./js/src/io/DocumentIO.js) | 2 | 18 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 2 | 13 |
 | [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 2 | 5 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 2 | 5 |
+| [LayerPropertiesDialog.js](./js/src/interface/window/dialog/LayerPropertiesDialog.js) | 2 | 4 |
+| [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 2 | 3 |
 
 Known audit points:
 

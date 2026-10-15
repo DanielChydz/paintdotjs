@@ -152,14 +152,10 @@ class SettingsDialog {
         const navigation = document.createElement("nav");
         navigation.className = "settings-navigation";
         {
-            for (const [id, label, iconName, implemented = true] of this.sections) {
+            for (const [id, label, iconName] of this.sections) {
                 const button = document.createElement("button");
                 button.type = "button";
                 button.dataset.section = id;
-                button.disabled = !implemented;
-                if (!implemented) {
-                    button.title = "Not implemented yet";
-                }
                 {
                     const icon = document.createElement("img");
                     icon.src = "assets/icons/" + iconName;

@@ -844,3 +844,27 @@ test("legacy PDN documents reject null and malformed JSON with the documented fo
     assert.equal(decoded.layers.length, 0);
     assert.equal(fixture.state.created.length, 0, "Reading PDN metadata must not create a workspace");
 });
+
+test("drop operations own their file list while font importing waits for storage", async () => {
+    let fixture = documentFixture();
+    let font = {name: "Example.ttf"};
+    let image = {name: "image.png"};
+    let completeImport;
+    let imported = [];
+    fixture.context.FontManager = {
+        isFontFile: file => file.name.endsWith(".ttf"),
+        importFiles: () => new Promise(resolve => { completeImport = resolve; })
+    };
+    fixture.context.SettingsDialog = {open: () => assert.fail("Mixed drop should still open its image")};
+    fixture.state.choice = "open";
+    fixture.io.openFiles = async files => imported.push(...files);
+    let files = [font, image];
+    let dropped = fixture.io.handleDroppedFiles(files);
+    files.length = 0;
+    completeImport({added: [{name: "Example"}], errors: []});
+    await dropped;
+    assert.deepEqual(imported, [image]);
+    fixture.state.dialog = null;
+    await fixture.io.handleDroppedFiles([]);
+    assert.equal(fixture.state.dialog, null, "An empty drop should not open a choice dialog");
+});

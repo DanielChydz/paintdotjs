@@ -116,6 +116,10 @@ module.exports = async function checkSurfaceTransactions() {
     let workspace = app.createBlankDocumentInNewWorkspace(768, 8);
     app.setActiveTool(null);
     let tool = new Tool(ToolType.PENCIL);
+    let hiddenRgb = new Uint8ClampedArray([200, 50, 80, 0]);
+    check(tool.matchesColorTolerance(hiddenRgb, 0, [0, 0, 0, 0], 0, true)
+        && !tool.matchesColorTolerance(hiddenRgb, 0, [0, 0, 0, 0], 0, false),
+        "Zero-alpha tolerance did not respect premultiplied versus straight color semantics");
     tool.onActivate();
     let layer = workspace.getActiveLayer();
     let surface = layer.getSurface();

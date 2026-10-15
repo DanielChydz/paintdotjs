@@ -376,6 +376,10 @@ class DocumentIO {
     }
 
     static async handleDroppedFiles(files) {
+        files = [...files];
+        if (files.length === 0) {
+            return;
+        }
         const fontFiles = files.filter(file => FontManager.isFontFile(file));
         if (fontFiles.length > 0) {
             if (fontFiles.length === files.length) {
@@ -389,14 +393,6 @@ class DocumentIO {
                     `${item.file.name}: ${item.error.message}`).join("\n"));
             }
             files = files.filter(file => !FontManager.isFontFile(file));
-            if (files.length === 0) {
-                SettingsDialog.open("fonts");
-                const message = result.added.length === 1
-                    ? `Added ${result.added[0].name}.`
-                    : `Added ${result.added.length} fonts.`;
-                SettingsDialog.instance.setStatus(message);
-                return;
-            }
         }
         const choice = await TaskDialog.show({
             title: "Drag and Drop",

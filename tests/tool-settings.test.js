@@ -128,3 +128,12 @@ test("custom tool descriptors retain metadata, factory identity and action toolt
     assert.equal(storage.has("paintdotjs.toolSettings.customTool"), false);
     assert.equal(type.getById("missing"), null);
 });
+
+test("invalid legacy per-tool selection quality falls back without retaining malformed preferences", () => {
+    let {type} = toolFixture({storage: {
+        "paintdotjs.toolSettings.rectangleSelectTool": JSON.stringify({renderingQuality: "invalid"})
+    }});
+    for (let tool of [type.RECTANGLE_SELECT, type.MOVE, type.MOVE_SELECTION, type.LASSO_SELECT, type.ELLIPSE_SELECT, type.MAGIC_WAND]) {
+        assert.equal(tool.getSetting("renderingQuality"), "high");
+    }
+});

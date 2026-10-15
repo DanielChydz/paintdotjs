@@ -219,11 +219,43 @@ module.exports = async function checkSavingClipboard() {
     let decoded = await window.portableImageCodec.decode(bytes, "png");
     equal(decoded.rgba, surface.context.getImageData(0, 0, 32, 16).data, "Saved PNG changed pixels");
 
+    phase("merged whole-document copy preserves composited pixels when system clipboard permission is denied");
+    app.setActiveTool(null);
+    workspace.getSelection().reset();
+    let mergedExpected = surface.context.getImageData(0, 0, 32, 16).data;
+    let mergedLayer = Layer.createLayer(workspace, 32, 16, "Merged copy marker");
+    mergedLayer.getSurface().context.fillStyle = "#00ff00";
+    mergedLayer.getSurface().context.fillRect(0, 0, 1, 1);
+    workspace.getDocument().addLayer(mergedLayer);
+    mergedExpected.set([0, 255, 0, 255], 0);
+    let writeClipboard = navigator.clipboard.write;
+    let deniedCopies = 0;
+    try {
+        navigator.clipboard.write = async () => {
+            ++deniedCopies;
+            throw new DOMException("Clipboard write denied", "NotAllowedError");
+        };
+        check(await DocumentIO.copySelection(true), "Permission-denied merged copy lost its in-app clipboard");
+    } finally {
+        navigator.clipboard.write = writeClipboard;
+    }
+    let mergedCopy = await window.portableImageCodec.decode(new Uint8Array(await DocumentIO.internalClipboard.arrayBuffer()), "png");
+    equal(mergedCopy.rgba, mergedExpected, "Whole-canvas merged clipboard changed composition pixels");
+    check(deniedCopies === 1 && mergedCopy.width === 32 && mergedCopy.height === 16
+        && DocumentIO.internalClipboardInfo.bounds.x === 0 && DocumentIO.internalClipboardInfo.bounds.y === 0,
+        "Merged copy lost its full-canvas bounds or bypassed the clipboard write boundary");
+    workspace.getDocument().getLayers().removeLayer(mergedLayer);
+    mergedLayer.dispose();
     phase("selection outlines and pixel clipboard");
     let selection = workspace.getSelection();
+    check(!DocumentIO.copySelectionOutline() && !DocumentIO.pasteSelectionOutline(),
+        "Empty selection/outline clipboard reported a successful outline operation");
     selection.setContinuation(new Rectangle(8, 4, 8, 4), CombineMode.REPLACE);
     selection.commitContinuation();
     check(DocumentIO.copySelectionOutline(), "Selection outline was not copied");
+    let previousOutline = DocumentIO.internalSelectionPath;
+    check(DocumentIO.copySelectionOutline() && previousOutline.vertexLists === null
+        && DocumentIO.internalSelectionPath !== previousOutline, "Replacing an outline clipboard retained the old path");
     selection.reset();
     check(DocumentIO.pasteSelectionOutline(), "Selection outline was not pasted");
     check(selection.getBounds().width === 8 && selection.getBounds().height === 4,

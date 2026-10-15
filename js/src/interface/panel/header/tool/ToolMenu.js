@@ -58,8 +58,8 @@ class ToolMenu extends StripPanel {
             fitSelected = false) => (
             {kind: "select", label, key, values, width, toolbar, split, fitSelected}
         );
-        const number = (label, key, min, max, step = 1, suffix = "") => (
-            {kind: "number", label, key, min, max, step, suffix}
+        const number = (label, key, min, max, step = 1) => (
+            {kind: "number", label, key, min, max, step}
         );
         const size = (label, key, min, max, step = 1, presets = null) => (
             {kind: "size", label, key, min, max, step, presets}
@@ -466,13 +466,6 @@ class ToolMenu extends StripPanel {
                     control.title = definition.label;
                 }
                 group.appendChild(control);
-
-                // Suffix
-                if (definition.suffix) {
-                    const suffix = document.createElement("span");
-                    suffix.textContent = definition.suffix;
-                    group.appendChild(suffix);
-                }
             }
             this.optionsElement.appendChild(group);
         }

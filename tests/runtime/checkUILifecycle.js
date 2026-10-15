@@ -179,6 +179,33 @@ module.exports = async function checkUILifecycle() {
     } finally {
         window.close = closeWindow;
     }
+    phase("unmounted settings and tool panels keep optional controls inert");
+    let detachedSettings = new SettingsDialog();
+    detachedSettings.renderShortcutRows();
+    detachedSettings.updateFontImportProgress(null);
+    check(detachedSettings.shortcutList === null && detachedSettings.fontImportPanel === null,
+        "Unmounted settings refresh allocated optional controls");
+    let navigation = detachedSettings.createNavigation();
+    check(navigation.children.length >= 10 && [...navigation.children].every(button => !button.disabled && button.textContent.trim()),
+        "Implemented settings sections were disabled or lacked navigation labels");
+    let detachedToolbar = new ToolMenu();
+    detachedToolbar.renderOptions(null);
+    let unknownType = new ToolType("unknown-custom-tool", "pencil_tool_icon", () => null, null, false);
+    check(detachedToolbar.optionsElement === null && detachedToolbar.getOptionDefinitions(unknownType).length === 0,
+        "Unknown tool options or an unmounted toolbar produced controls");
+    let selector = PanelRegistry.get("toolMenu").get("toolStripChooser.chooseToolButton");
+    let unavailable = new DropEntry("unavailable-tool").withIconPathKey("pencil_tool_icon");
+    selector.add(unavailable);
+    try {
+        let toolsGrid = FormRegistry.get("mainToolBarForm").buildContent();
+        let disabledTool = toolsGrid.lastElementChild;
+        let selectedTool = app.getActiveTool();
+        check(disabledTool.hasAttribute("disabled"), "Unregistered tool entry was enabled in the Tools grid");
+        disabledTool.click();
+        check(app.getActiveTool() === selectedTool, "Clicking an unregistered tool changed the active tool");
+    } finally {
+        selector.remove(unavailable);
+    }
     phase("new-dialog cancellation is idempotent and size preferences tolerate denied storage");
     let newFile = NewFileDialog.open(4, 3);
     let newClose = document.querySelector(".new-file-dialog .app-dialog-close");
