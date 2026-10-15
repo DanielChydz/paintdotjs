@@ -15,6 +15,7 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "desktop UI lifecycle, optional icons and modal guards", file: "checkUILifecycle.js"},
     {name: "desktop codecs, layer-name safety, document cleanup and worker cancellation", file: ""},
     {name: "desktop dialog submission, cancellation, effects and persistent settings", file: "checkDialogs.js"},
     {name: "desktop document import, image codecs, transformations and undo/redo", file: "checkDocumentIO.js"},

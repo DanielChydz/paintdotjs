@@ -45,7 +45,7 @@ class LabelMenuItem extends ActionItem {
         if (this.element === null) {
             return;
         }
-        this.element.children[1].innerHTML = text;
+        this.element.lastElementChild.innerHTML = text;
     }
 
     isClickable() {

@@ -1,6 +1,6 @@
 # Runtime coverage handoff
 
-## Current resumed checkpoint (2026-10-14)
+## Current resumed checkpoint (2026-10-15)
 
 The user resumed the task and explicitly requires **ongoing commits after
 verified batches**. The earlier pause and instruction to defer all commits
@@ -17,11 +17,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,827 | 41,439 | 98.52% | 612 |
-| Branches | 9,169 | 9,644 | 95.07% | 475 |
+| Lines/statements | 40,865 | 41,439 | 98.61% | 574 |
+| Branches | 9,219 | 9,681 | 95.22% | 462 |
 | Functions | 2,529 | 2,529 | 100% | 0 |
 
-- **180 tests passed; zero failures.**
+- **181 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -55,6 +55,11 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `LabelMenuItem.updateText`: update the actual label with or without an icon.
+  A new native UI lifecycle scenario reproduces the previous iconless-label
+  TypeError and verifies detached items, disabled/standalone menus, numeric input
+  guards, modal attention timers and About/Help singleton/toggle behavior.
 
 - `DocumentIO.cropToSelection`: a crop entirely outside the canvas returns false
   and restores the previously active tool. A native regression failed before
@@ -230,9 +235,9 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 |---|---:|---:|
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 45 | 37 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 41 | 31 |
-| [DocumentIO.js](./js/src/io/DocumentIO.js) | 34 | 32 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 31 | 16 |
 | [AppView.js](./js/src/engine/AppView.js) | 26 | 32 |
+| [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 23 | 11 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
 | [ScrollList.js](./js/src/interface/item/layout/ScrollList.js) | 20 | 9 |
@@ -244,9 +249,9 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 13 | 7 |
-| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 12 | 13 |
 | [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 12 | 7 |
 | [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 12 | 4 |
+| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 10 | 12 |
 | [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 10 | 2 |
 
 Known audit points:
