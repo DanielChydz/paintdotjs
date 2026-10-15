@@ -30,6 +30,8 @@ module.exports = async function checkUILifecycle() {
     menu.appendTo(host, null);
     menu.updateText(null);
     check(menu.getElement().textContent === menu.getText(), "Null menu text erased its label");
+    menu.setId("lifecycle.renamedMenu");
+    check(menu.getElement().id === "lifecycle.renamedMenu", "Mounted menu did not synchronize its new id");
     menu.removeClass("absent");
     let detached = menu.getElement();
     detached.remove();
@@ -41,7 +43,7 @@ module.exports = async function checkUILifecycle() {
     label.updateText("Updated label");
     check(label.getElement().textContent === "Updated label" && label.getElement().children.length === 1,
         "Updating an iconless label lost its text or inserted an icon");
-    let checkbox = new CheckboxItem();
+    let checkbox = new CheckboxItem("lifecycle.checkbox");
     checkbox.appendTo(host, null);
     let press = new MouseEvent("mousedown", {bubbles: true, cancelable: true});
     checkbox.getElement().dispatchEvent(press);
@@ -61,9 +63,11 @@ module.exports = async function checkUILifecycle() {
     entry.setEnabled(true);
     entry.onPress(new MouseEvent("click"));
     check(calls === 1, "Standalone drop entry failed without a menu ancestor");
+    ActionRegistry.get("lifecycle.entry").runPerformAction();
+    check(calls === 2, "Registered menu command did not invoke its UI callback");
     entry.setPressable(null);
     ActionRegistry.get("lifecycle.entry").runPerformAction();
-    check(calls === 1, "Clearing a registered callback retained the previous command");
+    check(calls === 2, "Clearing a registered callback retained the previous command");
     let submenu = new SubmenuDropEntry("lifecycle.submenu", [entry]);
     submenu.appendTo(host, null);
     submenu.setEnabled(false);
@@ -80,6 +84,12 @@ module.exports = async function checkUILifecycle() {
     standaloneMenu.getElement().dispatchEvent(new MouseEvent("mouseenter"));
     standaloneMenu.close();
     check(!standaloneMenu.isOpen(), "Standalone menu close retained an open state");
+    let submenuParent = {parent: null, entries: [entry]};
+    entry.setPressable(() => { ++calls; });
+    entry.setEnabled(true);
+    entry.updateParent(submenuParent);
+    entry.onPress(new MouseEvent("click"));
+    check(calls === 3, "Standalone nested entry failed to traverse an ancestor without a popup");
     phase("number controls reject unsupported pointer and keyboard gestures without changing value");
     let number = document.createElement("input");
     number.type = "number";
@@ -134,6 +144,41 @@ module.exports = async function checkUILifecycle() {
     helpAction.runPerformAction();
     check(!help.isOpen(), "Help shortcut did not close its menu");
     check(FormRegistry.get("missing-lifecycle-form") === null, "Missing form lookup did not return null");
+    phase("form and palette toolbar callbacks preserve their visible toggle states");
+    let settings = PanelRegistry.get("settingsMenu");
+    let colorsForm = FormRegistry.get("colorsForm");
+    let colorsWindow = colorsForm.getWindow();
+    let wasOpen = colorsWindow.isOpen();
+    let toggleColors = settings.get("menu.window.colors");
+    toggleColors.getElement().click();
+    check(colorsWindow.isOpen() === !wasOpen, "Colors toolbar button did not toggle its floating window");
+    toggleColors.getElement().click();
+    check(colorsWindow.isOpen() === wasOpen, "Repeated Colors toolbar click did not restore its window");
+    let wasAddingColor = colorsForm.colorAddMode;
+    colorsForm.colorAddElement.getElement().click();
+    check(colorsForm.colorAddMode === !wasAddingColor, "Palette add-color button did not enter its mode");
+    colorsForm.colorAddElement.getElement().click();
+    check(colorsForm.colorAddMode === wasAddingColor, "Palette add-color button did not leave its mode");
+    let percentage = PanelRegistry.get("footerMenu").get("zoomPercentageItem");
+    percentage.open();
+    percentage.textField.setText("100%");
+    percentage.textField.getElement().dispatchEvent(new KeyboardEvent("keydown", {key: "Enter", bubbles: true}));
+    check(!percentage.isOpen(), "Zoom field submission did not close its popup");
+    let adjustmentCalls = 0;
+    let customAdjustment = AdjustmentsMenu.createAdjustment("lifecycle.customAdjustment", () => { ++adjustmentCalls; });
+    customAdjustment.onPress(new MouseEvent("click"));
+    check(adjustmentCalls === 1 && customAdjustment.getIconPath().includes("_adjustment"),
+        "Custom adjustment entry did not retain its callback and icon name");
+    let exit = PanelRegistry.get("mainMenu").get("menu.file").get("menu.file.exit");
+    let closeWindow = window.close;
+    let closeCalls = 0;
+    try {
+        window.close = () => { ++closeCalls; };
+        exit.onPress(new MouseEvent("click"));
+        check(closeCalls === 1, "File Exit did not request closing its host window");
+    } finally {
+        window.close = closeWindow;
+    }
     phase("new-dialog cancellation is idempotent and size preferences tolerate denied storage");
     let newFile = NewFileDialog.open(4, 3);
     let newClose = document.querySelector(".new-file-dialog .app-dialog-close");

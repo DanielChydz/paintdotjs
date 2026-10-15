@@ -23,7 +23,6 @@ class MoveTool extends MoveToolBase {
         this.fullQuality = false;
         this.activeLayer = null;
         this.renderArgs = null;
-        this.didPaste = false;
         this.pendingPasteSurface = null;
         this.pendingPasteUnderlay = null;
         this.pendingPasteOrigin = null;
@@ -500,21 +499,8 @@ class MoveTool extends MoveToolBase {
         if (this.currentHistoryMementos.length > 0) {
             let cha = new CompoundHistoryMemento(null, null, this.currentHistoryMementos);
 
-            let haName;
-            let image;
-
-            if (this.didPaste) {
-                haName = i18n("commonAction.paste");
-                image = "assets/icons/menu_edit_paste_icon.png";
-                this.didPaste = false;
-            } else {
-                if (name === null) {
-                    haName = this.getName();
-                } else {
-                    haName = name;
-                }
-                image = this.getImage();
-            }
+            let haName = name === null ? this.getName() : name;
+            let image = this.getImage();
 
             let ctha = new CompoundToolHistoryMemento(cha, this.getDocumentWorkspace(), haName, image);
 

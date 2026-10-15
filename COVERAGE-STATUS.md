@@ -17,8 +17,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,112 | 41,398 | 99.3% | 286 |
-| Branches | 9,505 | 9,828 | 96.71% | 323 |
+| Lines/statements | 41,146 | 41,384 | 99.42% | 238 |
+| Branches | 9,541 | 9,846 | 96.9% | 305 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **183 tests passed; zero failures.**
@@ -118,6 +118,10 @@ No automatic approval review rejected these authorized actions.
   canvas so a width change cannot revive a stale preview. Assert unchanged pixels.
 
 ## Additional resumed-session test coverage
+
+- Actual UI callback tests cover registered standalone/nested menu commands,
+  mounted ids and named checkboxes, floating-form and palette toggles, zoom field
+  submission, custom adjustment factories and the window-close platform boundary.
 
 - Independent native Canvas masks validate concave stencil outlines, holes and
   islands; a separate queue-based four-neighbor oracle validates scanline flood
@@ -283,7 +287,6 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 31 | 16 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
@@ -292,9 +295,8 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [AppView.js](./js/src/engine/AppView.js) | 12 | 25 |
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
+| [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 10 | 6 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
-| [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 8 | 5 |
-| [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 8 | 1 |
 | [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 7 | 9 |
 | [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 6 | 17 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 6 | 16 |
@@ -303,6 +305,8 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [DocumentWorkspace.js](./js/src/engine/document/DocumentWorkspace.js) | 6 | 1 |
 | [ToolSelector.js](./js/src/interface/panel/header/tool/ToolSelector.js) | 5 | 3 |
 | [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 4 | 3 |
+| [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
+| [DocumentContextMenu.js](./js/src/interface/panel/header/documents/DocumentContextMenu.js) | 3 | 2 |
 
 Known audit points:
 
@@ -312,8 +316,11 @@ Known audit points:
 - New/resize dialog synchronization no longer maintains an unreachable reentry
   flag: native input.value assignments and textContent updates dispatch no input
   events. Existing native pixel/print/DPI/aspect/mode tests pass after cleanup.
-- `MoveTool.didPaste` is only initialized/reset to false; a repository search
-  found no assignment of true. Audit obsolete state and valid history semantics.
+- Removed obsolete `MoveTool.didPaste` state, which was never true; DocumentIO
+  already records Paste separately. Native Move tests preserve exact pixels and
+  full undo/redo, including layer context switching, empty release, idle-callback
+  fallback, owned paste-buffer disposal, default history names and external
+  selection changes that interrupt Move/selection-Move gestures.
 - `MoveTool.onPasteMouseDown` and `AppFile.exists` are now implemented and tested;
   the older instructions about their empty stubs no longer apply.
 - Keep function coverage honest; line/branch gaps still matter even with 100%

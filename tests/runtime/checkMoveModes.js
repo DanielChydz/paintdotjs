@@ -23,6 +23,108 @@ module.exports = async function checkMoveModes() {
     for (let workspace of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(workspace, false);
     }
+    phase("Move initialization falls back when idle scheduling is unavailable");
+    let lifecycleWorkspace = app.createBlankDocumentInNewWorkspace(32, 32);
+    app.setActiveTool(null);
+    let firstLayer = lifecycleWorkspace.getActiveLayer();
+    let secondLayer = Layer.createLayer(lifecycleWorkspace, 32, 32, "History target");
+    lifecycleWorkspace.getDocument().addLayer(secondLayer);
+    lifecycleWorkspace.setActiveLayer(firstLayer);
+    let requestIdle = window.requestIdleCallback;
+    try {
+        window.requestIdleCallback = undefined;
+        app.setActiveToolFromType(ToolType.MOVE);
+        await new Promise(resolve => setTimeout(resolve, 10));
+        check(MaskedSurface.gpuRenderer !== undefined, "Move did not prepare its renderer without idle scheduling");
+    } finally {
+        window.requestIdleCallback = requestIdle;
+    }
+    let lifecycleMove = app.getActiveTool();
+    let lifecycleSurface = firstLayer.getSurface();
+    let idlePixels = lifecycleSurface.context.getImageData(0, 0, 32, 32).data;
+    let idleHistorySize = lifecycleWorkspace.getHistory().undoStack.length;
+    lifecycleMove.onMouseUp(4, 4, MouseButton.LEFT);
+    check(!lifecycleMove.tracking && lifecycleWorkspace.getHistory().undoStack.length === idleHistorySize
+        && same(lifecycleSurface.context.getImageData(0, 0, 32, 32).data, idlePixels),
+        "Idle Move release created history or changed pixels");
+    let emptyMerges = lifecycleMove.mergeDirtyRectangles([null, new Rectangle(4, 4, 0, 0)]);
+    check(emptyMerges.length === 0, "Absent and empty dirty footprints produced a restore rectangle");
+    phase("Move context undo restores its original active layer and render destination");
+    let layerContext = new MoveContextHistoryMemento(lifecycleWorkspace, lifecycleMove.context, "Layer context", null);
+    lifecycleMove.deactivateOnLayerChange = false;
+    lifecycleWorkspace.setActiveLayer(secondLayer);
+    lifecycleMove.deactivateOnLayerChange = true;
+    let redoLayerContext = layerContext.performUndo();
+    check(lifecycleWorkspace.getActiveLayer() === firstLayer && lifecycleMove.activeLayer === firstLayer
+        && lifecycleMove.renderArgs.getSurface() === firstLayer.getSurface() && lifecycleMove.deactivateOnLayerChange,
+        "Context undo did not restore the layer-specific Move state");
+    redoLayerContext.performUndo();
+    check(lifecycleWorkspace.getActiveLayer() === secondLayer && lifecycleMove.renderArgs.getSurface() === secondLayer.getSurface(),
+        "Context redo did not restore the alternate layer render destination");
+    app.setActiveTool(null);
+    lifecycleWorkspace.setActiveLayer(firstLayer);
+    phase("discarded pending paste buffers release only owned surfaces");
+    let disposableMove = ToolType.MOVE.create();
+    let pendingSource = document.createElement("canvas");
+    pendingSource.width = 3;
+    pendingSource.height = 2;
+    let underlay = lifecycleSurface.clone();
+    disposableMove.setPendingPaste(pendingSource, underlay);
+    let ownedSource = disposableMove.pendingPasteSurface.getCanvas();
+    let ownedUnderlay = disposableMove.pendingPasteUnderlay.getCanvas();
+    disposableMove.dispose();
+    disposableMove.dispose();
+    check(ownedSource.width === 0 && ownedUnderlay.width === 0 && pendingSource.width === 3
+        && underlay.getWidth() === 32 && disposableMove.context === null,
+        "Move disposal retained owned paste buffers or disposed a caller-owned surface");
+    underlay.dispose();
+    phase("external selection changes finish active Move and selection-Move gestures");
+    lifecycleSurface.clear();
+    lifecycleSurface.context.fillStyle = "red";
+    lifecycleSurface.context.fillRect(8, 8, 4, 4);
+    let lifecycleOriginal = lifecycleSurface.context.getImageData(0, 0, 32, 32).data;
+    let lifecycleSelection = lifecycleWorkspace.getSelection();
+    lifecycleSelection.setContinuation(new Rectangle(0, 0, 32, 32), CombineMode.REPLACE);
+    lifecycleSelection.commitContinuation();
+    lifecycleWorkspace.getHistory().clearAll();
+    ToolType.MOVE.setSetting("resampling", "nearest");
+    app.setActiveToolFromType(ToolType.MOVE);
+    lifecycleMove = app.getActiveTool();
+    lifecycleMove.onMouseDown(16, 16, MouseButton.LEFT);
+    lifecycleMove.flushHistoryMementos(null);
+    check(lifecycleWorkspace.getHistory().undoStack.at(-1).getName() === lifecycleMove.getName(),
+        "Explicitly flushed Move history did not default to its tool name");
+    lifecycleMove.onMouseMove(18, 19);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    lifecycleSelection.reset();
+    let lifecycleExpected = new Uint8ClampedArray(32 * 32 * 4);
+    for (let y = 11; y < 15; ++y) {
+        for (let x = 10; x < 14; ++x) {
+            lifecycleExpected.set([255, 0, 0, 255], (y * 32 + x) * 4);
+        }
+    }
+    check(!lifecycleMove.tracking && !lifecycleMove.context.lifted
+        && same(lifecycleSurface.context.getImageData(0, 0, 32, 32).data, lifecycleExpected),
+        "External selection reset did not finish Move at its presented pixel position");
+    let lifecycleHistory = lifecycleWorkspace.getHistory();
+    let lifecycleSteps = lifecycleHistory.undoStack.length;
+    for (let index = 0; index < lifecycleSteps; ++index) {
+        lifecycleHistory.stepBackward();
+    }
+    check(same(lifecycleSurface.context.getImageData(0, 0, 32, 32).data, lifecycleOriginal),
+        "Selection-interrupted Move undo did not restore the original bitmap");
+    app.setActiveTool(null);
+    lifecycleSelection.reset();
+    lifecycleSelection.setContinuation(new Rectangle(0, 0, 32, 32), CombineMode.REPLACE);
+    lifecycleSelection.commitContinuation();
+    app.setActiveToolFromType(ToolType.MOVE_SELECTION);
+    let lifecycleSelectionMove = app.getActiveTool();
+    lifecycleSelectionMove.onMouseDown(16, 16, MouseButton.LEFT);
+    lifecycleSelectionMove.onMouseMove(18, 19);
+    lifecycleSelection.reset();
+    check(!lifecycleSelectionMove.tracking && !lifecycleSelectionMove.context.lifted && lifecycleSelection.isEmpty(),
+        "External selection reset retained an active selection-Move gesture");
+    app.closeDocumentWorkspace(lifecycleWorkspace, false);
     ToolType.MOVE.setSetting("resampling", "nearest");
     ToolType.MOVE.setSetting("renderingQuality", "aliased");
     for (let [mode, start, end, rectangle, button] of [
