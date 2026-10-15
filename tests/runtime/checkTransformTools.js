@@ -351,5 +351,26 @@ module.exports = async function checkTransformTools() {
     }
     tiny.dispose();
     previewTarget.dispose();
+    phase("modifier transitions redraw an active rectangular selection without another pointer move");
+    app.setActiveTool(null);
+    selection.reset();
+    app.shiftKeyDown = false;
+    app.altKeyDown = false;
+    app.controlKeyDown = false;
+    ToolType.RECTANGLE_SELECT.resetSettings();
+    app.setActiveToolFromType(ToolType.RECTANGLE_SELECT);
+    let rectangleTool = app.getActiveTool();
+    rectangleTool.onMouseDown(10, 10, MouseButton.LEFT);
+    rectangleTool.onMouseMove(40, 20);
+    let unconstrained = selection.getBounds();
+    check(unconstrained.width > unconstrained.height, "Rectangular selection fixture unexpectedly began square");
+    window.dispatchEvent(new KeyboardEvent("keydown", {key: "Shift", bubbles: true}));
+    let constrained = selection.getBounds();
+    check(constrained.width === constrained.height, "Pressing Shift did not redraw the stationary selection as a square");
+    window.dispatchEvent(new KeyboardEvent("keyup", {key: "Shift", bubbles: true}));
+    let released = selection.getBounds();
+    check(released.width === unconstrained.width && released.height === unconstrained.height,
+        "Releasing Shift did not restore the unconstrained selection preview");
+    rectangleTool.onMouseUp(40, 20, MouseButton.LEFT);
     app.closeDocumentWorkspace(workspace, false);
 };

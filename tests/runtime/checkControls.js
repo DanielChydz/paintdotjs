@@ -402,18 +402,26 @@ module.exports = async function checkControls() {
     dropdown.replaceValues([]);
     check(dropdown.value === null, "Empty replacement values retained a selection");
     let fontChoices = FontManager.getTextToolChoices();
+    fontChoices = [...fontChoices.filter(entry => entry[0] !== font.family),
+        fontChoices.find(entry => entry[0] === font.family)];
     let fontDropdown = new ToolOptionDropdown({
         value: "Arial", values: fontChoices, width: 160, fontPreview: true, fitSelected: true,
         leadingIcon: "text_icon.png", onChange: value => changes.push(value)
     });
     document.body.appendChild(fontDropdown.getElement());
     fontDropdown.open();
-    await waitFor(() => fontDropdown.fontEntryButtons.size === fontChoices.length);
-    let previewResults = fontDropdown.menu.querySelector(".tool-font-dropdown-results");
+    let previewResults = fontDropdown.menu;
+    previewResults.id = "font-preview-viewport-contract";
     previewResults.style.maxHeight = "80px";
+    let previewLayout = document.createElement("style");
+    previewLayout.textContent = "#font-preview-viewport-contract .tool-font-dropdown-results > button:last-child {margin-top:250px}";
+    previewResults.appendChild(previewLayout);
+    await waitFor(() => fontDropdown.fontEntryButtons.size === fontChoices.length);
     let customPreviewButton = fontDropdown.fontEntryButtons.get(font.family);
-    customPreviewButton.style.marginTop = "250px";
     await new Promise(resolve => setTimeout(resolve, 50));
+    check(customPreviewButton.querySelector(".tool-font-dropdown-preview").style.fontFamily === ""
+        && customPreviewButton.getBoundingClientRect().top > previewResults.getBoundingClientRect().bottom + 100,
+    "Lazy custom preview loaded before entering the observed viewport margin");
     customPreviewButton.scrollIntoView({block: "nearest"});
     await waitFor(() => customPreviewButton.querySelector(".tool-font-dropdown-preview").style.fontFamily.includes(font.family));
     check(fontDropdown.menu !== null, "Lazy custom font preview closed its dropdown");

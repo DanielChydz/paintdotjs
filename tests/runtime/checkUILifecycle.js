@@ -187,6 +187,40 @@ module.exports = async function checkUILifecycle() {
     helpAction.runPerformAction();
     check(!help.isOpen(), "Help shortcut did not close its menu");
     check(FormRegistry.get("missing-lifecycle-form") === null, "Missing form lookup did not return null");
+    phase("registering a restored hidden form emits its closed state without creating a window");
+    let hiddenFormId = "lifecycleHiddenForm";
+    let hiddenForm = new Form(hiddenFormId);
+    let hiddenEvents = [];
+    let onHiddenState = (window, open) => {
+        if (window.persistenceId === hiddenFormId) {
+            hiddenEvents.push(open);
+        }
+    };
+    let addWindowListener = window.addEventListener;
+    let registeredWindowListeners = [];
+    app.on("app:window_open_state_changed", onHiddenState);
+    AppSettingsStore.set("windows." + hiddenFormId, {visible: false, width: 150, height: 120, anchorX: 0, anchorY: 0});
+    try {
+        window.addEventListener = function (...args) {
+            registeredWindowListeners.push(args);
+            return addWindowListener.apply(this, args);
+        };
+        FormRegistry.register(hiddenForm);
+        check(FormRegistry.get(hiddenFormId) === hiddenForm && !hiddenForm.getWindow().isOpen()
+            && hiddenForm.getWindow().windowElement === null && hiddenEvents.length === 1 && hiddenEvents[0] === false,
+        "Restored hidden form created a floating window or failed to publish its closed state");
+    } finally {
+        window.addEventListener = addWindowListener;
+        for (let args of registeredWindowListeners) {
+            window.removeEventListener(...args);
+        }
+        for (let name of ["app:update_active_document", "document:update_viewport", "app:resize"]) {
+            app.off(name, hiddenForm.getWindow().updateImageOverlap);
+        }
+        app.off("app:window_open_state_changed", onHiddenState);
+        FormRegistry.unregister(hiddenFormId);
+        AppSettingsStore.set("windows." + hiddenFormId, null);
+    }
     phase("form and palette toolbar callbacks preserve their visible toggle states");
     let settings = PanelRegistry.get("settingsMenu");
     let colorsForm = FormRegistry.get("colorsForm");

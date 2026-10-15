@@ -258,6 +258,9 @@ module.exports = async function checkTextGradient() {
     check(text.editor === null && text.originNub === null && history.undoStack.length === 0,
         "Text cancellation retained editors, handles or undo entries");
     check(surface.context.getImageData(0, 0, 160, 120).data.every(value => value === 0), "Text cancellation retained preview pixels");
+    text.syncEditorToViewport();
+    check(text.editor === null && text.viewportSyncFrame === null && history.undoStack.length === 0,
+        "Late viewport synchronization revived canceled text or changed history");
     text.focusEditor();
     text.placeCaretAt(new Point());
     text.destroyNub();

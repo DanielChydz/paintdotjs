@@ -101,6 +101,44 @@ module.exports = async function checkPendingSelections() {
             roundTripEdit(before, pixels(), "Scale " + edge + "/" + shift);
         }
     }
+    phase("pending shape hover identifies the padded rotation region");
+    let hovered = draw();
+    hovered.onMouseMove(52, 36);
+    check(hovered.rotateIndicator.isVisible() && app.cursorState.value === "hand_open_cursor",
+        "Pending shape hover did not advertise the padded rotation region");
+    hovered.onMouseMove(0, 0);
+    check(!hovered.rotateIndicator.isVisible() && app.cursorState.value === "crosshair",
+        "Leaving the pending shape retained its rotation indicator");
+    phase("collapsed shape transforms remain finite and cannot be picked through an inverse");
+    let collapsed = draw();
+    collapsed.shapeTransform.scale(0, 0);
+    collapsed.renderPreview();
+    check(!collapsed.hitTestPendingShape(new Point(0, 0)), "Singular shape transform was treated as pickable");
+    collapsed.cancelPending();
+    check(pixels().every(value => value === 0), "Canceling a collapsed shape retained preview pixels");
+
+    phase("pending shape history works when the optional color form is absent");
+    app.setActiveTool(null);
+    let optionalColors = FormRegistry.get("colorsForm");
+    FormRegistry.unregister("colorsForm");
+    try {
+        let monochrome = draw();
+        let monochromePixels = pixels();
+        check(monochrome.colorsForm === null && monochrome.capturePendingState().colors === null
+            && surface.context.getImageData(50, 50, 1, 1).data[3] === 255
+            && surface.context.getImageData(50, 50, 1, 1).data[0] === 0,
+        "Absent color form did not use opaque black shape defaults");
+        monochrome.commitPending();
+        history.stepBackward();
+        check(app.getActiveTool().pending && app.getActiveTool().restoredColors === null,
+            "Undoing monochrome shape commit invented a saved color form state");
+        equalBytes(pixels(), monochromePixels, "Monochrome shape undo changed its pixels");
+        history.stepForward();
+        equalBytes(pixels(), monochromePixels, "Monochrome shape redo changed its pixels");
+    } finally {
+        app.setActiveTool(null);
+        FormRegistry.forms.colorsForm = optionalColors;
+    }
     let tool = draw();
     let before = pixels();
     tool.onMouseMove(52, 50);

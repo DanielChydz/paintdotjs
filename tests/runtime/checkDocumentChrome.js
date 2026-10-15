@@ -231,15 +231,22 @@ module.exports = async function checkDocumentChrome() {
     let clipboardImage = await new Promise(resolve => clipboardCanvas.toBlob(resolve));
     await navigator.clipboard.write([new ClipboardItem({"image/png": clipboardImage})]);
     await waitFor(async () => {
-        let items = await navigator.clipboard.read();
-        let imageItem = items.find(item => item.types.includes("image/png"));
-        if (imageItem === undefined) {
-            return false;
+        try {
+            let items = await navigator.clipboard.read();
+            let imageItem = items.find(item => item.types.includes("image/png"));
+            if (imageItem === undefined) {
+                return false;
+            }
+            let decodedClipboard = await createImageBitmap(await imageItem.getType("image/png"));
+            let ready = decodedClipboard.width === 16 && decodedClipboard.height === 8;
+            decodedClipboard.close();
+            return ready;
+        } catch (error) {
+            if (error.name === "InvalidStateError") {
+                return false;
+            }
+            throw error;
         }
-        let decodedClipboard = await createImageBitmap(await imageItem.getType("image/png"));
-        let ready = decodedClipboard.width === 16 && decodedClipboard.height === 8;
-        decodedClipboard.close();
-        return ready;
     });
     let clipboardSize = await DocumentIO.getClipboardImageSize();
     check(clipboardSize !== null && clipboardSize.width === 16 && clipboardSize.height === 8,

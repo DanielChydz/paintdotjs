@@ -110,15 +110,22 @@ module.exports = async function checkFileWorkflows() {
     await waitFor(() => document.hasFocus());
     await navigator.clipboard.write([new ClipboardItem({"image/png": png})]);
     await waitFor(async () => {
-        let items = await navigator.clipboard.read();
-        let imageItem = items.find(item => item.types.includes("image/png"));
-        if (imageItem === undefined) {
-            return false;
+        try {
+            let items = await navigator.clipboard.read();
+            let imageItem = items.find(item => item.types.includes("image/png"));
+            if (imageItem === undefined) {
+                return false;
+            }
+            let decodedClipboard = await createImageBitmap(await imageItem.getType("image/png"));
+            let ready = decodedClipboard.width === 4 && decodedClipboard.height === 2;
+            decodedClipboard.close();
+            return ready;
+        } catch (error) {
+            if (error.name === "InvalidStateError") {
+                return false;
+            }
+            throw error;
         }
-        let decodedClipboard = await createImageBitmap(await imageItem.getType("image/png"));
-        let ready = decodedClipboard.width === 4 && decodedClipboard.height === 2;
-        decodedClipboard.close();
-        return ready;
     });
     app.performAction(new NewFileAction());
     await waitFor(() => document.querySelector(".new-file-dialog") !== null);
@@ -517,6 +524,61 @@ module.exports = async function checkFileWorkflows() {
     check(app.getActiveDocumentWorkspace() === first && second.isDirty(), "Save-all failure lost original focus or dirty state");
     closeAll();
     check(await DocumentIO.saveAll(), "Empty save-all did not finish");
+    phase("empty path figures do not alter brush clipping, flood fill or crop history");
+    let figureWorkspace = app.createBlankDocumentInNewWorkspace(8, 8);
+    app.setActiveTool(null);
+    let figureSelection = figureWorkspace.getSelection();
+    let figures = new GraphicsPath([new VertexList()]);
+    figures.addRectangle(new Rectangle(2, 2, 3, 3));
+    figureSelection.setContinuationPath(figures, CombineMode.REPLACE);
+    figureSelection.commitContinuation();
+    let figureSurface = figureWorkspace.getActiveLayer().getSurface();
+    figureSurface.clear();
+    ToolType.PAINT_BRUSH.setSetting("width", 20);
+    ToolType.PAINT_BRUSH.setSetting("hardness", 100);
+    ToolType.PAINT_BRUSH.setSetting("antialias", true);
+    FormRegistry.get("colorsForm").setMainColor(Color.fromRGB(0, 0, 255));
+    app.setActiveToolFromType(ToolType.PAINT_BRUSH);
+    app.getActiveTool().onMouseDown(3, 3, MouseButton.LEFT);
+    app.getActiveTool().onMouseUp(3, 3, MouseButton.LEFT);
+    let figureExpected = new Uint8ClampedArray(8 * 8 * 4);
+    for (let y = 2; y < 5; ++y) {
+        for (let x = 2; x < 5; ++x) {
+            figureExpected.set([0, 0, 255, 255], (y * 8 + x) * 4);
+        }
+    }
+    equal(figureSurface.context.getImageData(0, 0, 8, 8).data, figureExpected,
+        "Empty figure changed the brush's exact clipping region");
+    FormRegistry.get("colorsForm").setMainColor(Color.fromRGB(255, 0, 0));
+    ToolType.PAINT_BUCKET.setSetting("antialias", false);
+    ToolType.PAINT_BUCKET.setSetting("tolerance", 0);
+    ToolType.PAINT_BUCKET.setSetting("floodMode", "contiguous");
+    app.setActiveToolFromType(ToolType.PAINT_BUCKET);
+    app.getActiveTool().onMouseDown(3, 3, MouseButton.LEFT);
+    app.getActiveTool().onMouseUp(3, 3, MouseButton.LEFT);
+    for (let offset = 0; offset < figureExpected.length; offset += 4) {
+        if (figureExpected[offset + 3] !== 0) {
+            figureExpected[offset] = 255;
+            figureExpected[offset + 2] = 0;
+        }
+    }
+    equal(figureSurface.context.getImageData(0, 0, 8, 8).data, figureExpected,
+        "Empty figure changed the flood fill's exact clipping region");
+    app.setActiveTool(null);
+    figureWorkspace.getHistory().clearAll();
+    check(DocumentIO.cropToSelection(), "Selection with an empty figure could not be cropped");
+    check(figureWorkspace.getDocument().width === 3 && figureWorkspace.getDocument().height === 3,
+        "Empty figure changed crop dimensions");
+    let croppedFigures = figureWorkspace.getActiveLayer().getSurface().context.getImageData(0, 0, 3, 3).data;
+    check(croppedFigures.every((value, index) => value === [255, 0, 0, 255][index % 4]),
+        "Empty figure changed cropped pixels");
+    figureWorkspace.getHistory().stepBackward();
+    equal(figureWorkspace.getActiveLayer().getSurface().context.getImageData(0, 0, 8, 8).data, figureExpected,
+        "Undoing empty-figure crop lost its original pixels");
+    figureWorkspace.getHistory().stepForward();
+    equal(figureWorkspace.getActiveLayer().getSurface().context.getImageData(0, 0, 3, 3).data, croppedFigures,
+        "Redoing empty-figure crop changed its pixels");
+    closeAll();
     canvas.width = 0;
     canvas.height = 0;
 };

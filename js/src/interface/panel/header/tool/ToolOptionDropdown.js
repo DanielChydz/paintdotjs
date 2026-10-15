@@ -261,7 +261,7 @@ class ToolOptionDropdown {
                     console.warn(`Could not load font preview "${preview.dataset.fontName}"`, error);
                 });
             }
-        }, {root: results, rootMargin: "100px"});
+        }, {root: this.menu, rootMargin: "100px"});
 
         const token = ++this.fontRenderToken;
         let index = 0;

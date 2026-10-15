@@ -15,8 +15,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,305 | 41,362 | 99.86% | 57 |
-| Branches | 9,810 | 9,969 | 98.4% | 159 |
+| Lines/statements | 41,322 | 41,356 | 99.91% | 34 |
+| Branches | 9,847 | 9,985 | 98.61% | 138 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **198 tests passed; zero failures.**
@@ -89,6 +89,24 @@ No automatic approval review rejected these authorized actions.
   handle hit tests distinguish exact painted boundaries from padded boundaries.
 
 ## Resumed-session production fixes
+
+- `ToolOptionDropdown`: observe the actual scrolling font menu, not the full
+  results container. The strengthened native regression failed before this fix:
+  offscreen font previews were loaded immediately. It now checks unloaded state
+  outside the viewport/root margin and real FontFace loading after scrolling in.
+- `PreviewShapeTool`: pending edits remain pending throughout transformations;
+  collapse duplicate state checks. In-memory history always captures initialized
+  pointer/last-point/bounds values from mouse-down, so clone them directly when
+  capturing/restoring. Ending an edit centrally destroys its nubs; positioning
+  routines do not need a second inactive cleanup loop. Native pixel/history tests
+  cover hover rotation, singular transform cancellation and no color-form fallback.
+- Native tests cover public paths with empty figures: exact brush clipping, flood
+  fill, crop and full pixel undo/redo. Also cover modifier-driven selection redraw,
+  late canceled text synchronization and restored hidden-form notifications.
+- Clipboard fixture preparation retries only transient InvalidStateError when the
+  real X11 clipboard ownership changes between read and getType; other failures
+  propagate. It still waits for real decoded image dimensions, with no clipboard
+  replacement or fabricated success.
 
 - `MeasurementUnitSelectorItem.getText`: removing every entry through the inherited
   public API no longer dereferences a null selection during reinitialization.
@@ -414,26 +432,26 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 9 | 22 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 9 | 5 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 6 | 12 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 6 | 3 |
 | [AppView.js](./js/src/engine/AppView.js) | 4 | 9 |
-| [DocumentIO.js](./js/src/io/DocumentIO.js) | 2 | 18 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 2 | 15 |
-| [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 2 | 13 |
-| [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 2 | 5 |
-| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 2 | 5 |
-| [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 2 | 3 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 2 | 3 |
-| [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 2 | 3 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 2 | 2 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 2 | 2 |
-| [FormRegistry.js](./js/src/interface/window/FormRegistry.js) | 2 | 1 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 1 | 1 |
+| [DocumentIO.js](./js/src/io/DocumentIO.js) | 0 | 17 |
+| [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 0 | 12 |
+| [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 0 | 9 |
 | [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 0 | 8 |
 | [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 0 | 6 |
+| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 0 | 4 |
+| [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 0 | 3 |
 | [SurfaceBoxBaseRenderer.js](./js/src/engine/document/render/renderer/SurfaceBoxBaseRenderer.js) | 0 | 3 |
+| [Surface.js](./js/src/engine/document/layer/bitmap/Surface.js) | 0 | 3 |
+| [MaskedSurface.js](./js/src/engine/document/layer/bitmap/MaskedSurface.js) | 0 | 3 |
+| [PdnDocumentCodec.js](./js/src/io/PdnDocumentCodec.js) | 0 | 2 |
 
 Known audit points:
 

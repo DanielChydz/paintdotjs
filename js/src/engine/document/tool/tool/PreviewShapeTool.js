@@ -59,7 +59,7 @@ class PreviewShapeTool extends DrawingTool {
     usesContinuousPointerCoordinates() {
         // Preserve sub-pixel pointer movement while an existing shape is being
         // edited. Individual transforms then snap at their half-pixel point.
-        return this.pending || this.interactionMode !== null;
+        return this.pending;
     }
 
     onMouseDown(x, y, button) {
@@ -284,7 +284,7 @@ class PreviewShapeTool extends DrawingTool {
     }
 
     hasNubTarget() {
-        return this.pending || (this.tracking && this.interactionMode !== null);
+        return this.pending;
     }
 
     usesBoundingBoxNubs() {
@@ -971,9 +971,6 @@ class PreviewShapeTool extends DrawingTool {
 
     positionGradientNubs() {
         if (this.shape !== "gradient" || !this.pending) {
-            for (const nub of this.gradientNubs || []) {
-                nub.setVisible(false);
-            }
             return;
         }
         if (this.gradientNubs === null) {
@@ -1017,9 +1014,6 @@ class PreviewShapeTool extends DrawingTool {
 
     positionCurveNubs() {
         if (this.shape !== "line" || !this.pending) {
-            for (const nub of this.curveNubs || []) {
-                nub.setVisible(false);
-            }
             return;
         }
         this.ensureCurveControlPoints();
@@ -1209,9 +1203,9 @@ class PreviewShapeTool extends DrawingTool {
         return {
             startPoint: this.startPoint.clone(),
             endPoint: this.endPoint.clone(),
-            pointerStartPoint: this.pointerStartPoint === null ? null : this.pointerStartPoint.clone(),
-            lastPoint: this.lastPoint === null ? null : this.lastPoint.clone(),
-            changedBounds: this.changedBounds === null ? null : this.changedBounds.clone(),
+            pointerStartPoint: this.pointerStartPoint.clone(),
+            lastPoint: this.lastPoint.clone(),
+            changedBounds: this.changedBounds.clone(),
             shapeTransform: this.shapeTransform.clone(),
             curveControlPoints: this.curveControlPoints === null ? null
                 : this.curveControlPoints.map(point => point.clone()),
@@ -1232,8 +1226,8 @@ class PreviewShapeTool extends DrawingTool {
         this.beginBitmapTransaction();
         this.startPoint = state.startPoint.clone();
         this.endPoint = state.endPoint.clone();
-        this.pointerStartPoint = state.pointerStartPoint === null ? null : state.pointerStartPoint.clone();
-        this.lastPoint = state.lastPoint === null ? null : state.lastPoint.clone();
+        this.pointerStartPoint = state.pointerStartPoint.clone();
+        this.lastPoint = state.lastPoint.clone();
         this.shapeTransform = state.shapeTransform.clone();
         this.curveControlPoints = state.curveControlPoints === null ? null
             : state.curveControlPoints.map(point => point.clone());
@@ -1248,7 +1242,7 @@ class PreviewShapeTool extends DrawingTool {
         this.interactionMode = null;
         this.editingStartState = null;
         this.drawHistoryPushed = true;
-        this.changedBounds = state.changedBounds === null ? this.getPreviewBounds() : state.changedBounds.clone();
+        this.changedBounds = state.changedBounds.clone();
         this.renderPreview();
         if (this.usesBoundingBoxNubs()) {
             MoveToolBase.prototype.positionNubs.call(this, MoveToolBaseMode.TRANSLATE);
