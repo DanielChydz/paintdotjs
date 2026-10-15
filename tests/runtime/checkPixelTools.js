@@ -319,6 +319,24 @@ module.exports = async function checkPixelTools() {
     check(cloneTool.getAnchor().mode === "relative", "Clone source did not become aligned");
     undoRedo(before, pixels(), "Clone stamp");
 
+    phase("spaced recoloring keeps the gaps between separate dabs untouched");
+    prepare([[ToolType.RECOLOR, {width: 4, spacing: 400, hardness: 100, tolerance: 0,
+        smoothing: false, recolorSampling: "secondary", antialias: false}]]);
+    let spacedBefore = pixels();
+    app.setActiveToolFromType(ToolType.RECOLOR);
+    let spacedRecolor = app.getActiveTool();
+    spacedRecolor.onMouseDown(4, 10, MouseButton.LEFT);
+    spacedRecolor.onMouseUp(20, 10, MouseButton.LEFT);
+    equal(at(4, 10), [255, 0, 0, 255], "Spaced recolor lost its first dab");
+    equal(at(12, 10), [0, 0, 255, 255], "Spaced recolor filled the gap between dabs");
+    equal(at(20, 10), [255, 0, 0, 255], "Spaced recolor lost its final dab");
+    undoRedo(spacedBefore, pixels(), "Spaced recolor");
+    app.setActiveToolFromType(ToolType.RECOLOR);
+    let offscreenRecolor = app.getActiveTool();
+    let beforeOffscreenRecolor = pixels();
+    offscreenRecolor.onMouseDown(-100, -100, MouseButton.LEFT);
+    offscreenRecolor.onMouseUp(-90, -90, MouseButton.LEFT);
+    equal(pixels(), beforeOffscreenRecolor, "Offscreen recolor modified document pixels");
     phase("integer pixel translation and move history");
     for (let resampling of ["nearest", "linear", "multisampleLinear", "anisotropic", "highQualityCubic"]) {
         prepare([[ToolType.MOVE, {resampling}]]);

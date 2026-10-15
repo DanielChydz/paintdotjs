@@ -30,6 +30,49 @@ module.exports = async function checkBrushContracts() {
     surface.clear();
     let pixels = () => surface.context.getImageData(0, 0, 32, 32).data;
     let baseline = pixels();
+    phase("preview lifecycle guards and idle tools leave pixels and renderers untouched");
+    let renderersBefore = workspace.getSurfaceBox().getRendererList().length;
+    for (let type of [ToolType.PAINT_BRUSH, ToolType.ERASER]) {
+        let unactivated = type.create();
+        unactivated.updateBrushPreview(4, 4, null, false);
+        unactivated.destroyBrushPreview();
+        unactivated.destroyBrushPreview();
+        check(unactivated.brushPreview === null, "Unactivated brush allocated or retained a preview");
+    }
+    let idleClone = ToolType.CLONE_STAMP.create();
+    idleClone.updatePreviews(4, 4);
+    idleClone.updateSourcePreview();
+    let legacyAnchor = {point: new Point(2, 3), layer: workspace.getActiveLayer()};
+    CloneStampTool.anchors.set(workspace, legacyAnchor);
+    check(idleClone.getAnchor() === legacyAnchor && legacyAnchor.mode === "absolute" && legacyAnchor.offset === null,
+        "Legacy absolute clone anchor did not migrate without changing its position");
+    CloneStampTool.anchors.delete(workspace);
+    let idlePicker = ToolType.COLOR_PICKER.create();
+    idlePicker.updatePixelPreview(4, 4);
+    check(!idlePicker.onMouseUp(4, 4, MouseButton.LEFT), "Idle picker consumed a mouse release");
+    let idlePan = ToolType.PAN.create();
+    check(!idlePan.onMouseMove(4, 4) && !idlePan.onMouseUp(4, 4, MouseButton.LEFT),
+        "Idle Pan consumed a gesture without a press");
+    check(workspace.getSurfaceBox().getRendererList().length === renderersBefore && same(pixels(), baseline),
+        "Unactivated preview operations changed renderer ownership or pixels");
+    for (let type of [ToolType.MAGIC_WAND, ToolType.PAINT_BUCKET]) {
+        app.setActiveToolFromType(type);
+        let flood = app.getActiveTool();
+        check(!flood.onKeyPress("Escape") && !flood.onMouseDown(100, 100, MouseButton.LEFT),
+            "Idle/offscreen flood gesture created an operation");
+        check(!flood.pending && same(pixels(), baseline), "Offscreen flood gesture changed pending state or pixels");
+    }
+    ToolType.COLOR_PICKER.setSetting("afterClick", "none");
+    app.setActiveToolFromType(ToolType.COLOR_PICKER);
+    let picker = app.getActiveTool();
+    picker.onMouseDown(4, 4, MouseButton.LEFT);
+    check(picker.onMouseMove(5, 5), "Tracked picker failed to sample a new pixel");
+    check(!picker.onMouseUp(5, 5, MouseButton.RIGHT) && picker.tracking,
+        "Unrelated button release ended the picker gesture");
+    picker.onMouseUp(5, 5, MouseButton.LEFT);
+    check(!picker.tracking && FormRegistry.get("colorsForm").mainColor.toPacked() === surface.getColorAt(5, 5).toPacked(),
+        "Picker release did not preserve its sampled color or ended with a tracked gesture");
+    app.setActiveTool(null);
     let selection = workspace.getSelection();
     selection.setContinuation(new Rectangle(8, 8, 8, 8), CombineMode.REPLACE);
     selection.commitContinuation();
@@ -52,6 +95,28 @@ module.exports = async function checkBrushContracts() {
     check(same(pixels(), expected), "Clipped pencil redo lost its exact selected pixels");
     app.setActiveTool(null);
     selection.reset();
+    surface.clear();
+    history.clearAll();
+    phase("unsampled base drawing uses lazy bitmap snapshots and exact segment restoration");
+    ToolType.PAINT_BRUSH.setSetting("width", 1);
+    ToolType.PAINT_BRUSH.setSetting("antialias", false);
+    ToolType.PAINT_BRUSH.setSetting("smoothing", false);
+    let unsampled = new DrawingTool(ToolType.PAINT_BRUSH);
+    app.setActiveTool(unsampled);
+    unsampled.onMouseDown(10, 10, MouseButton.LEFT);
+    unsampled.onMouseMove(14, 10);
+    check(!unsampled.bitmapTransaction.fullSnapshot, "Unsampled drawing unexpectedly allocated a full-canvas snapshot");
+    unsampled.onMouseUp(14, 10, MouseButton.LEFT);
+    let segmentExpected = new Uint8ClampedArray(32 * 32 * 4);
+    for (let x = 10; x <= 14; ++x) {
+        segmentExpected.set([255, 0, 0, 255], (10 * 32 + x) * 4);
+    }
+    check(same(pixels(), segmentExpected), "Unsampled base drawing did not produce an exact one-pixel red segment");
+    history.stepBackward();
+    check(same(pixels(), baseline), "Unsampled drawing undo retained segment pixels");
+    history.stepForward();
+    check(same(pixels(), segmentExpected), "Unsampled drawing redo did not restore its segment");
+    app.setActiveTool(null);
     surface.clear();
     history.clearAll();
     phase("brush frames present aliased one-pixel dabs and recover from a second press");

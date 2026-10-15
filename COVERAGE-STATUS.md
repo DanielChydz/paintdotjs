@@ -17,11 +17,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,953 | 41,403 | 98.91% | 450 |
-| Branches | 9,345 | 9,750 | 95.84% | 405 |
-| Functions | 2,530 | 2,530 | 100% | 0 |
+| Lines/statements | 41,038 | 41,409 | 99.1% | 371 |
+| Branches | 9,441 | 9,802 | 96.31% | 361 |
+| Functions | 2,531 | 2,531 | 100% | 0 |
 
-- **181 tests passed; zero failures.**
+- **182 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -55,6 +55,19 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `MoveToolBase`: keyboard nudges now explicitly begin a translation; hit testing
+  overlapping scale handles no longer resizes tiny selections or single pixels.
+  New native workspace lifecycle tests cover full geometry/pixel undo and redo,
+  unfinished startup strokes, dirty close confirmation, missing/disposed documents,
+  startup failures, invalid units, routing, modal wheel zoom and ruler caching.
+- `DrawingTool`: apply the half-pixel offset only to antialiased discrete brush
+  geometry; the aliased rasterizer already rounds coordinates. A base unsampled
+  one-pixel stroke previously shifted one pixel down/right. Assert its complete
+  destination, lazy snapshots and undo/redo. Also cover idle previews, legacy clone
+  anchors, ignored releases, flood boundaries and spaced/offscreen recoloring.
+- `checkDocumentChrome`: focus the real Electron window and await document focus
+  before image clipboard operations, matching the earlier file-workflow fix.
 
 - `ScrollList`: existing missing-key guards logged a diagnostic but later
   unconditionally called `getKey`, crashing mixed lists. Centralize keyed-row
@@ -252,24 +265,24 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 |---|---:|---:|
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 45 | 37 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 31 | 16 |
-| [AppView.js](./js/src/engine/AppView.js) | 26 | 32 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 23 | 11 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
 | [WebWindow.js](./js/src/interface/window/window/WebWindow.js) | 16 | 9 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 15 | 20 |
-| [AppWorkspace.js](./js/src/engine/AppWorkspace.js) | 15 | 13 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 13 | 10 |
-| [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 13 | 7 |
-| [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 12 | 4 |
-| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 10 | 12 |
-| [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 8 | 6 |
+| [AppView.js](./js/src/engine/AppView.js) | 12 | 25 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 8 | 5 |
 | [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 8 | 1 |
 | [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 7 | 9 |
+| [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 6 | 17 |
+| [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 6 | 5 |
+| [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 6 | 4 |
+| [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
+| [GraphicsPath.js](./js/src/engine/document/selection/GraphicsPath.js) | 6 | 3 |
 
 Known audit points:
 

@@ -430,7 +430,7 @@ class MoveToolBase extends Tool {
                     bounds.getLeft() + bounds.getWidth() / 2,
                     bounds.getTop() + bounds.getHeight() / 2
                 );
-                this.onMouseDown(start.x, start.y, MouseButton.LEFT);
+                this.beginTransform(start.x, start.y, MouseButton.LEFT, true);
                 this.onMouseMove(start.x + dx, start.y + dy);
                 this.onMouseUp(start.x + dx, start.y + dy, MouseButton.LEFT);
                 return true;
@@ -469,12 +469,14 @@ class MoveToolBase extends Tool {
         throw new Error("Not implemented");
     }
 
-    lift(mouseX, mouseY, button) {
+    lift(mouseX, mouseY, button, forceTranslate = false) {
         this.pushContextHistoryMemento();
 
         this.context.seriesGuid = UUID.randomUUID();
 
-        let out = this.determineMoveMode(mouseX, mouseY, button);
+        let out = forceTranslate
+            ? {mode: MoveToolBaseMode.TRANSLATE, edge: MoveToolBaseEdge.NONE}
+            : this.determineMoveMode(mouseX, mouseY, button);
         this.context.currentMode = out.mode;
         this.context.startEdge = out.edge;
 
@@ -493,13 +495,17 @@ class MoveToolBase extends Tool {
     }
 
     onMouseDown(mouseX, mouseY, button) {
+        return this.beginTransform(mouseX, mouseY, button);
+    }
+
+    beginTransform(mouseX, mouseY, button, forceTranslate = false) {
         let consumed = super.onMouseDown(mouseX, mouseY, button);
 
         if (this.tracking || button === MouseButton.MIDDLE) {
             return;
         }
 
-        let determinedMoveMode = false;
+        let determinedMoveMode = forceTranslate;
         let newMode = MoveToolBaseMode.TRANSLATE;
         let newEdge = MoveToolBaseEdge.NONE;
 
@@ -533,7 +539,7 @@ class MoveToolBase extends Tool {
         this.getDocumentWorkspace().getSelectionRenderer().setSelectionOutline(this.enableOutline);
 
         if (!this.context.lifted) {
-            this.lift(mouseX, mouseY, button);
+            this.lift(mouseX, mouseY, button, forceTranslate);
         }
 
         this.pushContextHistoryMemento();

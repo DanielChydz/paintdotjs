@@ -269,7 +269,7 @@ class DrawingTool extends Tool {
         // half-pixel minimum makes small soft brushes stamp twice as often and
         // compounds their translucent centers until every hardness looks solid.
         const spacing = Math.max(1, width * Number(this.getSetting("spacing", 15)) / 100);
-        const coordinateOffset = this.usesContinuousPointerCoordinates() ? 0 : 0.5;
+        const coordinateOffset = antialiased && !this.usesContinuousPointerCoordinates() ? 0.5 : 0;
         const color = coverageColor;
         const distance = Math.max(0, Utility.distance(from, to));
         const offsets = [];

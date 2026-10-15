@@ -150,6 +150,8 @@ module.exports = async function checkDocumentChrome() {
     await frame();
     check(await navigator.clipboard.readText() === filePath && DocumentContextMenu.popup === null, "Copy Path did not copy or close its menu");
     check(await DocumentIO.getClipboardImageSize() === null, "Text clipboard unexpectedly supplied image dimensions");
+    await require("electron").ipcRenderer.invoke("paintdotjs:test-input", {type: "mouseMove", x: 10, y: 10});
+    await waitFor(() => document.hasFocus());
     let clipboardCanvas = named.getActiveLayer().getSurface().getCanvas();
     let clipboardImage = await new Promise(resolve => clipboardCanvas.toBlob(resolve));
     await navigator.clipboard.write([new ClipboardItem({"image/png": clipboardImage})]);
