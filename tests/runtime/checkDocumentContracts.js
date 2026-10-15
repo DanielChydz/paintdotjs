@@ -55,6 +55,23 @@ module.exports = async function checkDocumentContracts() {
     }
     check(destination.context.getImageData(0, 0, 16, 12).data.every((value, index) => value === rendererPixels[index]),
         "A renderer without geometry or a source changed destination pixels");
+    let brushPreview = new BrushPreviewRenderer(unattachedBox);
+    destination.clear();
+    brushPreview.setPreview(new Point(4, 4), 3, "circle", 1, true);
+    brushPreview.render(destination, renderBounds);
+    let alignedOutline = destination.context.getImageData(0, 0, 16, 12).data;
+    check(alignedOutline.some(value => value !== 0), "Brush preview did not render an outline");
+    destination.clear();
+    brushPreview.setPreview(new Point(4.5, 4.5), 3, "circle", 1, false);
+    brushPreview.render(destination, renderBounds);
+    check(destination.context.getImageData(0, 0, 16, 12).data.every((value, index) => value === alignedOutline[index]),
+        "Continuous brush preview introduced a second half-pixel offset");
+    brushPreview.setPreview(null, 3);
+    destination.clear();
+    brushPreview.render(destination, renderBounds);
+    check(!brushPreview.isVisible() && destination.context.getImageData(0, 0, 16, 12).data.every(value => value === 0),
+        "Clearing a brush preview retained visibility or pixels");
+    brushPreview.dispose();
     let selected = new Selection();
     let edgeRenderer = new SelectionRenderer(unattachedBox, selected);
     let edgePath = new GraphicsPath();
@@ -66,6 +83,15 @@ module.exports = async function checkDocumentContracts() {
     check(edgePixels[(3 * 16 + 5) * 4 + 3] === 255 && edgePixels[(5 * 16 + 5) * 4 + 3] === 0,
         "Aliased selection outline did not snap to opaque pixel centers or filled the interior: "
             + edgePixels[(3 * 16 + 5) * 4 + 3] + ", " + edgePixels[(5 * 16 + 5) * 4 + 3]);
+    edgeRenderer.outlineAnimation = false;
+    destination.clear();
+    edgeRenderer.renderSelection(destination, renderBounds, edgePath);
+    let staticOutline = destination.context.getImageData(0, 0, 16, 12).data;
+    await new Promise(resolve => setTimeout(resolve, 45));
+    destination.clear();
+    edgeRenderer.renderSelection(destination, renderBounds, edgePath);
+    check(destination.context.getImageData(0, 0, 16, 12).data.every((value, index) => value === staticOutline[index])
+        && staticOutline.some(value => value !== 0), "Disabled marching ants changed their rendered outline over time");
     edgeRenderer.dispose();
     edgePath.dispose();
     selected.data.dispose();
@@ -285,6 +311,17 @@ module.exports = async function checkDocumentContracts() {
         "Canceling an unsaved preview changed document dirty state");
     app.closeDocumentWorkspace(other, false);
     phase("document resolution and layer/renderer contracts preserve geometry");
+    let fallbackResolution = new Document(3, 4, "invalid");
+    check(fallbackResolution.getResolution() === 96 && fallbackResolution.pixelToPhysical(96, "inch") === 1,
+        "Invalid constructor resolution did not recover 96 DPI");
+    let legacyLayer = new BitmapLayer(workspace, 1, 1, Color.fromRGBA(12, 34, 56, 255));
+    legacyLayer.properties = new LayerProperties("Legacy", true, false);
+    let legacyComposite = Surface.create(1, 1);
+    legacyLayer.render(new RenderArgs(legacyComposite), new Rectangle(0, 0, 1, 1));
+    check([...legacyComposite.context.getImageData(0, 0, 1, 1).data].join(",") === "12,34,56,255",
+        "Layer without saved opacity lost its opaque default");
+    legacyLayer.dispose();
+    legacyComposite.dispose();
     model.setResolution(48);
     check(model.getResolution() === 48 && model.pixelToPhysical(48, "inch") === 1,
         "Document resolution setter did not update physical conversion");
@@ -316,6 +353,12 @@ module.exports = async function checkDocumentContracts() {
     check(painted.x === 8 && painted.y === 18 && painted.width === 4 && painted.height === 4
         && padded.x === 4 && padded.y === 14 && padded.width === 12 && padded.height === 12,
         "Move handle rectangles did not convert their device-pixel padding through the zoom");
+    check(nub.isPointTouching(new Point(12, 20), false) && !nub.isPointTouching(new Point(12.1, 20), false)
+        && nub.isPointTouching(new Point(12.1, 20), true),
+        "Unpadded handle hit testing ignored the exact painted radius or padded extent");
+    nub.setHitTestPadding("invalid");
+    check(nub.hitTestPadding === 0 && !nub.isPointTouching(new Point(12.1, 20), true),
+        "Invalid handle padding did not recover an unpadded hit region");
     box.removeRenderer(nub);
     check(!box.getRendererList().includes(nub), "Removing a renderer retained its registration");
     nub.dispose();

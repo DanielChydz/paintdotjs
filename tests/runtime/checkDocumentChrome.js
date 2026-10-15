@@ -38,6 +38,51 @@ module.exports = async function checkDocumentChrome() {
         workspaces.push(app.createBlankDocumentInNewWorkspace(index % 2 === 0 ? 16 : 8, index % 2 === 0 ? 8 : 16));
     }
     await frame();
+    phase("mounting a document strip with existing documents preserves their selected identity");
+    let originalStripId = strip.element.id;
+    let listenerSnapshot = new Set(Object.values(app.listeners).flat());
+    let addDocumentListener = document.addEventListener;
+    let addedDocumentListeners = [];
+    let mountedStrip = null;
+    try {
+        strip.element.id = "original-document-strip";
+        mountedStrip = new DocumentStrip();
+        strip.element.id = originalStripId;
+        mountedStrip.element.id = "late-mounted-document-strip";
+        document.addEventListener = function (...args) {
+            addedDocumentListeners.push(args);
+            return addDocumentListener.apply(this, args);
+        };
+        mountedStrip.initialize(null);
+        document.body.appendChild(mountedStrip.element);
+        document.addEventListener = addDocumentListener;
+        await frame();
+        check(mountedStrip.documentsListItem.items.length === 14
+            && mountedStrip.documentsListItem.selectedItem.getDocumentWorkspace() === app.getActiveDocumentWorkspace(),
+        "Late-mounted document strip omitted existing documents or their active selection");
+        let activeBeforePlaceholder = app.getActiveDocumentWorkspace();
+        mountedStrip.documentsListItem.selectCallback(new DocumentItem(null));
+        check(app.getActiveDocumentWorkspace() === activeBeforePlaceholder,
+            "Placeholder selection discarded the active document");
+    } finally {
+        strip.element.id = originalStripId;
+        document.addEventListener = addDocumentListener;
+        for (let args of addedDocumentListeners) {
+            document.removeEventListener(...args);
+        }
+        for (let [name, listeners] of Object.entries(app.listeners)) {
+            for (let listener of [...listeners]) {
+                if (!listenerSnapshot.has(listener)) {
+                    app.off(name, listener);
+                }
+            }
+        }
+        if (mountedStrip !== null) {
+            mountedStrip.resizeObserver?.disconnect();
+            cancelAnimationFrame(mountedStrip.navigationFrame);
+            mountedStrip.element.remove();
+        }
+    }
     phase("document-list selection, thumbnail refresh and reordered workspace identity");
     strip.documentListButton.click();
     await frame();

@@ -131,6 +131,10 @@ module.exports = async function checkSettingsControls() {
     output.value = 0.1;
     change(output);
     check(AppSettingsStore.get("canvas.checkerboardBrightness") === 25, "Checkerboard lower bound was not clamped");
+    output.value = "";
+    change(output);
+    check(AppSettingsStore.get("canvas.checkerboardBrightness") === 75 && output.value === "0.75",
+        "Empty checkerboard brightness did not recover its default");
     checkerboard.querySelector(".settings-inline-reset").click();
     check(AppSettingsStore.get("canvas.checkerboardBrightness") === 75, "Checkerboard reset did not restore its default");
 
@@ -312,6 +316,44 @@ module.exports = async function checkSettingsControls() {
         }
     } finally {
         window.desktopUpdater = oldUpdater;
+    }
+    phase("diagnostics report unavailable browser capabilities without failing");
+    let diagnosticProperties = ["platform", "language", "hardwareConcurrency", "deviceMemory"];
+    let navigatorDescriptors = diagnosticProperties.map(name => Object.getOwnPropertyDescriptor(navigator, name));
+    let pointerDescriptor = Object.getOwnPropertyDescriptor(window, "PointerEvent");
+    let canvasContext = HTMLCanvasElement.prototype.getContext;
+    try {
+        for (let name of diagnosticProperties) {
+            Object.defineProperty(navigator, name, {configurable: true, value: ""});
+        }
+        delete window.PointerEvent;
+        HTMLCanvasElement.prototype.getContext = function (type, ...args) {
+            if (type === "webgl" || type === "webgl2") {
+                return null;
+            }
+            return canvasContext.call(this, type, ...args);
+        };
+        settings.selectSection("diagnostics");
+        let cells = [...settings.page.querySelectorAll(".settings-diagnostics-table span")].map(cell => cell.textContent);
+        for (let name of ["Platform", "Language", "Logical processors", "Device memory"]) {
+            check(cells[cells.indexOf(name) + 1] === "Unknown", "Diagnostics omitted unavailable capability: " + name);
+        }
+        for (let name of ["Pointer events", "WebGL"]) {
+            check(cells[cells.indexOf(name) + 1] === "Unavailable", "Diagnostics falsely advertised capability: " + name);
+        }
+        settings.selectSection("graphics");
+        check(settings.page.textContent.includes("Graphics acceleration is not available."),
+            "Graphics settings falsely advertised unavailable acceleration");
+    } finally {
+        diagnosticProperties.forEach((name, index) => {
+            if (navigatorDescriptors[index] === undefined) {
+                delete navigator[name];
+            } else {
+                Object.defineProperty(navigator, name, navigatorDescriptors[index]);
+            }
+        });
+        Object.defineProperty(window, "PointerEvent", pointerDescriptor);
+        HTMLCanvasElement.prototype.getContext = canvasContext;
     }
     phase("diagnostic clipboard and settings cleanup");
     settings.selectSection("diagnostics");

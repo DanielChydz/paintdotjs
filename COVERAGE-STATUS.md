@@ -15,8 +15,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,260 | 41,364 | 99.74% | 104 |
-| Branches | 9,706 | 9,929 | 97.75% | 223 |
+| Lines/statements | 41,271 | 41,368 | 99.76% | 97 |
+| Branches | 9,733 | 9,940 | 97.91% | 207 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **197 tests passed; zero failures.**
@@ -73,8 +73,20 @@ No automatic approval review rejected these authorized actions.
 - Document tab tests cover stale drags/delayed renders after close, nonbitmap
   updates, absent context callbacks and browser clipboard Copy Path.
 - The latest successful full run includes these scenarios. Subsequent toolbar
-  validation regression work is separate and not included in that measurement.
+  validation regression and capability/renderer scenarios also pass in the latest measurement.
 
+
+## Latest verified native contracts
+
+- Settings diagnostics report Unknown/Unavailable when browser capabilities are
+  absent; unavailable WebGL also updates the Graphics page correctly. Empty
+  checkerboard brightness restores the default.
+- A late-mounted document strip includes existing documents and preserves their
+  selected identity; all extra app/document listeners and its observer are cleaned.
+- Brush previews preserve continuous half-pixel coordinates; clearing a preview
+  removes visibility/pixels. Disabled marching ants remain stable over time.
+- Invalid constructor DPI recovers 96; legacy missing layer opacity remains opaque;
+  handle hit tests distinguish exact painted boundaries from padded boundaries.
 
 ## Resumed-session production fixes
 
@@ -82,7 +94,7 @@ No automatic approval review rejected these authorized actions.
   change/Enter previously stored NaN as the brush width. Native regression failed
   before the fix; commits now normalize against the last valid setting and retain
   the existing empty-field minimum behavior. Fresh mapped build and the toolbar
-  scenario pass; the coverage table above predates this production fix.
+  scenario pass; the latest full coverage run includes this production fix.
 
 - `DocumentIO.handleDroppedFiles`: snapshot the caller-owned array before async
   font imports; a regression demonstrated that clearing the caller array could
@@ -355,7 +367,6 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 10 | 6 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
-| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 9 | 4 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 6 | 17 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 6 | 12 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
@@ -369,6 +380,7 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 2 | 3 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 2 | 3 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 2 | 3 |
+| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 2 | 2 |
 | [DropMenuItem.js](./js/src/interface/item/menu/action/drop/DropMenuItem.js) | 2 | 2 |
 | [FormRegistry.js](./js/src/interface/window/FormRegistry.js) | 2 | 1 |
 
