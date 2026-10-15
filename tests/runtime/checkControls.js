@@ -350,14 +350,29 @@ module.exports = async function checkControls() {
     document.body.appendChild(fontDropdown.getElement());
     fontDropdown.open();
     await waitFor(() => fontDropdown.fontEntryButtons.size === fontChoices.length);
+    let previewResults = fontDropdown.menu.querySelector(".tool-font-dropdown-results");
+    previewResults.style.maxHeight = "80px";
+    let customPreviewButton = fontDropdown.fontEntryButtons.get(font.family);
+    customPreviewButton.style.marginTop = "250px";
+    await new Promise(resolve => setTimeout(resolve, 50));
+    customPreviewButton.scrollIntoView({block: "nearest"});
+    await waitFor(() => customPreviewButton.querySelector(".tool-font-dropdown-preview").style.fontFamily.includes(font.family));
+    check(fontDropdown.menu !== null, "Lazy custom font preview closed its dropdown");
     let key = value => document.dispatchEvent(new KeyboardEvent("keydown", {key: value, bubbles: true, cancelable: true}));
     key("m");
     check(document.activeElement === fontDropdown.fontEntryButtons.get("monospace"), "Font prefix did not focus its match");
     key("ArrowUp");
     check(fontDropdown.value === "serif" && document.activeElement === fontDropdown.fontEntryButtons.get("serif"),
         "Font arrow did not move selection");
+    for (let options of [{key: "F12"}, {key: "m", ctrlKey: true}, {key: "m", metaKey: true},
+        {key: "m", altKey: true}, {key: "m", isComposing: true}]) {
+        let ignored = new KeyboardEvent("keydown", {cancelable: true, ...options});
+        fontDropdown.onFontTypeahead(ignored);
+        check(!ignored.defaultPrevented && fontDropdown.value === "serif" && fontDropdown.menu !== null,
+            "Font typeahead consumed a modified/nonprintable key or changed its selection");
+    }
     key("Enter");
-    check(fontDropdown.menu === null && changes.at(-1) === "serif", "Font Enter did not accept selection");
+    check(fontDropdown.menu === null && changes.at(-1) === "serif", "Font Enter did not accept the focused row");
     fontDropdown.open();
     await waitFor(() => fontDropdown.fontEntryButtons.size === fontChoices.length);
     key("q");
@@ -414,6 +429,31 @@ module.exports = async function checkControls() {
     dropdown.cycle();
     check(dropdown.menu === null && dropdown.value === "two", "Cycling an open dropdown did not close its menu");
     dropdown.close();
+    phase("font picker diagnostics recover from unavailable lazy font storage");
+    let openFontDatabase = FontManager.openDatabase;
+    let warnFont = console.warn;
+    let pickerWarnings = [];
+    let fontStorageFailure = new Error("Picker font storage temporarily unavailable");
+    document.fonts.delete(FontManager.faces.get(font.id));
+    FontManager.faces.delete(font.id);
+    try {
+        FontManager.openDatabase = async () => { throw fontStorageFailure; };
+        console.warn = (...args) => pickerWarnings.push(args);
+        fontDropdown.replaceValues([[font.family, font.name]]);
+        fontDropdown.selectEntry([font.family, font.name]);
+        await waitFor(() => pickerWarnings.some(args => args[0].startsWith("Could not load selected font")));
+        fontDropdown.open();
+        await waitFor(() => pickerWarnings.some(args => args[0].startsWith("Could not load font preview")));
+        check(pickerWarnings.length === 2 && pickerWarnings.every(args => args[1] === fontStorageFailure),
+            "Font picker lost the original storage error or produced duplicate diagnostics");
+        check(fontDropdown.value === font.family && fontDropdown.menu !== null,
+            "Font storage failure changed the selection or prevented opening its menu");
+    } finally {
+        fontDropdown.close();
+        FontManager.openDatabase = openFontDatabase;
+        console.warn = warnFont;
+    }
+    check((await FontManager.ensureLoaded(font.family)).status === "loaded", "Font picker could not recover after storage became available");
     dropdown.element.remove();
     fontDropdown.element.remove();
     ToolType.TEXT.setSetting("fontFamily", font.family);

@@ -128,7 +128,7 @@ module.exports = async function checkEffectControls() {
     await native("mouseUp", curve, 0.6, 0.3, "right");
     await ready();
     check(previews.at(-1).redPoints.length === 2, "Specialized curve did not remove its interior point");
-    await drag(curve, [0, 1], [0.2, 0.8]);
+    await drag(curve, [0.01, 0.99], [0.2, 0.8]);
     await ready();
     check(previews.at(-1).redPoints[0][0] === 0, "Curve endpoint moved away from x=0");
     let reset = [...form().querySelectorAll("button")].find(button => button.textContent === "Reset");
@@ -182,9 +182,11 @@ module.exports = async function checkEffectControls() {
         await native("mouseMove", editorCanvas, 0.9, 0.1);
         await native("mouseUp", editorCanvas, 0.9, 0.1);
         check(JSON.stringify(curveValues.curve) === canceledPoints, "Canceled curve drag continued changing its transfer points");
-        await native("mouseDown", editorCanvas, 0, 1, "right");
-        await native("mouseUp", editorCanvas, 0, 1, "right");
+        await native("mouseDown", editorCanvas, 0.01, 0.99, "right");
+        await native("mouseUp", editorCanvas, 0.01, 0.99, "right");
         check(JSON.stringify(curveValues.curve) === canceledPoints, "Curve context menu removed a fixed endpoint");
+        await drag(editorCanvas, [0.99, 0.01], [0.8, 0.2]);
+        check(curveValues.curve.at(-1)[0] === 255, "Dragging the final curve endpoint moved it away from x=255");
         await native("mouseDown", editorCanvas, 0.5, 0.5);
         editor.setCurve("curve", [[0, 0], [255, 255]]);
         await native("mouseMove", editorCanvas, 0.6, 0.4, "left", ["leftbuttondown"]);

@@ -124,6 +124,16 @@ module.exports = async function checkTransformTools() {
     near(selection.getBounds().height, 25, "Reflected top handle scaled in the wrong direction");
     reset();
     tool = app.getActiveTool();
+    tool.onMouseMove(32, 40);
+    check(app.cursorState.type === "image" && app.cursorState.value === "hand_open_cursor",
+        "Idle Move handle hover did not advertise a draggable handle");
+    tool.onMouseMove(52, 36);
+    check(tool.rotateIndicator.isVisible() && app.cursorState.value === "hand_open_cursor",
+        "Idle Move hover did not advertise the padded rotate region");
+    check(tool.determineMoveMode(52, 36, MouseButton.LEFT).mode === MoveToolBaseMode.ROTATE,
+        "Left click in the advertised rotate region selected another transform mode");
+    near(tool.distanceToSegment(new Point(4, 6), new Point(1, 2), new Point(1, 2)), 5,
+        "A collapsed transform edge returned a non-Euclidean distance");
     check(tool.updateRotationIndicator(new Point(52, 36)), "Padded rotation region was not detected");
     tool.rotateIndicator.render(surface, new Rectangle(0, 0, 128, 128));
     check(!tool.updateRotationIndicator(new Point(52, 50)), "Inside selection showed a rotation indicator");
