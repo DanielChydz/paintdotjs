@@ -78,6 +78,12 @@ No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
 
+- `ToolMenu.createSizeControl`: committing nonnumeric text or Infinity through
+  change/Enter previously stored NaN as the brush width. Native regression failed
+  before the fix; commits now normalize against the last valid setting and retain
+  the existing empty-field minimum behavior. Fresh mapped build and the toolbar
+  scenario pass; the coverage table above predates this production fix.
+
 - `DocumentIO.handleDroppedFiles`: snapshot the caller-owned array before async
   font imports; a regression demonstrated that clearing the caller array could
   lose its image. Ignore empty drops. The fonts-only path already returns before

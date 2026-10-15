@@ -525,7 +525,9 @@ class ToolMenu extends StripPanel {
             input.className = "tool-size-input";
             input.value = type.getSetting(definition.key);
             const change = value => {
-                value = Utility.clamp(Number(value), definition.min, definition.max);
+                const entered = Number(value);
+                value = Utility.clamp(Number.isFinite(entered) ? entered : Number(type.getSetting(definition.key)),
+                    definition.min, definition.max);
                 input.value = value;
                 this.updateSetting(type, definition.key, value);
             };
@@ -633,7 +635,9 @@ class ToolMenu extends StripPanel {
                 fillValueLabel.textContent = text;
             };
             const change = value => {
-                value = Utility.clamp(Number(value), definition.min, definition.max);
+                const entered = Number(value);
+                value = Utility.clamp(Number.isFinite(entered) ? entered : Number(type.getSetting(definition.key)),
+                    definition.min, definition.max);
                 input.value = value;
                 input.title = `${definition.label} ${value}`;
                 updateMeter(value);

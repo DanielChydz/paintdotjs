@@ -53,6 +53,15 @@ module.exports = async function checkToolbarWindows() {
     key(widthInput, "Enter");
     check(widthInput.selectionStart === 0 && widthInput.selectionEnd === widthInput.value.length,
         "Enter did not select the accepted size");
+    for (let value of ["invalid", "Infinity"]) {
+        input(widthInput, value, "change");
+        check(ToolType.PAINT_BRUSH.getSetting("width") === 24 && widthInput.value === "24",
+            "Invalid committed size corrupted the previous tool width");
+        widthInput.value = value;
+        key(widthInput, "Enter");
+        check(ToolType.PAINT_BRUSH.getSetting("width") === 24 && widthInput.value === "24",
+            "Invalid size accepted with Enter corrupted the previous tool width");
+    }
     let arrow = widthGroup.querySelector(".tool-size-arrow");
     arrow.click();
     check(toolbar.sizeMenu !== null && toolbar.sizeMenu.children[0].textContent === "24",
@@ -76,6 +85,10 @@ module.exports = async function checkToolbarWindows() {
     check(toolbar.sizeMenu === null, "Outside pointer did not close the size menu");
     input(widthInput, "", "change");
     check(ToolType.PAINT_BRUSH.getSetting("width") === 1, "Empty committed width did not clamp to its minimum");
+    widthInput.value = "";
+    key(widthInput, "Enter");
+    check(ToolType.PAINT_BRUSH.getSetting("width") === 1 && widthInput.value === "1",
+        "Accepting an empty size with Enter did not restore the minimum");
     let bottomControl = toolbar.createSizeControl(ToolType.PAINT_BRUSH,
         {key: "width", label: "Size", min: 1, max: 2000, step: 1, presets: [1, 5, 10]});
     bottomControl.style.position = "fixed";
