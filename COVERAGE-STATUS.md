@@ -17,8 +17,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,985 | 41,443 | 98.89% | 458 |
-| Branches | 9,350 | 9,760 | 95.79% | 410 |
+| Lines/statements | 40,953 | 41,403 | 98.91% | 450 |
+| Branches | 9,345 | 9,750 | 95.84% | 405 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **181 tests passed; zero failures.**
@@ -259,22 +259,26 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [WebWindow.js](./js/src/interface/window/window/WebWindow.js) | 16 | 9 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 15 | 20 |
 | [AppWorkspace.js](./js/src/engine/AppWorkspace.js) | 15 | 13 |
-| [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 15 | 11 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
+| [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 13 | 10 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 13 | 7 |
 | [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 12 | 4 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 10 | 12 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 8 | 6 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 8 | 5 |
-| [GraphicsPath.js](./js/src/engine/document/selection/GraphicsPath.js) | 8 | 5 |
 | [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 8 | 1 |
+| [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 7 | 9 |
 
 Known audit points:
 
-- `GraphicsPath.combine` has redundant nested defaults unreachable after outer
-  enum validation. Do not mutate enums to manufacture coverage.
+- `GraphicsPath.combine` now dispatches empty paths within the validated outer
+  enum cases, removing unreachable nested defaults. Exhaustive mode/empty-input
+  tests retain clone independence and rejection of invalid enum arguments.
+- New/resize dialog synchronization no longer maintains an unreachable reentry
+  flag: native input.value assignments and textContent updates dispatch no input
+  events. Existing native pixel/print/DPI/aspect/mode tests pass after cleanup.
 - `MoveTool.didPaste` is only initialized/reset to false; a repository search
   found no assignment of true. Audit obsolete state and valid history semantics.
 - `MoveTool.onPasteMouseDown` and `AppFile.exists` are now implemented and tested;

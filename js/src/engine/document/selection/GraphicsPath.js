@@ -210,31 +210,11 @@ class GraphicsPath {
                 if (subjectPath.isEmpty() && clipPath.isEmpty()) {
                     return new GraphicsPath(); // Empty path
                 } else if (subjectPath.isEmpty()) {
-                    switch (combineMode) {
-                        case CombineMode.XOR:
-                        case CombineMode.UNION:
-                            return clipPath.clone();
-
-                        case CombineMode.INTERSECT:
-                        case CombineMode.EXCLUDE:
-                            return new GraphicsPath();
-
-                        default:
-                            throw new Error("Invalid enum argument");
-                    }
+                    return combineMode === CombineMode.XOR || combineMode === CombineMode.UNION
+                        ? clipPath.clone() : new GraphicsPath();
                 } else if (clipPath.isEmpty()) {
-                    switch (combineMode) {
-                        case CombineMode.EXCLUDE:
-                        case CombineMode.XOR:
-                        case CombineMode.UNION:
-                            return subjectPath.clone();
-
-                        case CombineMode.INTERSECT:
-                            return new GraphicsPath();
-
-                        default:
-                            throw new Error("Invalid enum argument");
-                    }
+                    return combineMode === CombineMode.INTERSECT
+                        ? new GraphicsPath() : subjectPath.clone();
                 } else {
                     return GraphicsPath.clipPath(subjectPath, combineMode, clipPath);
                 }

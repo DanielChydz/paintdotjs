@@ -134,7 +134,6 @@ class NewFileDialog {
         const {width, height, resolution, printWidth, printHeight, aspect, sizeSummary} = controls;
         const clampDimension = value => Math.max(1, Math.min(32768, Math.round(Number(value) || 1)));
         let ratio = initialWidth / initialHeight;
-        let syncing = false;
 
         const applyDimensions = (widthValue, heightValue, dpi) => {
             width.input.value = widthValue;
@@ -159,31 +158,21 @@ class NewFileDialog {
         };
 
         const update = source => {
-            if (syncing) {
-                return;
-            }
-            syncing = true;
             const dpi = Math.max(0.01, Number(resolution.input.value) || 96);
             const dimensions = maintainRatio(source, width.input, height.input, {
                 width: clampDimension(width.input.value),
                 height: clampDimension(height.input.value)
             });
             applyDimensions(dimensions.width, dimensions.height, dpi);
-            syncing = false;
         };
 
         const updateFromPrint = source => {
-            if (syncing) {
-                return;
-            }
-            syncing = true;
             const dpi = Math.max(0.01, Number(resolution.input.value) || 96);
             const dimensions = maintainRatio(source, printWidth.input, printHeight.input, {
                 width: clampDimension(Number(printWidth.input.value) * dpi),
                 height: clampDimension(Number(printHeight.input.value) * dpi)
             });
             applyDimensions(dimensions.width, dimensions.height, dpi);
-            syncing = false;
         };
 
         for (const input of [width.input, height.input, resolution.input]) {

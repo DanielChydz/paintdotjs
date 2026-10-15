@@ -75,7 +75,6 @@ class ImageSizeDialog {
             } = controls;
             const {element: footer, ok, cancel} = this.createFooter();
 
-            let syncing = false;
             let dpi = originalResolution;
             const ratio = originalWidth / originalHeight;
             const usingPercentage = () => percentChoice.input.checked;
@@ -108,10 +107,10 @@ class ImageSizeDialog {
                 updateSummary();
             };
             const updateDimension = source => {
-                if (syncing || usingPercentage()) {
+                if (usingPercentage()) {
                     return;
                 }
-                syncing = true;
+
                 let dimensions = getDimensions();
                 if (maintain.checked) {
                     if (source === width.input) {
@@ -125,24 +124,22 @@ class ImageSizeDialog {
                 height.input.value = dimensions.height;
                 percentInput.value = (dimensions.width / originalWidth * 100).toFixed(2);
                 finishUpdate();
-                syncing = false;
             };
             const updatePercentage = () => {
-                if (syncing || !usingPercentage()) {
+                if (!usingPercentage()) {
                     return;
                 }
-                syncing = true;
+
                 const percentage = Math.max(0.01, Math.min(2000, Number(percentInput.value) || 100));
                 width.input.value = this.clampDimension(originalWidth * percentage / 100);
                 height.input.value = this.clampDimension(originalHeight * percentage / 100);
                 finishUpdate();
-                syncing = false;
             };
             const updatePrintDimension = source => {
-                if (syncing || usingPercentage()) {
+                if (usingPercentage()) {
                     return;
                 }
-                syncing = true;
+
                 const scale = printScale();
                 let newWidth = this.clampDimension(Number(printWidth.input.value) / scale * dpi);
                 let newHeight = this.clampDimension(Number(printHeight.input.value) / scale * dpi);
@@ -159,18 +156,12 @@ class ImageSizeDialog {
                 percentInput.value = (newWidth / originalWidth * 100).toFixed(2);
                 updatePrintFields();
                 updateSummary();
-                syncing = false;
             };
             const updateResolution = () => {
-                if (syncing) {
-                    return;
-                }
-                syncing = true;
                 const displayed = Math.max(0.01, Number(resolution.input.value) || 96);
                 dpi = resolutionUnit.value === "centimeter" ? displayed * 2.54 : displayed;
                 updatePrintFields();
                 updateSummary();
-                syncing = false;
             };
             const updateMode = () => {
                 const percentage = usingPercentage();
