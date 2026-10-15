@@ -82,3 +82,31 @@ test("effect categories reject unregistered effects before building menu entries
     let {EffectsMenu} = optionalUIFixture();
     assert.throws(() => EffectsMenu.createCategory("custom", ["missingEffect"]), /Missing effect action: menu.effects.missingEffect/);
 });
+
+function colorsFixture(settings) {
+    let context = vm.createContext({app: {}, window: {localStorage: {getItem: () => null}}});
+    if (settings !== undefined) {
+        context.AppSettingsStore = {get: (key, fallback) => Object.hasOwn(settings, key) ? settings[key] : fallback};
+    }
+    for (let relative of ["engine/util/Debounced.js", "engine/util/Color.js",
+        "engine/document/event/EventHandler.js", "interface/window/Form.js", "interface/window/form/ColorsForm.js"]) {
+        let filename = path.resolve(__dirname, "../js/src", relative);
+        vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    }
+    return vm.runInContext("new ColorsForm()", context);
+}
+
+test("color preferences recover missing settings and invalid stored channels without sharing defaults", () => {
+    for (let settings of [undefined, {"tools.primaryColor": "invalid", "tools.secondaryColor": 1.5},
+        {"tools.primaryColor": 0xff123456, "tools.secondaryColor": 0x80102030, "windows.colorsForm": {expanded: true}}]) {
+        let colors = colorsFixture(settings);
+        let valid = settings?.["windows.colorsForm"]?.expanded === true;
+        assert.equal(colors.mainColor.toPacked() >>> 0, valid ? 0xff123456 : 0xff000000);
+        assert.equal(colors.secondaryColor.toPacked() >>> 0, valid ? 0x80102030 : 0xffffffff);
+        assert.equal(colors.expanded, valid);
+        assert.equal(colors.palette.length, 96);
+        assert.notEqual(colors.palette[0], colors.defaultPalette[0]);
+        colors.palette[0].setAlpha(0);
+        assert.equal(colors.defaultPalette[0].getAlpha(), 255);
+    }
+});

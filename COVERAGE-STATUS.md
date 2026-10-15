@@ -1,30 +1,25 @@
 # Runtime coverage handoff
 
-## Saved and paused checkpoint (2026-10-15)
+## Resumed checkpoint (2026-10-15)
 
-The latest user instruction is to **save the work and pause now**, because the
-session allowance is nearly exhausted. Resume coverage work only when the user
-asks to continue. Keep committing verified batches when work resumes. For
-unimplemented stubs/TODOs, the user says to **choose implementation without
-asking again**. Preserve intentional abstract base contracts; implement concrete
-missing functionality.
+The user has asked to **continue** after the saved pause. Continue toward 100%
+line and branch coverage and commit verified batches regularly. For concrete
+unimplemented stubs/TODOs, choose implementation without asking again.
 
 The target is **100% line and branch coverage of all first-party runtime
 sources**, meaningful regressions, fixes for demonstrated bugs, and verified
 commits. **The target is not complete.** Line and branch coverage still fail
-the strict 100% gate. The latest run also leaves one function uncovered:
-`CurveEditor` canvas `onpointerleave` (line 40); earlier 100% function coverage
-is not retained in this measurement.
+the strict 100% gate. All functions are covered in the latest measurement.
 
 Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,228 | 41,364 | 99.67% | 136 |
-| Branches | 9,648 | 9,905 | 97.40% | 257 |
-| Functions | 2,529 | 2,530 | 99.96% | 1 |
+| Lines/statements | 41,241 | 41,364 | 99.7% | 123 |
+| Branches | 9,669 | 9,914 | 97.52% | 245 |
+| Functions | 2,530 | 2,530 | 100% | 0 |
 
-- **191 tests passed; zero failures.**
+- **192 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -67,8 +62,11 @@ No automatic approval review rejected these authorized actions.
   distance to a collapsed edge.
 - Curve endpoint gestures start slightly inside the canvas (0.01/0.99); exact
   boundary coordinates rounded outside it and missed the endpoint handlers.
-- The full coverage run passed all 191 tests. Save this checkpoint and stop;
-  there are still 136 uncovered lines, 257 branches and one function.
+- Resumed batch: real pointer exit clears curve coordinates/guides, invalid and
+  inaccessible localStorage recovers default palettes, denied persistence retains
+  in-memory colors, and missing/invalid settings recover independent defaults.
+- Latest full run passes 192 tests; 123 lines and 245 branches remain uncovered.
+  Function coverage is 100%.
 
 ## Resumed-session production fixes
 
@@ -335,13 +333,11 @@ Ellipse tests measure chord error through 16,000px dimensions.
 ## Remaining coverage priorities
 
 Inspect original-source statement and branch ranges in the latest detailed
-report. The current function gap is `CurveEditor` canvas `onpointerleave`;
-remaining gaps include alternate modes, guards, fallbacks and races.
+report. Remaining gaps include alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 15 | 7 |
-| [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [AppView.js](./js/src/engine/AppView.js) | 12 | 25 |
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
@@ -349,9 +345,9 @@ remaining gaps include alternate modes, guards, fallbacks and races.
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 6 | 17 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
+| [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 4 | 4 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
 | [DocumentContextMenu.js](./js/src/interface/panel/header/documents/DocumentContextMenu.js) | 3 | 2 |
-| [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 3 | 1 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 2 | 18 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 2 | 13 |
 | [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 2 | 5 |
@@ -360,6 +356,7 @@ remaining gaps include alternate modes, guards, fallbacks and races.
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 2 | 3 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 2 | 3 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 2 | 3 |
+| [DropMenuItem.js](./js/src/interface/item/menu/action/drop/DropMenuItem.js) | 2 | 2 |
 
 Known audit points:
 

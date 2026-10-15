@@ -245,6 +245,42 @@ module.exports = async function checkControls() {
     colors.setExpanded(false);
     check(colors.sliderPanel.style.display === "none", "Collapsed controls remained visible");
 
+    phase("palette recovery from invalid and unavailable browser storage");
+    let storedPalette = localStorage.getItem("paintdotjs.colors.currentPalette");
+    let storedUsers = localStorage.getItem("paintdotjs.colors.userPalettes");
+    let storageDescriptor = Object.getOwnPropertyDescriptor(window, "localStorage");
+    try {
+        localStorage.setItem("paintdotjs.colors.currentPalette", "invalid");
+        let recovered = colors.loadCurrentPalette();
+        check(colors.paletteEquals(recovered, colors.defaultPalette) && recovered[0] !== colors.defaultPalette[0],
+            "Invalid stored palette did not recover independent default colors");
+        for (let value of ["null", "17", '"palette"', "{"]) {
+            localStorage.setItem("paintdotjs.colors.userPalettes", value);
+            check(Object.keys(colors.getUserPalettes()).length === 0, "Malformed user palette root was accepted");
+        }
+        Object.defineProperty(window, "localStorage", {configurable: true, get() {
+            throw new DOMException("Palette storage denied", "SecurityError");
+        }});
+        check(colors.paletteEquals(colors.loadCurrentPalette(), colors.defaultPalette)
+            && Object.keys(colors.getUserPalettes()).length === 0,
+        "Unavailable palette storage did not recover readable defaults");
+        check(colors.setPalette([Color.fromRGBA(12, 34, 56, 78)], "In memory")
+            && colors.palette.length === 96 && colors.palette[0].toHex() === "#0c22384e"
+            && colors.palette[95].toPacked() === Color.WHITE.toPacked(),
+        "Denied persistence discarded an in-memory palette or its padding");
+        colors.saveUserPalettes({Temporary: "FF010203"});
+    } finally {
+        Object.defineProperty(window, "localStorage", storageDescriptor);
+        for (let [key, value] of [["paintdotjs.colors.currentPalette", storedPalette],
+            ["paintdotjs.colors.userPalettes", storedUsers]]) {
+            if (value === null) {
+                localStorage.removeItem(key);
+            } else {
+                localStorage.setItem(key, value);
+            }
+        }
+    }
+
     phase("font persistence and lazy loading");
     let fs = require("node:fs");
     let {execFileSync} = require("node:child_process");

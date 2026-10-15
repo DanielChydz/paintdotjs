@@ -140,7 +140,8 @@ module.exports = async function checkEffectControls() {
     phase("curve programmatic normalization and canceled native pointer edits");
     let curveValues = {curve: [[0, 0], [255, 255]]};
     let curveChanges = [];
-    let editor = new CurveEditor(curveValues, committed => curveChanges.push(committed), () => {});
+    let curveCoordinates = [];
+    let editor = new CurveEditor(curveValues, committed => curveChanges.push(committed), point => curveCoordinates.push(point));
     editor.draw();
     check(editor.canvas === null, "Drawing an unmounted curve allocated its canvas");
     let editorCanvas = editor.buildElement();
@@ -193,6 +194,12 @@ module.exports = async function checkEffectControls() {
         check(editor.dragging.length === 0 && JSON.stringify(curveValues.curve) === "[[0,0],[255,255]]",
             "Replacing a curve during a gesture resurrected its removed point");
         await native("mouseUp", editorCanvas, 0.6, 0.4);
+        await native("mouseMove", editorCanvas, 0.5, 0.5);
+        check(editor.pointerPoint !== null && curveCoordinates.at(-1) !== null,
+            "Hovering the curve omitted its pointer guides and coordinates");
+        await native("mouseMove", editorCanvas, -0.1, 0.5);
+        check(editor.pointerPoint === null && curveCoordinates.at(-1) === null && editor.dragging.length === 0,
+            "Leaving the curve retained its pointer guides or coordinates");
     } finally {
         await native("mouseUp", editorCanvas, 0.5, 0.3);
         editorCanvas.remove();
