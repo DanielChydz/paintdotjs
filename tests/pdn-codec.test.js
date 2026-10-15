@@ -336,3 +336,18 @@ test("PDN blend enum metadata walks each NRBF binary type and rejects multiple m
     let malformed = Buffer.concat([Buffer.from([5]), Buffer.alloc(4), string("BlendMode"), Buffer.from([2, 0, 0, 0])]);
     assert.throws(() => codec.findBlendModeValueOffset(malformed, 0), /Invalid.*enum/);
 });
+
+test("PDN headers reject invalid dimensions and unsafe XML values before serialization", () => {
+    let codec = loadCodec();
+    for (let [width, height, layers] of [
+        [0, 2, 1], [2, 0, 1], [1.5, 2, 1], [2, 1.5, 1],
+        [32769, 2, 1], [2, 32769, 1], [Infinity, 2, 1], [2, Infinity, 1],
+        [2, 2, 0], [2, 2, 65], [2, 2, 1.5], ['2" invalid="true', 2, 1]
+    ]) {
+        assert.throws(() => codec.createHeader(width, height, layers), /Invalid Paint.NET header dimensions or layer count/);
+    }
+    let largest = codec.createHeader(32768, 32768, 64);
+    let length = largest[4] + largest[5] * 256 + largest[6] * 65536;
+    assert.ok(length < 200);
+    assert.match(new TextDecoder().decode(largest.subarray(7, 7 + length)), /width="32768" height="32768" layers="64"/);
+});

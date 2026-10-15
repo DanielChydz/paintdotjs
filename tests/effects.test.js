@@ -693,3 +693,27 @@ test("box-blur definitions expose their parameter bounds and execute the configu
     let result = BitmapEffectEngine.apply(source, 4, 3, definition, {radius: 2});
     assert.deepEqual(result.data, referenceBoxBlur(source, 2));
 });
+
+test("Gaussian rendering falls back when an existing filter property rejects blur", () => {
+    let {BitmapEffectEngine, context} = loadContext();
+    let source = pixels(5, 3);
+    let expected = BitmapEffectEngine.gaussianBlur(source, 5, 3, 4);
+    let requestedFilters = [];
+    let snapshots = 0;
+    let output = {
+        get filter() { return "none"; },
+        set filter(value) { requestedFilters.push(value); },
+        drawImage() { assert.fail("An unsupported filter must not produce a filtered image"); }
+    };
+    let contexts = [{drawImage() {}}, output, {putImageData: input => {
+        assert.equal(input, source);
+        ++snapshots;
+    }}];
+    let index = 0;
+    context.document = {createElement: () => ({getContext: () => contexts[index++ % contexts.length]})};
+    assert.deepEqual(BitmapEffectEngine.gaussianBlur(source, 5, 3, 4).data, expected.data);
+    assert.equal(snapshots, 1);
+    assert.equal(requestedFilters.length, 1);
+    assert.match(requestedFilters[0], /^blur\([\d.]+px\)$/);
+    assert.deepEqual(source.data, pixels(5, 3).data);
+});

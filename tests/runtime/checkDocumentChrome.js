@@ -21,7 +21,7 @@ module.exports = async function checkDocumentChrome() {
     let frame = () => new Promise(resolve => requestAnimationFrame(resolve));
     let waitFor = async predicate => {
         let deadline = performance.now() + 5000;
-        while (!predicate()) {
+        while (!(await predicate())) {
             check(performance.now() < deadline, "Document chrome timed out");
             await new Promise(resolve => setTimeout(resolve, 10));
         }
@@ -155,6 +155,17 @@ module.exports = async function checkDocumentChrome() {
     let clipboardCanvas = named.getActiveLayer().getSurface().getCanvas();
     let clipboardImage = await new Promise(resolve => clipboardCanvas.toBlob(resolve));
     await navigator.clipboard.write([new ClipboardItem({"image/png": clipboardImage})]);
+    await waitFor(async () => {
+        let items = await navigator.clipboard.read();
+        let imageItem = items.find(item => item.types.includes("image/png"));
+        if (imageItem === undefined) {
+            return false;
+        }
+        let decodedClipboard = await createImageBitmap(await imageItem.getType("image/png"));
+        let ready = decodedClipboard.width === 16 && decodedClipboard.height === 8;
+        decodedClipboard.close();
+        return ready;
+    });
     let clipboardSize = await DocumentIO.getClipboardImageSize();
     check(clipboardSize !== null && clipboardSize.width === 16 && clipboardSize.height === 8,
         "Real desktop image clipboard did not supply its dimensions through the shared browser API");

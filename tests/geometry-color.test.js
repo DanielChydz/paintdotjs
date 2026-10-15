@@ -477,3 +477,15 @@ test("single-rectangle regions produce independent paths with unchanged coordina
     region.dispose();
     converted.dispose();
 });
+
+test("catalog paths report unavailable native geometry capabilities without building partial paths", () => {
+    for (let globals of [{}, {Path2D: function () { assert.fail("DOMMatrix is unavailable"); }}]) {
+        let context = vm.createContext(globals);
+        let filename = path.resolve(__dirname, "../js/src/engine/document/tool/shape/ShapeCatalog.js");
+        vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+        let catalog = vm.runInContext("ShapeCatalog", context);
+        let shape = Object.keys(catalog.PATHS)[0];
+        assert.equal(catalog.createPath(shape, {x: 1, y: 2, width: 3, height: 4}), null);
+        assert.equal(catalog.createPath("unknown-shape", {x: 1, y: 2, width: 3, height: 4}), null);
+    }
+});

@@ -17,11 +17,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,174 | 41,383 | 99.49% | 209 |
-| Branches | 9,574 | 9,862 | 97.07% | 288 |
+| Lines/statements | 41,186 | 41,379 | 99.53% | 193 |
+| Branches | 9,597 | 9,879 | 97.14% | 282 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
-- **186 tests passed; zero failures.**
+- **189 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -55,6 +55,18 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `DocumentWorkspace.onLayerRemoving`: preserve an unrelated active layer; when
+  removing the active row choose its surviving neighbor, or null for the final
+  row. Native tests reproduce the previous inactive-row selection change and
+  validate final-layer cleanup. Also assert empty zoom and invalid nub transform.
+- `PdnDocumentCodec.createHeader`: validate integer dimensions (1..32768) and
+  layer count (1..64) before XML interpolation. Reject malformed/unsafe values.
+  The bounded header is below 200 bytes, so the old unreachable 24-bit XML-size
+  guard is replaced by meaningful input validation. Test upper bounds and XML.
+- Clipboard setup now waits for the real browser clipboard read and image decode
+  to observe the just-written dimensions. Focus alone did not eliminate X11
+  propagation races. No clipboard implementation was mocked or replaced.
 
 - `ToolSelector.setSelectedId`: reject an unknown tool before mutating the
   selected entry. VM contracts reproduce the prior corrupt selected id and cover
@@ -126,6 +138,9 @@ No automatic approval review rejected these authorized actions.
   canvas so a width change cannot revive a stale preview. Assert unchanged pixels.
 
 ## Additional resumed-session test coverage
+
+- Verify CPU Gaussian output when a present Canvas filter property rejects blur,
+  and unavailable Path2D/DOMMatrix catalog fallbacks in isolated environments.
 
 - Actual UI callback tests cover registered standalone/nested menu commands,
   mounted ids and named checkboxes, floating-form and palette toggles, zoom field
@@ -309,12 +324,12 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 6 | 16 |
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 6 | 4 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
-| [DocumentWorkspace.js](./js/src/engine/document/DocumentWorkspace.js) | 6 | 1 |
 | [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 4 | 3 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
 | [DocumentContextMenu.js](./js/src/interface/panel/header/documents/DocumentContextMenu.js) | 3 | 2 |
-| [BitmapEffectEngine.js](./js/src/engine/document/effect/BitmapEffectEngine.js) | 2 | 14 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 2 | 13 |
+| [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 2 | 5 |
+| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 2 | 5 |
 
 Known audit points:
 

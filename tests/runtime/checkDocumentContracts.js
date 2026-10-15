@@ -239,6 +239,33 @@ module.exports = async function checkDocumentContracts() {
     isolated.activeLayer = null;
     isolated.dispose();
     foreign.dispose();
+    phase("removing inactive or final layers preserves a valid active-layer reference");
+    let detachedWorkspace = new DocumentWorkspace(app);
+    detachedWorkspace.setDocument(new Document(2, 2));
+    let detachedLayers = detachedWorkspace.getDocument().getLayers();
+    let detachedRows = [];
+    for (let index = 0; index < 4; ++index) {
+        let row = Layer.createLayer(detachedWorkspace, 2, 2, "Detached " + index);
+        detachedRows.push(row);
+        detachedWorkspace.getDocument().addLayer(row);
+    }
+    detachedWorkspace.setActiveLayer(detachedRows[3]);
+    detachedLayers.removeLayerAt(1);
+    check(detachedWorkspace.getActiveLayer() === detachedRows[3], "Removing an inactive layer changed the active layer");
+    detachedLayers.removeLayerAt(2);
+    check(detachedWorkspace.getActiveLayer() === detachedRows[2], "Removing the last active row did not select its previous neighbor");
+    detachedLayers.removeLayerAt(0);
+    detachedLayers.removeLayerAt(0);
+    check(detachedLayers.size() === 0 && detachedWorkspace.getActiveLayer() === null,
+        "Removing the final layer retained a foreign active-layer reference");
+    detachedWorkspace.dispose();
+    for (let row of detachedRows) {
+        row.dispose();
+    }
+    let zoomBeforeEmpty = workspace.getZoom();
+    workspace.zoomToRectangle(null);
+    workspace.zoomToRectangle(new Rectangle(2, 3, 0, 0));
+    check(workspace.getZoom() === zoomBeforeEmpty, "Missing/empty zoom bounds changed the document zoom");
     phase("unsaved document preview thumbnails activate their actual document workspace");
     let other = app.createBlankDocumentInNewWorkspace(64, 32);
     workspace.setDirty(true);
@@ -280,6 +307,7 @@ module.exports = async function checkDocumentContracts() {
     nub.setLocation(location);
     nub.setAngle(30);
     nub.setShape(MoveNubShape.CIRCLE);
+    rejects(() => nub.setTransform(null), /transform/);
     box.addRenderer(nub);
     check(nub.getLocation() === location && nub.angle === 30 && nub.getShape() === MoveNubShape.CIRCLE
         && box.getRendererList().includes(nub), "Renderer controls lost their configured geometry or registration");

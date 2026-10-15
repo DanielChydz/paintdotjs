@@ -130,13 +130,15 @@ class PdnDocumentCodec {
     }
 
     static createHeader(width, height, layerCount) {
+        if (!Number.isInteger(width) || !Number.isInteger(height) || !Number.isInteger(layerCount)
+            || width < 1 || height < 1 || width > 32768 || height > 32768
+            || layerCount < 1 || layerCount > 64) {
+            throw new Error("Invalid Paint.NET header dimensions or layer count");
+        }
         const xml = new TextEncoder().encode(
             '<pdnImage width="' + width + '" height="' + height + '" layers="' + layerCount
             + '" savedWithVersion="5.112.9563.32325"><custom></custom></pdnImage>'
         );
-        if (xml.length > 0xffffff) {
-            throw new Error("Paint.NET header is too large");
-        }
 
         const header = new Uint8Array(9 + xml.length);
         header.set(this.MAGIC, 0);

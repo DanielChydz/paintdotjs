@@ -21,7 +21,7 @@ module.exports = async function checkFileWorkflows() {
     let phase = name => require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
     let waitFor = async predicate => {
         let deadline = performance.now() + 5000;
-        while (!predicate()) {
+        while (!(await predicate())) {
             check(performance.now() < deadline, "File workflow timed out");
             await new Promise(resolve => setTimeout(resolve, 10));
         }
@@ -106,7 +106,20 @@ module.exports = async function checkFileWorkflows() {
     context.fillRect(2, 0, 2, 2);
     let expected = context.getImageData(0, 0, 4, 2).data;
     let png = await ImageEncoder.encode(canvas, "png");
+    await require("electron").ipcRenderer.invoke("paintdotjs:test-input", {type: "mouseMove", x: 10, y: 10});
+    await waitFor(() => document.hasFocus());
     await navigator.clipboard.write([new ClipboardItem({"image/png": png})]);
+    await waitFor(async () => {
+        let items = await navigator.clipboard.read();
+        let imageItem = items.find(item => item.types.includes("image/png"));
+        if (imageItem === undefined) {
+            return false;
+        }
+        let decodedClipboard = await createImageBitmap(await imageItem.getType("image/png"));
+        let ready = decodedClipboard.width === 4 && decodedClipboard.height === 2;
+        decodedClipboard.close();
+        return ready;
+    });
     app.performAction(new NewFileAction());
     await waitFor(() => document.querySelector(".new-file-dialog") !== null);
     newForm = document.querySelector(".new-file-dialog");

@@ -121,19 +121,13 @@ class DocumentWorkspace extends DocumentView {
     }
 
     onLayerRemoving(index) {
-        // Let's pick a new layer to be active
         let layers = this.document.getLayers();
-        let newLayerIndex = index === 0 ? index + 1 : index - 1;
-
-        if (newLayerIndex >= 0 && newLayerIndex < layers.getLayerCount()) {
-            this.setActiveLayer(layers.getAt(newLayerIndex));
-        } else {
-            if (layers.getLayerCount() === 0) {
-                this.setActiveLayer(null);
-            } else {
-                this.setActiveLayer(layers.getAt(0));
-            }
+        if (this.activeLayer !== layers.getAt(index)) {
+            return;
         }
+
+        let nextLayer = layers.getAt(index === 0 ? 1 : index - 1);
+        this.setActiveLayer(nextLayer);
     }
 
     onLayerInserted(index) {
