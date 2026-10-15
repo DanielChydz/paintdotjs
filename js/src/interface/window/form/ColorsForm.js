@@ -579,9 +579,10 @@ class ColorsForm extends Form {
     getUserPalettes() {
         try {
             const palettes = JSON.parse(window.localStorage.getItem("paintdotjs.colors.userPalettes") || "{}");
-            return palettes !== null && typeof palettes === "object" ? palettes : {};
+            return palettes !== null && typeof palettes === "object" && !Array.isArray(palettes)
+                ? Object.assign(Object.create(null), palettes) : Object.create(null);
         } catch (_) {
-            return {};
+            return Object.create(null);
         }
     }
 

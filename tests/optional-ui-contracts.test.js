@@ -83,12 +83,15 @@ test("effect categories reject unregistered effects before building menu entries
     assert.throws(() => EffectsMenu.createCategory("custom", ["missingEffect"]), /Missing effect action: menu.effects.missingEffect/);
 });
 
-function colorsFixture(settings) {
-    let context = vm.createContext({app: {}, window: {localStorage: {getItem: () => null}}});
+function colorsFixture(settings, storage = new Map()) {
+    let context = vm.createContext({app: {}, window: {localStorage: {
+        getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value)
+    }}});
     if (settings !== undefined) {
         context.AppSettingsStore = {get: (key, fallback) => Object.hasOwn(settings, key) ? settings[key] : fallback};
     }
-    for (let relative of ["engine/util/Debounced.js", "engine/util/Color.js",
+    for (let relative of ["engine/document/selection/Matrix.js", "engine/util/Utility.js",
+        "engine/util/Debounced.js", "engine/util/Color.js",
         "engine/document/event/EventHandler.js", "interface/window/Form.js", "interface/window/form/ColorsForm.js"]) {
         let filename = path.resolve(__dirname, "../js/src", relative);
         vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
@@ -108,5 +111,24 @@ test("color preferences recover missing settings and invalid stored channels wit
         assert.notEqual(colors.palette[0], colors.defaultPalette[0]);
         colors.palette[0].setAlpha(0);
         assert.equal(colors.defaultPalette[0].getAlpha(), 255);
+    }
+});
+
+test("palette registries recover invalid roots and retain filenames matching prototype properties", async () => {
+    for (let saved of ["[]", "null", "42", '"palette"', "{", "{}", '{"__proto__":"FF010203"}']) {
+        let storage = new Map([["paintdotjs.colors.userPalettes", saved]]);
+        let colors = colorsFixture(undefined, storage);
+        assert.equal(Array.isArray(colors.getUserPalettes()), false, "Array roots must recover an object registry");
+        let names = ["__proto__", "constructor", "toString"];
+        let imported = await colors.importPaletteFiles(names.map(name => new File(["80402010"], name + ".txt")));
+        assert.equal(imported, 3);
+        let restored = colors.getUserPalettes();
+        let persisted = JSON.parse(storage.get("paintdotjs.colors.userPalettes"));
+        for (let name of names) {
+            assert.equal(Object.hasOwn(restored, name), true, "Imported palette was lost: " + name);
+            assert.equal(Object.hasOwn(persisted, name), true);
+            assert.equal(colors.parsePalette(restored[name])[0].toHex(), "#40201080");
+        }
+        assert.equal(Object.getPrototypeOf(restored), null);
     }
 });

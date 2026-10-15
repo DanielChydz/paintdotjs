@@ -90,6 +90,14 @@ No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
 
+- `ColorsForm.getUserPalettes`: reject array JSON roots and normalize valid
+  registries to dictionaries with no prototype. Previously array roots silently
+  discarded new named palettes and `__proto__.txt` reported a successful import
+  without preserving a palette. The new VM regression failed before the fix;
+  contract tests and native color controls pass. It verifies round-trips for
+  `__proto__`, `constructor` and `toString` through actual File text and storage.
+  The coverage table predates this latest fix until the next full measurement.
+
 - `EffectConfigDialog`: rely on the existing cancelAnimationFrame/clearTimeout
   ownership for queued preview callbacks, removing two unreachable generation
   checks inside already canceled synchronous tasks. Keep the generation check
