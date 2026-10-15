@@ -50,10 +50,10 @@ module.exports = async function checkEffectControls() {
         source.data.set([offset % 256, (offset + 40) % 256, (offset + 80) % 256, 255], offset);
     }
     let previews = [];
-    let open = definition => {
+    let open = (definition, initialValues = BitmapEffectEngine.defaults(definition)) => {
         previews = [];
         let pending = EffectConfigDialog.open({
-            title: definition.id, controls: definition.controls, values: BitmapEffectEngine.defaults(definition),
+            title: definition.id, controls: definition.controls, values: initialValues,
             layout: definition.dialog, source, onPreview: value => previews.push(value === null ? null : structuredClone(value))
         });
         return pending;
@@ -141,6 +141,8 @@ module.exports = async function checkEffectControls() {
     let curveValues = {curve: [[0, 0], [255, 255]]};
     let curveChanges = [];
     let editor = new CurveEditor(curveValues, committed => curveChanges.push(committed), () => {});
+    editor.draw();
+    check(editor.canvas === null, "Drawing an unmounted curve allocated its canvas");
     let editorCanvas = editor.buildElement();
     editorCanvas.style.position = "fixed";
     editorCanvas.style.left = "20px";
@@ -157,12 +159,21 @@ module.exports = async function checkEffectControls() {
         check(JSON.stringify(curveValues.curve) === "[[0,0],[128,180],[255,255]]"
             && JSON.stringify(suppliedPoints) === suppliedSnapshot && curveChanges.length === 0,
         "Programmatic curve update did not sort, round, clamp and copy its points without emitting a user commit");
+        editor.setChannels([]);
+        editorCanvas.dispatchEvent(new PointerEvent("pointerdown", {button: 0, pointerId: 99, bubbles: true}));
+        check(editor.dragging.length === 0 && !editorCanvas.hasPointerCapture(99),
+            "Curve without selected channels started a captured edit");
+        editor.setChannels([{key: "curve", color: "#ff0000"}]);
         let pointerId = null;
         editorCanvas.addEventListener("pointerdown", event => {
             pointerId = event.pointerId;
         }, {once: true});
         await native("mouseDown", editorCanvas, 0.5, 0.3);
         check(pointerId !== null && editor.dragging.length === 1, "Native curve press did not begin a captured edit");
+        let pointerBeforeLeave = editor.pointerPoint;
+        editor.onPointerLeave();
+        check(editor.pointerPoint === pointerBeforeLeave && editor.dragging.length === 1,
+            "Leaving a captured curve canceled its active edit");
         let changesBeforeCancel = curveChanges.length;
         editorCanvas.dispatchEvent(new PointerEvent("pointercancel", {pointerId, bubbles: true}));
         check(editor.dragging.length === 0 && !editorCanvas.hasPointerCapture(pointerId)
@@ -171,11 +182,28 @@ module.exports = async function checkEffectControls() {
         await native("mouseMove", editorCanvas, 0.9, 0.1);
         await native("mouseUp", editorCanvas, 0.9, 0.1);
         check(JSON.stringify(curveValues.curve) === canceledPoints, "Canceled curve drag continued changing its transfer points");
+        await native("mouseDown", editorCanvas, 0, 1, "right");
+        await native("mouseUp", editorCanvas, 0, 1, "right");
+        check(JSON.stringify(curveValues.curve) === canceledPoints, "Curve context menu removed a fixed endpoint");
+        await native("mouseDown", editorCanvas, 0.5, 0.5);
+        editor.setCurve("curve", [[0, 0], [255, 255]]);
+        await native("mouseMove", editorCanvas, 0.6, 0.4, "left", ["leftbuttondown"]);
+        check(editor.dragging.length === 0 && JSON.stringify(curveValues.curve) === "[[0,0],[255,255]]",
+            "Replacing a curve during a gesture resurrected its removed point");
+        await native("mouseUp", editorCanvas, 0.6, 0.4);
     } finally {
         await native("mouseUp", editorCanvas, 0.5, 0.3);
         editorCanvas.remove();
     }
 
+    phase("missing specialized curves receive independent identity channels");
+    pending = open(BitmapEffectEngine.DEFINITIONS.curvesEffect, {channel: "luminosity"});
+    result = await submit(pending);
+    for (let key of ["points", "redPoints", "greenPoints", "bluePoints"]) {
+        check(JSON.stringify(result[key]) === "[[0,0],[255,255]]", "Missing curve did not receive identity: " + key);
+    }
+    check(result.points !== result.redPoints && result.points[0] !== result.redPoints[0],
+        "Default curve channels shared mutable point arrays");
     phase("levels channel switches, automatic extents and draggable gamma");
     pending = open(BitmapEffectEngine.DEFINITIONS.levelsEffect);
     await ready();
@@ -193,7 +221,25 @@ module.exports = async function checkEffectControls() {
     let extents = BitmapEffectEngine.channelExtents(source.data);
     check(values.inputLow === Math.min(...extents.min) && values.inputHigh === Math.max(...extents.max),
         "Automatic levels did not use actual source extents");
+    let levelSections = [...form().querySelectorAll(".levels-column")];
+    let inputNumbers = [...levelSections[0].querySelectorAll("input[type=number]")];
+    input(inputNumbers[1], 180);
+    input(inputNumbers[0], 100);
+    await ready();
+    check(previews.at(-1).inputLow === 99 && previews.at(-1).inputHigh === 100,
+        "Lowering high levels through the low endpoint did not preserve order");
+    input(inputNumbers[1], 120);
+    await ready();
+    check(previews.at(-1).inputLow === 120 && previews.at(-1).inputHigh === 121,
+        "Raising low levels through the high endpoint did not preserve order");
     let tracks = [...form().querySelectorAll(".levels-vertical-track")];
+    let beforeIgnoredTracks = JSON.stringify(previews.at(-1));
+    for (let track of tracks) {
+        track.dispatchEvent(new PointerEvent("pointermove", {pointerId: 99, bubbles: true}));
+        track.dispatchEvent(new PointerEvent("pointerup", {pointerId: 99, bubbles: true}));
+        track.dispatchEvent(new PointerEvent("pointerdown", {button: 2, pointerId: 99, bubbles: true}));
+    }
+    check(JSON.stringify(previews.at(-1)) === beforeIgnoredTracks, "Idle/right-button levels gestures changed the preview");
     await drag(tracks[0], [0.5, 0.98], [0.5, 0.8]);
     await drag(tracks[0], [0.5, 0.02], [0.5, 0.2]);
     await drag(tracks[1], [0.5, 0.5], [0.5, 0.4]);
@@ -210,6 +256,11 @@ module.exports = async function checkEffectControls() {
     await ready();
     let sphere = form().querySelector(".rotate-roll-visual");
     check(sphere !== null, "Rotation sphere was not created");
+    let ignoredSphere = JSON.stringify(previews.at(-1));
+    for (let type of ["pointermove", "pointerup", "pointercancel", "pointerdown"]) {
+        sphere.dispatchEvent(new PointerEvent(type, {button: 2, pointerId: 99, bubbles: true}));
+    }
+    check(JSON.stringify(previews.at(-1)) === ignoredSphere, "Idle/right-button sphere gestures changed orientation");
     await drag(sphere, [0.5, 0.5], [0.65, 0.6]);
     await ready();
     check(previews.at(-1).rollAmount > 0, "Sphere drag did not apply roll");
@@ -221,6 +272,10 @@ module.exports = async function checkEffectControls() {
     await ready();
     check(previews.at(-1).angle === 0 && previews.at(-1).rollAmount === 0, "Double-click did not reset orientation");
     let pan = form().querySelector(".rotate-pan-visual");
+    let ignoredPan = JSON.stringify(previews.at(-1));
+    pan.dispatchEvent(new PointerEvent("pointerdown", {button: 2, pointerId: 99, bubbles: true}));
+    pan.dispatchEvent(new PointerEvent("pointerup", {pointerId: 99, bubbles: true}));
+    check(JSON.stringify(previews.at(-1)) === ignoredPan, "Uncaptured pan gesture changed the preview");
     await drag(pan, [0.5, 0.5], [0.8, 0.7]);
     await ready();
     check(previews.at(-1).panX > 0 && previews.at(-1).panY > 0, "Pan capture did not update both axes");
@@ -241,6 +296,12 @@ module.exports = async function checkEffectControls() {
     let clientX = bounds.left + 7 + ratio * Math.max(0, bounds.width - 14);
     check(EffectConfigDialog.isPointerOverSliderThumb(range, {clientX}, 14), "Thumb hit testing missed its center");
     check(!EffectConfigDialog.isPointerOverSliderThumb(range, {clientX: bounds.left - 100}, 14), "Thumb hit testing included outside coordinates");
+    range.dispatchEvent(new PointerEvent("pointerdown", {button: 1, clientX, bubbles: true}));
+    range.dispatchEvent(new PointerEvent("pointerdown", {button: 0, clientX: bounds.left - 100, bubbles: true}));
+    let context = new MouseEvent("contextmenu", {clientX, bubbles: true, cancelable: true});
+    range.dispatchEvent(context);
+    check(context.defaultPrevented && Number(range.value) === 30,
+        "Thumb context menu was not suppressed or an unsupported press reset its value");
     for (let index = 0; index < 2; ++index) {
         range.dispatchEvent(new PointerEvent("pointerdown", {button: 2, clientX, bubbles: true, cancelable: true}));
     }

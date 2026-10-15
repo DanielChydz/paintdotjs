@@ -17,8 +17,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,951 | 41,443 | 98.81% | 492 |
-| Branches | 9,315 | 9,740 | 95.63% | 425 |
+| Lines/statements | 40,985 | 41,443 | 98.89% | 458 |
+| Branches | 9,350 | 9,760 | 95.79% | 410 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **181 tests passed; zero failures.**
@@ -100,6 +100,11 @@ No automatic approval review rejected these authorized actions.
   canvas so a width change cannot revive a stale preview. Assert unchanged pixels.
 
 ## Additional resumed-session test coverage
+
+- Effect editor tests now cover optional identity curves without shared mutable
+  arrays; numeric levels endpoints crossing each other; ignored idle/right/middle
+  pointer gestures; context-menu suppression on slider thumbs; endpoint protection;
+  and removal of an actively dragged curve point by a programmatic curve update.
 
 - Native document contracts now also cover unattached/null-geometry renderer
   no-ops with unchanged pixels; opaque aliased selection edges; empty/offscreen/
@@ -246,25 +251,25 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 45 | 37 |
-| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 41 | 31 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 31 | 16 |
 | [AppView.js](./js/src/engine/AppView.js) | 26 | 32 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 23 | 11 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
 | [WebWindow.js](./js/src/interface/window/window/WebWindow.js) | 16 | 9 |
+| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 15 | 20 |
 | [AppWorkspace.js](./js/src/engine/AppWorkspace.js) | 15 | 13 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 15 | 11 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 13 | 7 |
-| [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 12 | 7 |
 | [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 12 | 4 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 10 | 12 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 8 | 6 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 8 | 5 |
 | [GraphicsPath.js](./js/src/engine/document/selection/GraphicsPath.js) | 8 | 5 |
+| [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 8 | 1 |
 
 Known audit points:
 
