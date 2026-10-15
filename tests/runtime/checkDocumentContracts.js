@@ -31,6 +31,45 @@ module.exports = async function checkDocumentContracts() {
     for (let workspace of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(workspace, false);
     }
+    phase("unattached renderer no-ops preserve all destination pixels");
+    let unattachedBox = new SurfaceBox(app);
+    check(unattachedBox.getScaleFactorRatio() === 1, "No-document render scale did not default to one");
+    let destination = Surface.create(16, 12);
+    destination.context.fillStyle = "#123456";
+    destination.context.fillRect(0, 0, 16, 12);
+    let rendererPixels = destination.context.getImageData(0, 0, 16, 12).data;
+    let renderBounds = new Rectangle(0, 0, 16, 12);
+    let previews = [new BrushPreviewRenderer(unattachedBox), new RotateCursorRenderer(unattachedBox),
+        new RotateNubRenderer(unattachedBox)];
+    unattachedBox.baseRenderer.render(destination, renderBounds);
+    for (let preview of previews) {
+        preview.render(destination, renderBounds);
+    }
+    previews[0].setPreview(new Point(4, 4), 5);
+    previews[0].render(destination, renderBounds);
+    unattachedBox.setSurface(destination);
+    for (let preview of previews) {
+        preview.location = null;
+        preview.render(destination, renderBounds);
+        preview.dispose();
+    }
+    check(destination.context.getImageData(0, 0, 16, 12).data.every((value, index) => value === rendererPixels[index]),
+        "A renderer without geometry or a source changed destination pixels");
+    let selected = new Selection();
+    let edgeRenderer = new SelectionRenderer(unattachedBox, selected);
+    let edgePath = new GraphicsPath();
+    edgePath.addRectangle(new Rectangle(3.2, 3.2, 4, 4));
+    destination.clear();
+    edgeRenderer.renderingQuality = "aliased";
+    edgeRenderer.renderPath(destination.context, renderBounds, edgePath, {});
+    let edgePixels = destination.context.getImageData(0, 0, 16, 12).data;
+    check(edgePixels[(3 * 16 + 5) * 4 + 3] === 255 && edgePixels[(5 * 16 + 5) * 4 + 3] === 0,
+        "Aliased selection outline did not snap to opaque pixel centers or filled the interior: "
+            + edgePixels[(3 * 16 + 5) * 4 + 3] + ", " + edgePixels[(5 * 16 + 5) * 4 + 3]);
+    edgeRenderer.dispose();
+    edgePath.dispose();
+    selected.data.dispose();
+    destination.dispose();
     phase("untouched startup image is replaced even while no tool is active");
     app.setActiveTool(null);
     let startup = app.createBlankDocumentInNewWorkspace(8, 8, 96, true);
@@ -58,16 +97,78 @@ module.exports = async function checkDocumentContracts() {
     let historySize = workspace.getHistory().undoStack.length;
     rejects(() => workspace.executeFunction(new HistoryFunction()), /Not implemented/);
     check(workspace.getHistory().undoStack.length === historySize, "Rejected history operation recorded an entry");
+    phase("empty, offscreen and non-bitmap selection commands do not record edits");
+    let originalSelection = workspace.getSelection();
+    check(workspace.executeFunction(new EraseSelectionFunction()) === HistoryFunctionResult.SUCCESS, "Empty erase created history");
+    originalSelection.setContinuation(new Rectangle(100, 100, 4, 4), CombineMode.REPLACE);
+    originalSelection.commitContinuation();
+    check(workspace.executeFunction(new EraseSelectionFunction()) === HistoryFunctionResult.SUCCESS, "Offscreen erase created history");
+    workspace.activeLayer = new Layer(16, 12);
+    check(workspace.executeFunction(new EraseSelectionFunction()) === HistoryFunctionResult.SUCCESS
+        && workspace.executeFunction(new FillSelectionFunction(new Color(255, 0, 0))) === HistoryFunctionResult.SUCCESS,
+        "Non-bitmap selection commands created history");
+    workspace.activeLayer = layer;
+    originalSelection.reset();
+    let colorsForm = FormRegistry.get("colorsForm");
+    FormRegistry.unregister("colorsForm");
+    try {
+        check(new FillSelectionAction().performAction(workspace) === undefined,
+            "Fill without a color provider reported an edit");
+    } finally {
+        FormRegistry.forms.colorsForm = colorsForm;
+    }
+    check(workspace.getHistory().undoStack.length === historySize, "No-op selection command changed history");
+    let farRegion = Region.fromRectangle(new Rectangle(100, 100, 4, 4));
+    let noPixels = new BitmapHistoryMemento("offscreen", null, workspace, 0, farRegion);
+    check(noPixels.chunks.length === 0 && noPixels.bounds.isEmpty(), "Offscreen bitmap snapshot retained pixel chunks");
+    let noPixelsRedo = noPixels.performUndo();
+    check(noPixelsRedo.chunks.length === 0 && noPixelsRedo.getId() === noPixels.getId(),
+        "Empty bitmap undo did not preserve its identity or created pixel data");
+    farRegion.dispose();
+    let emptyFigure = new GraphicsPath([new VertexList()]);
+    layer.getSurface().context.clearRect(0, 0, 16, 12);
+    FillSelectionFunction.tracePath(layer.getSurface().context, emptyFigure);
+    layer.getSurface().context.fill();
+    check(layer.getSurface().context.getImageData(0, 0, 16, 12).data.every(value => value === 0),
+        "Tracing an empty figure unexpectedly filled pixels");
+    emptyFigure.dispose();
+    phase("document invalidation clips rectangle arrays and preserves unit fallbacks");
+    model.invalidate([new Rectangle(-2, -3, 5, 6), new Rectangle(100, 100, 1, 1)]);
+    check(model.updateRegion.length === 1 && model.updateRegion[0].x === 0 && model.updateRegion[0].y === 0
+        && model.updateRegion[0].width === 3 && model.updateRegion[0].height === 3,
+        "Document invalidation did not clip or discard out-of-bounds rectangles");
+    check(model.pixelToPhysical(27, "unknown") === 27, "Unknown measurement unit changed pixels");
+    rejects(() => model.getLayers().indexOf(null), /layer is null/);
     phase("abstract action failures are explicit and do not record successful history");
     for (let action of [new Action("contract-action", null, null, null),
         new AppWorkspaceAction("contract-app-action", null, null, null),
         new DocumentWorkspaceAction("contract-document-action", null, null, null),
         new FileAction("contract-file-action", "contract", null, null)]) {
         rejects(() => action.runPerformAction(), /No action implementation provided/);
+        rejects(() => action.createIconItem().pressable(), /No action implementation provided/);
+        rejects(() => action.createDropEntry().pressable(), /No action implementation provided/);
         check(workspace.getHistory().undoStack.length === historySize, "Abstract action failure changed history");
     }
     let layerAction = new LayerAction("contract-layer-action", "contract", "contract", null);
     rejects(() => layerAction.runIsActionExecutable(), /No isLayerActionExecutable implementation/);
+    phase("typed tool history rejects incompatible active tools before changing pixels");
+    app.setActiveToolFromType(ToolType.PENCIL);
+    let moveContext = new MoveToolContext();
+    let selectionContext = new MoveToolBaseContext();
+    let typedMementos = [new MoveContextHistoryMemento(workspace, moveContext, "move", null),
+        new MoveSelectionContextHistoryMemento(workspace, selectionContext, "selection", null),
+        new ShapeCommitHistoryMemento(workspace, null, null, "shape commit", null, true),
+        new ShapeDrawHistoryMemento(workspace, "shape draw", null),
+        new ShapeEditHistoryMemento(workspace, null, "shape edit", null)];
+    for (let memento of typedMementos) {
+        rejects(() => memento.onToolUndo(), /Current [Tt]ool is not/);
+        memento.data?.context?.dispose();
+    }
+    moveContext.dispose();
+    selectionContext.dispose();
+    check(app.getActiveTool().getType() === ToolType.PENCIL && workspace.getHistory().undoStack.length === historySize,
+        "Rejected typed history replaced the active tool or changed history");
+    app.setActiveTool(null);
     phase("registered selection commands execute actual functions and preserve exact fill/erase pixels");
     let repeat = new RepeatEffectAction();
     let effectsMenu = PanelRegistry.get("mainMenu").get("menu.effects");

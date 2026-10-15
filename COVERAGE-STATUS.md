@@ -17,8 +17,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,865 | 41,439 | 98.61% | 574 |
-| Branches | 9,219 | 9,681 | 95.22% | 462 |
+| Lines/statements | 40,911 | 41,439 | 98.72% | 528 |
+| Branches | 9,286 | 9,721 | 95.52% | 435 |
 | Functions | 2,529 | 2,529 | 100% | 0 |
 
 - **181 tests passed; zero failures.**
@@ -94,6 +94,12 @@ No automatic approval review rejected these authorized actions.
   canvas so a width change cannot revive a stale preview. Assert unchanged pixels.
 
 ## Additional resumed-session test coverage
+
+- Native document contracts now also cover unattached/null-geometry renderer
+  no-ops with unchanged pixels; opaque aliased selection edges; empty/offscreen/
+  non-bitmap fill and erase operations; missing color providers; empty bitmap
+  history chunks; rectangle-array invalidation; typed history rejection; and
+  abstract actions invoked through their generated UI callbacks.
 
 New root tests: `app-settings-store.test.js`, `font-manager.test.js`,
 `tool-settings.test.js`. New native scenarios: `checkDocumentContracts.js`,
@@ -252,7 +258,7 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 12 | 7 |
 | [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 12 | 4 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 10 | 12 |
-| [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 10 | 2 |
+| [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 8 | 6 |
 
 Known audit points:
 
