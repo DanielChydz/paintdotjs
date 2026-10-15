@@ -583,4 +583,53 @@ module.exports = async function checkToolbarWindows() {
     actualSize.toggleZoomBasis();
     percentage.close();
     check(percentage.getText() === "100%", "Footer percentage without a document lost its default");
+    phase("floating windows snap to viewport edges and neighboring window bounds");
+    let savedForms = {...FormRegistry.forms};
+    let movingForm = FormRegistry.get("colorsForm");
+    let anchorForm = FormRegistry.get("layerForm");
+    let movingWindow = movingForm.getWindow();
+    let anchorWindow = anchorForm.getWindow();
+    let movingBounds = movingWindow.getBounds();
+    let anchorBounds = anchorWindow.getBounds();
+    try {
+        for (let form of FormRegistry.list()) {
+            FormRegistry.unregister(form.id);
+        }
+        FormRegistry.forms[movingForm.id] = movingForm;
+        movingWindow.setSize(80, 80);
+        let border = movingWindow.getViewBounds();
+        movingWindow.setPositionAligned(border.getLeft() + 3, border.getTop() + 3);
+        check(movingWindow.x === border.getLeft() && movingWindow.y === border.getTop(),
+            "Floating window did not snap to the viewport's upper-left edge");
+        movingWindow.setPositionAligned(border.getRight() - movingWindow.width - 3,
+            border.getBottom() - movingWindow.height - 3);
+        check(movingWindow.x === border.getRight() - movingWindow.width
+            && movingWindow.y === border.getBottom() - movingWindow.height,
+            "Floating window did not snap to the viewport's lower-right edge");
+        FormRegistry.forms[anchorForm.id] = anchorForm;
+        anchorWindow.setSize(180, 120);
+        anchorWindow.setPosition(border.x + border.width / 2 - 90, border.y + border.height / 2 - 60);
+        let anchor = anchorWindow.getBounds();
+        let farX = anchor.x - movingWindow.width - 40;
+        let farY = anchor.y - movingWindow.height - 40;
+        movingWindow.setPositionAligned(anchor.x - movingWindow.width + 2, farY);
+        check(movingWindow.x === anchor.x - movingWindow.width - 7.5,
+            "Floating window's right edge did not snap beside its neighbor");
+        movingWindow.setPositionAligned(farX, anchor.y - movingWindow.height + 2);
+        check(movingWindow.y === anchor.y - movingWindow.height - 7.5,
+            "Floating window's bottom edge did not snap above its neighbor");
+        movingWindow.setPositionAligned(anchor.getRight() + 2, farY);
+        check(movingWindow.x === anchor.getRight() + 7.5,
+            "Floating window's left edge did not snap beside its neighbor");
+        movingWindow.setPositionAligned(farX, anchor.getBottom() + 2);
+        check(movingWindow.y === anchor.getBottom() + 7.5,
+            "Floating window's top edge did not snap below its neighbor");
+    } finally {
+        FormRegistry.forms = savedForms;
+        movingWindow.setSize(movingBounds.width, movingBounds.height);
+        movingWindow.setPosition(movingBounds.x, movingBounds.y);
+        anchorWindow.setSize(anchorBounds.width, anchorBounds.height);
+        anchorWindow.setPosition(anchorBounds.x, anchorBounds.y);
+    }
+
 };

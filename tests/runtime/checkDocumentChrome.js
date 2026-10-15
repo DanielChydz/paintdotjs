@@ -329,5 +329,20 @@ module.exports = async function checkDocumentChrome() {
     }
     strip.updateNavigation();
     check(strip.documentListButton.hidden && strip.element.style.width === "0px", "Empty strip retained document controls/space");
+    phase("unmounted document strips tolerate late lookups and navigation updates");
+    let unmountedStrip = new DocumentStrip();
+    unmountedStrip.updateNavigation();
+    unmountedStrip.hideDocumentList();
+    check(unmountedStrip.getItemByDocumentWorkspace(null) === null,
+        "Unmounted document strip did not return a missing-item result");
+    let unmountedItem = new DocumentItem(failedClose);
+    unmountedItem.renderThumbnail();
+    let destination = document.createElement("canvas");
+    destination.width = 7;
+    destination.height = 5;
+    unmountedStrip.copyThumbnail(unmountedItem, destination);
+    check(destination.width === 7 && destination.height === 5,
+        "Missing source thumbnail changed the destination canvas");
     return {ok: true};
+
 };

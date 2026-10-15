@@ -21,6 +21,7 @@ class DocumentStrip extends Panel {
         this.thumbnailUpdates = new Debounced();
         this.navigationFrame = null;
         this.documentListOpen = false;
+        this.documentsListItem = null;
 
         this.app.on("app:create_document", (documentWorkspace) => {
             this.documentsListItem.add(this.createDocumentItem(documentWorkspace));

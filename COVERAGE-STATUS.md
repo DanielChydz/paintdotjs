@@ -17,8 +17,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,060 | 41,397 | 99.18% | 337 |
-| Branches | 9,461 | 9,808 | 96.46% | 347 |
+| Lines/statements | 41,087 | 41,398 | 99.24% | 311 |
+| Branches | 9,484 | 9,818 | 96.59% | 334 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **182 tests passed; zero failures.**
@@ -55,6 +55,11 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `DocumentStrip`: initialize its optional list reference to null so pre-mount
+  lookup/navigation guards work. Native regression reproduces the old undefined
+  dereference. Window tests now verify every viewport/sibling snap direction and
+  restore registry, dimensions and positions after the assertions.
 
 - `MoveToolBase`: keyboard nudges now explicitly begin a translation; hit testing
   overlapping scale handles no longer resizes tiny selections or single pixels.
@@ -271,11 +276,10 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 |---|---:|---:|
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 31 | 16 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
-| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 23 | 11 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
-| [WebWindow.js](./js/src/interface/window/window/WebWindow.js) | 16 | 9 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 15 | 20 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
+| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 15 | 7 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 13 | 10 |
@@ -289,6 +293,7 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 6 | 4 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
 | [GraphicsPath.js](./js/src/engine/document/selection/GraphicsPath.js) | 6 | 3 |
+| [DocumentWorkspace.js](./js/src/engine/document/DocumentWorkspace.js) | 6 | 1 |
 
 Known audit points:
 
