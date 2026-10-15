@@ -413,5 +413,54 @@ module.exports = async function checkPendingSelections() {
     app.controlKeyDown = false;
     app.altKeyDown = false;
     app.shiftKeyDown = false;
+    phase("antialiased rectangles keep independent interior and outline colors");
+    colors.setMainColor(new Color(255, 0, 0));
+    colors.setSecondaryColor(new Color(0, 0, 255));
+    tool = reset(ToolType.SHAPES, {shape: "rectangle", drawType: "both", width: 3,
+        antialias: true, fillStyle: "solid"});
+    check(!tool.onKeyPress("Escape"), "Idle shape consumed Escape without an editable preview");
+    check(!tool.beginCurveControlInteraction(new Point(100, 100))
+        && !tool.beginGradientControlInteraction(new Point(100, 100)),
+        "Idle non-curve shape exposed specialized control handles");
+    tool.onMouseDown(32, 40, MouseButton.LEFT);
+    tool.onMouseUp(72, 60, MouseButton.LEFT);
+    let borderColor = surface.getColorAt(33, 50);
+    let interiorColor = surface.getColorAt(50, 50);
+    check(borderColor.toPacked() === new Color(255, 0, 0).toPacked()
+        && interiorColor.toPacked() === new Color(0, 0, 255).toPacked()
+        && surface.getColorAt(20, 50).alpha === 0,
+        "Antialiased rectangle mixed its outline/interior colors or painted outside its bounds");
+    let editableRectangle = pixels();
+    tool.commitPending();
+    let shapeSteps = history.undoStack.length;
+    for (let index = 0; index < shapeSteps; ++index) {
+        history.stepBackward();
+    }
+    check(pixels().every(value => value === 0), "Outlined rectangle undo retained preview pixels");
+    for (let index = 0; index < shapeSteps; ++index) {
+        history.stepForward();
+    }
+    equalBytes(pixels(), editableRectangle, "Outlined rectangle redo changed its separate geometries");
+    phase("unknown persisted shapes retain the rectangular fallback");
+    tool = reset(ToolType.SHAPES, {shape: "unknown-saved-shape", drawType: "fill", width: 1, antialias: true});
+    tool.onMouseDown(32, 40, MouseButton.LEFT);
+    tool.onMouseUp(72, 60, MouseButton.LEFT);
+    check(surface.getColorAt(50, 50).alpha === 255 && surface.getColorAt(20, 50).alpha === 0,
+        "Unknown saved shape failed to render its bounded rectangular fallback");
+    tool.cancelPending();
+    phase("line cap combinations and endpoint hit testing preserve editable geometry");
+    tool = reset(ToolType.LINE, {width: 4, antialias: true, startCap: "filledArrow", endCap: "flat", fillStyle: "solid"});
+    tool.onMouseDown(32, 40, MouseButton.LEFT);
+    tool.onMouseUp(72, 60, MouseButton.LEFT);
+    check(tool.hitTestPendingShape(new Point(50, 49)) && !tool.hitTestPendingShape(new Point(100, 100)),
+        "Line body hit testing did not distinguish its segment from distant points");
+    check(!tool.beginCurveControlInteraction(new Point(100, 100)), "Distant point hit a curve control");
+    check(surface.getColorAt(50, 49).alpha > 0, "Filled-arrow line omitted its main segment");
+    tool.cancelPending();
+    tool = reset(ToolType.GRADIENT, {gradientType: "linear", gradientRepeat: "none"});
+    tool.onMouseDown(32, 40, MouseButton.LEFT);
+    tool.onMouseUp(72, 60, MouseButton.LEFT);
+    check(!tool.beginGradientControlInteraction(new Point(120, 120)), "Distant point hit a gradient control");
+    tool.cancelPending();
     app.closeDocumentWorkspace(workspace, false);
 };

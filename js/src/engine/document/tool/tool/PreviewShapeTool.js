@@ -68,7 +68,7 @@ class PreviewShapeTool extends DrawingTool {
         }
         const point = new Point(x, y);
 
-        if (this.supportsPendingEdit() && this.pending) {
+        if (this.pending) {
             if (this.shape === "line" && this.beginCurveControlInteraction(point)) {
                 return true;
             }
@@ -131,7 +131,7 @@ class PreviewShapeTool extends DrawingTool {
     onMouseMove(x, y) {
         const point = new Point(x, y);
         if (!this.tracking) {
-            if (this.supportsPendingEdit() && this.pending) {
+            if (this.pending) {
                 this.updateHoverCursor(point);
             }
             return false;
@@ -145,9 +145,6 @@ class PreviewShapeTool extends DrawingTool {
     }
 
     onMouseUp(x, y, button) {
-        if (!this.supportsPendingEdit()) {
-            return super.onMouseUp(x, y, button);
-        }
         if (!this.tracking || (this.interactionMode === null && button !== this.button)) {
             return false;
         }
@@ -179,7 +176,7 @@ class PreviewShapeTool extends DrawingTool {
     }
 
     onKeyPress(key) {
-        if (!this.supportsPendingEdit() || (!this.pending && !this.tracking)) {
+        if (!this.pending && !this.tracking) {
             return false;
         }
         if (key === "Enter") {
@@ -200,7 +197,7 @@ class PreviewShapeTool extends DrawingTool {
             this.colorsForm.changed.remove(this.colorsChangedListener);
             this.colorsForm = null;
         }
-        if (this.supportsPendingEdit() && (this.pending || this.tracking)) {
+        if (this.pending || this.tracking) {
             this.commitPending();
         }
         this.destroyNubs();
@@ -217,10 +214,6 @@ class PreviewShapeTool extends DrawingTool {
         if ((this.pending || this.tracking) && this.startPoint !== null && this.endPoint !== null) {
             this.renderPreview();
         }
-    }
-
-    supportsPendingEdit() {
-        return true;
     }
 
     onSettingChanged(key, value) {
@@ -1153,12 +1146,7 @@ class PreviewShapeTool extends DrawingTool {
     }
 
     commitStroke() {
-        if (!this.supportsPendingEdit()) {
-            super.commitStroke();
-        }
-        else {
-            this.commitPending();
-        }
+        this.commitPending();
     }
 
     commitPending() {

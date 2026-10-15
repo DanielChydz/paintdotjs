@@ -17,9 +17,9 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,038 | 41,409 | 99.1% | 371 |
-| Branches | 9,441 | 9,802 | 96.31% | 361 |
-| Functions | 2,531 | 2,531 | 100% | 0 |
+| Lines/statements | 41,060 | 41,397 | 99.18% | 337 |
+| Branches | 9,461 | 9,808 | 96.46% | 347 |
+| Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **182 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
@@ -113,6 +113,12 @@ No automatic approval review rejected these authorized actions.
   canvas so a width change cannot revive a stale preview. Assert unchanged pixels.
 
 ## Additional resumed-session test coverage
+
+- Shape regressions cover separate antialiased rectangle interior/outline colors
+  with exact undo/redo, unknown persisted shape fallback, filled-arrow/flat line
+  caps, line-body hit testing, and distant/uninitialized specialized handles.
+  `PreviewShapeTool` no longer branches on `supportsPendingEdit()` (always true
+  with no overrides): every current shape follows its editable-preview lifecycle.
 
 - Effect editor tests now cover optional identity curves without shared mutable
   arrays; numeric levels endpoints crossing each other; ignored idle/right/middle
@@ -263,7 +269,6 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 45 | 37 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 31 | 16 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 23 | 11 |
@@ -275,6 +280,7 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 13 | 10 |
 | [AppView.js](./js/src/engine/AppView.js) | 12 | 25 |
+| [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 8 | 5 |
 | [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 8 | 1 |
 | [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 7 | 9 |
