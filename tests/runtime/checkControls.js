@@ -417,6 +417,22 @@ module.exports = async function checkControls() {
     dropdown.element.remove();
     fontDropdown.element.remove();
     ToolType.TEXT.setSetting("fontFamily", font.family);
+    phase("loaded custom fonts update text that became pending during activation");
+    let previousToolType = app.getActiveTool()?.getType() || null;
+    app.setActiveToolFromType(ToolType.TEXT);
+    let customText = app.getActiveTool();
+    customText.onMouseDown(20, 20, MouseButton.LEFT);
+    customText.editor.value = "Custom face";
+    customText.editor.dispatchEvent(new Event("input"));
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    check(customText.pending && customText.editor.style.fontFamily.includes(font.family)
+        && (await FontManager.ensureLoaded(font.family)).status === "loaded",
+        "A custom font finishing activation lost its pending text or font family");
+    customText.cancelPending();
+    app.setActiveTool(null);
+    if (previousToolType !== null) {
+        app.setActiveToolFromType(previousToolType);
+    }
     check(await FontManager.removeFont(font.id), "Stored font was not removed");
     check(ToolType.TEXT.getSetting("fontFamily") === "Segoe UI" && FontManager.getFonts().length === 0,
         "Removing selected font did not restore a built-in family");

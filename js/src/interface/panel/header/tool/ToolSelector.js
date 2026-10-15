@@ -64,12 +64,11 @@ class ToolSelector extends SelectorMenuItem {
     }
 
     setSelectedId(id) {
-        super.setSelectedId(id);
-
         let tool = ToolType.getById(id);
         if (tool === null) {
             throw new Error("Tool not found: " + id);
         }
+        super.setSelectedId(id);
         this.app.setActiveToolFromType(tool);
     }
 }

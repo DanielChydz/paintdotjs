@@ -308,6 +308,60 @@ module.exports = async function checkTextGradient() {
         {key: "q", altKey: true}, {key: "F12"}, {key: "b", ctrlKey: true}]) {
         text.editor.dispatchEvent(new KeyboardEvent("keydown", {...key, bubbles: true, cancelable: true}));
     }
+    phase("live text settings and editor clicks preserve the insertion session");
+    let sameEditor = text.editor;
+    text.editor.setSelectionRange(text.editor.value.length, text.editor.value.length);
+    let caretRect = text.editor.getBoundingClientRect();
+    text.editor.dispatchEvent(new PointerEvent("pointerdown", {button: 0, pointerId: 99,
+        clientX: caretRect.left + 1, clientY: caretRect.top + 1, bubbles: true, cancelable: true}));
+    await frame();
+    check(text.editor === sameEditor && text.editor.selectionStart === 0 && text.pending,
+        "Left click on the text editor restarted text or failed to place the caret");
+    PanelRegistry.get("toolMenu").updateSetting(ToolType.TEXT, "fontSize", 24);
+    check(text.editor === sameEditor && Number.parseFloat(text.editor.style.fontSize) === text.getFontSize() * workspace.getZoom(),
+        "Changing a live text font size lost its editor or retained stale metrics");
+    check(!text.onKeyPress("F12") && text.pending, "Unrelated tool key committed pending text");
+    let historyBeforeNewText = history.undoStack.length;
+    text.onMouseDown(130, 90, MouseButton.LEFT);
+    check(text.pending && text.editor !== sameEditor && !sameEditor.isConnected
+        && history.undoStack.length === historyBeforeNewText + 1,
+        "Starting distant text failed to commit the previous insertion");
+    text.editor.value = "new";
+    text.editor.dispatchEvent(new Event("input"));
+    await frame();
+    let focusEditor = text.editor;
+    let originalFocus = focusEditor.focus;
+    let focusCalls = [];
+    try {
+        focusEditor.focus = options => {
+            focusCalls.push(options);
+            if (options !== undefined) {
+                throw new TypeError("Focus options unsupported");
+            }
+            originalFocus.call(focusEditor);
+        };
+        text.syncEditorToViewport();
+        await frame();
+        check(focusCalls.length === 2 && focusCalls[0].preventScroll && focusCalls[1] === undefined
+            && document.activeElement === focusEditor, "Viewport focus did not recover from unsupported focus options");
+    } finally {
+        focusEditor.focus = originalFocus;
+    }
+    check(text.onKeyPress("Escape") && !text.pending && text.editor === null,
+        "Tool Escape did not commit the active text insertion");
+    phase("canceled and deactivated text cannot revive a queued viewport overlay");
+    text.onMouseDown(30, 30, MouseButton.LEFT);
+    text.syncEditorToViewport();
+    let canceledEditor = text.editor;
+    text.cancelPending();
+    await frame();
+    check(!canceledEditor.isConnected && text.editor === null && text.viewportSyncFrame === null,
+        "Canceled text viewport callback retained or revived its overlay");
+    text.onMouseDown(30, 30, MouseButton.LEFT);
+    text.syncEditorToViewport();
+    app.setActiveToolFromType(ToolType.PENCIL);
+    check(text.viewportSyncFrame === null && text.editor === null,
+        "Text deactivation retained its pending viewport frame or editor");
     text.cancelPending();
     app.closeDocumentWorkspace(unrelated, false);
     app.closeDocumentWorkspace(workspace, false);

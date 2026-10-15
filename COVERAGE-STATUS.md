@@ -17,11 +17,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,146 | 41,384 | 99.42% | 238 |
-| Branches | 9,541 | 9,846 | 96.9% | 305 |
+| Lines/statements | 41,174 | 41,383 | 99.49% | 209 |
+| Branches | 9,574 | 9,862 | 97.07% | 288 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
-- **183 tests passed; zero failures.**
+- **186 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -55,6 +55,14 @@ metadata is read-only inside the sandbox, so commits also need escalation.
 No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
+
+- `ToolSelector.setSelectedId`: reject an unknown tool before mutating the
+  selected entry. VM contracts reproduce the prior corrupt selected id and cover
+  absent/invalid startup preferences, nested help translations and missing effects.
+- Text regressions cover a custom FontFace resolving after insertion begins;
+  live font-size changes; editor caret clicks; starting a second text insertion;
+  tool Escape; unsupported focus options; and queued overlay cancellation on
+  cancel/deactivate. Native font decoding and DOM focus remain real.
 
 - `DocumentStrip`: initialize its optional list reference to null so pre-mount
   lookup/navigation guards work. Native regression reproduces the old undefined
@@ -288,7 +296,6 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
-| [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 15 | 7 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
@@ -303,10 +310,11 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 6 | 4 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
 | [DocumentWorkspace.js](./js/src/engine/document/DocumentWorkspace.js) | 6 | 1 |
-| [ToolSelector.js](./js/src/interface/panel/header/tool/ToolSelector.js) | 5 | 3 |
 | [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 4 | 3 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
 | [DocumentContextMenu.js](./js/src/interface/panel/header/documents/DocumentContextMenu.js) | 3 | 2 |
+| [BitmapEffectEngine.js](./js/src/engine/document/effect/BitmapEffectEngine.js) | 2 | 14 |
+| [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 2 | 13 |
 
 Known audit points:
 
