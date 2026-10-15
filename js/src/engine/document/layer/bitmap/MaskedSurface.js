@@ -885,9 +885,12 @@ class MaskedSurface {
     }
 
     clone() {
+        if (this.disposed) {
+            throw new Error("MaskedSurface is disposed");
+        }
         const clone = Object.create(MaskedSurface.prototype);
-        clone.path = this.path === null ? null : this.path.clone();
-        clone.shadowPath = this.shadowPath === null ? null : this.shadowPath.clone();
+        clone.path = this.path.clone();
+        clone.shadowPath = this.shadowPath.clone();
         clone.bounds = this.bounds.clone();
         clone.surface = this.surface === null ? null : this.surface.clone();
         clone.linearSurface = this.linearSurface === null ? null : this.linearSurface.clone();

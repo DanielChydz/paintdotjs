@@ -1,25 +1,26 @@
 # Runtime coverage handoff
 
-## Resumed checkpoint (2026-10-15)
+## Saved pause checkpoint (2026-10-15)
 
-The user has asked to **continue** after the saved pause. Continue toward 100%
-line and branch coverage and commit verified batches regularly. For concrete
+The user explicitly asked to **save the state and stop** because tokens are running
+out. Work is paused; resume only when requested. On resumption, continue toward
+100% line and branch coverage and commit verified batches regularly. For concrete
 unimplemented stubs/TODOs, choose implementation without asking again.
 
 The target is **100% line and branch coverage of all first-party runtime
 sources**, meaningful regressions, fixes for demonstrated bugs, and verified
 commits. **The target is not complete.** Branch coverage still fails
-the strict 100% gate. All lines and functions are covered in the latest measurement; 118 branch alternatives remain.
+the strict 100% gate. All lines and functions are covered in the latest measurement; 86 branch alternatives remain.
 
 Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,281 | 41,281 | 100% | 0 |
-| Branches | 9,861 | 9,979 | 98.81% | 118 |
+| Lines/statements | 41,276 | 41,276 | 100% | 0 |
+| Branches | 9,904 | 9,990 | 99.13% | 86 |
 | Functions | 2,532 | 2,532 | 100% | 0 |
 
-- **198 tests passed; zero failures.**
+- **204 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -32,6 +33,29 @@ Reports: `coverage/coverage-summary.json`, `coverage/coverage-final.json`,
 `coverage/index.html`. Latest full-run log: `/tmp/paintdotjs-coverage-current.log`.
 Strict-gate log: `/tmp/paintdotjs-strict-coverage-current.log`.
 Generated reports and bundles are not committed sources.
+
+## Latest saved batch (2026-10-15)
+
+- Fixed TextTool shortcut dispatch when ActionRegistry is absent; the new regression
+  demonstrated a ReferenceError before the fix. Added legacy DPI and width-only
+  text metric layout contracts for left, center and right alignment.
+- MaskedSurface.clone now rejects disposed instances explicitly instead of creating
+  an unusable live-looking clone; native regression verifies the error. Live masks
+  clone their constructor-owned paths directly.
+- Simplified invariant-dominated transform snapshots, textarea caret positioning,
+  numeric range controls and initialized save-quality lookups. Text font-size
+  inputs retain their required invalid-text fallback.
+- Verified optional settings and base-view coordinate delegation, PDN default layer
+  names without caller mutation, unavailable JXR encoding, real browser/GPU
+  diagnostics, native caret placement, selection routing and missing device DPI.
+- Final checks passed: source lint, test lint, source headers, version information,
+  git diff whitespace checks and the complete coverage suite (204 tests).
+- Full coverage: 41,276/41,276 lines and statements, 2,532/2,532 functions,
+  9,904/9,990 branches (99.13%). All 254 runtime files remain included.
+- The strict 100% branch gate still fails as expected. The overall task remains
+  unfinished; do not claim 100% branches or rebuild packaging during this pause.
+- Resume from the fresh reports and the remaining-source table below. Temporary
+  detailed logs are in /tmp/paintdotjs-*.log; committed notes are the durable handoff.
 
 ## Commits and verification
 
@@ -90,8 +114,8 @@ No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
 
-- **100% lines/functions milestone**: 198 tests pass across all 254 runtime files.
-  Branch coverage is 98.81% (118 uncovered alternatives). Continue toward the
+- **100% lines/functions milestone**: 204 tests pass across all 254 runtime files.
+  Branch coverage is 99.13% (86 uncovered alternatives). On resumption, continue toward the
   requested 100% branches; do not mark the task complete yet.
 - Transform mode names/validation live in MoveToolBaseMode and are shared by
   dispatch/history naming. Validate before selection mutation. Scaling uses the
@@ -461,24 +485,24 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 |---|---:|---:|
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 0 | 17 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 0 | 14 |
-| [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 0 | 12 |
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 0 | 9 |
-| [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 0 | 8 |
-| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 0 | 8 |
-| [AppView.js](./js/src/engine/AppView.js) | 0 | 7 |
-| [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 0 | 6 |
+| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 0 | 6 |
+| [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 0 | 5 |
+| [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 0 | 4 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 0 | 4 |
 | [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 0 | 3 |
 | [SurfaceBoxBaseRenderer.js](./js/src/engine/document/render/renderer/SurfaceBoxBaseRenderer.js) | 0 | 3 |
-| [MaskedSurface.js](./js/src/engine/document/layer/bitmap/MaskedSurface.js) | 0 | 3 |
-| [PdnDocumentCodec.js](./js/src/io/PdnDocumentCodec.js) | 0 | 2 |
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 0 | 2 |
 | [RectangleSelectTool.js](./js/src/engine/document/tool/tool/RectangleSelectTool.js) | 0 | 2 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 0 | 2 |
-| [Surface.js](./js/src/engine/document/layer/bitmap/Surface.js) | 0 | 2 |
-| [ImageEncoder.js](./js/src/io/ImageEncoder.js) | 0 | 1 |
+| [PdnDocumentCodec.js](./js/src/io/PdnDocumentCodec.js) | 0 | 1 |
 | [SwatchItem.js](./js/src/interface/window/form/colors/SwatchItem.js) | 0 | 1 |
 | [ErrorForm.js](./js/src/interface/window/form/ErrorForm.js) | 0 | 1 |
+| [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 0 | 1 |
+| [TaskDialog.js](./js/src/interface/window/dialog/TaskDialog.js) | 0 | 1 |
+| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 0 | 1 |
+| [SubmenuDropEntry.js](./js/src/interface/item/menu/action/drop/SubmenuDropEntry.js) | 0 | 1 |
+| [ScrollList.js](./js/src/interface/item/layout/ScrollList.js) | 0 | 1 |
 
 Known audit points:
 

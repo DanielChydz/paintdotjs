@@ -559,21 +559,17 @@ class MoveToolBase extends Tool {
         this.context.deltaTransform = new Matrix();
         this.context.deltaTransform.reset();
 
-        if (newMode === MoveToolBaseMode.TRANSLATE
-            || newMode === MoveToolBaseMode.SCALE
-            || newMode !== this.context.currentMode
-            || newMode === MoveToolBaseMode.ROTATE) {
-            this.context.startBounds = this.getSelection().getBounds(false);
-            this.context.startMouseXY = new Point(mouseX, mouseY);
-            this.context.offset = new Point(0, 0);
+        // Every supported gesture snapshots the selection transform.
+        this.context.startBounds = this.getSelection().getBounds(false);
+        this.context.startMouseXY = new Point(mouseX, mouseY);
+        this.context.offset = new Point(0, 0);
 
-            if (this.context.baseTransform !== null) {
-                this.context.baseTransform.dispose();
-                this.context.baseTransform = null;
-            }
-
-            this.context.baseTransform = this.getSelection().getInterimTransformCopy();
+        if (this.context.baseTransform !== null) {
+            this.context.baseTransform.dispose();
+            this.context.baseTransform = null;
         }
+
+        this.context.baseTransform = this.getSelection().getInterimTransformCopy();
 
         this.context.startEdge = newEdge;
         this.context.currentMode = newMode;

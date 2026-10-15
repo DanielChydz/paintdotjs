@@ -42,7 +42,7 @@ class TextTool extends DrawingTool {
     }
 
     usesContinuousPointerCoordinates() {
-        return this.pending || this.tracking;
+        return this.pending;
     }
 
     onActivate() {
@@ -318,7 +318,7 @@ class TextTool extends DrawingTool {
             && ["a", "c", "x", "v"].includes(normalizedKey);
         const functionKey = /^f(?:[1-9]|1[0-2])$/.test(normalizedKey);
         if (!altGraph && !nativeTextShortcut && (commandModifier || functionKey)
-            && ActionRegistry.dispatch(event)) {
+            && typeof ActionRegistry !== "undefined" && ActionRegistry.dispatch(event)) {
             event.preventDefault();
         }
         event.stopPropagation();
@@ -583,7 +583,7 @@ class TextTool extends DrawingTool {
         }
 
         const text = this.editor.value;
-        const position = this.editor.selectionStart === null ? text.length : this.editor.selectionStart;
+        const position = this.editor.selectionStart;
         const beforeCaret = text.substring(0, position);
         const lineIndex = (beforeCaret.match(/\n/g) || []).length;
         const lineStart = beforeCaret.lastIndexOf("\n") + 1;

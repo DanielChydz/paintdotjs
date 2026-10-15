@@ -635,9 +635,7 @@ class ToolMenu extends StripPanel {
                 fillValueLabel.textContent = text;
             };
             const change = value => {
-                const entered = Number(value);
-                value = Utility.clamp(Number.isFinite(entered) ? entered : Number(type.getSetting(definition.key)),
-                    definition.min, definition.max);
+                value = Utility.clamp(Number(value), definition.min, definition.max);
                 input.value = value;
                 input.title = `${definition.label} ${value}`;
                 updateMeter(value);
@@ -730,15 +728,13 @@ class ToolMenu extends StripPanel {
                 return;
             }
             const value = Number(input.value);
-            if (Number.isFinite(value)) {
-                this.updateSetting(type, definition.key,
-                    Utility.clamp(value, definition.min, definition.max));
-            }
+            this.updateSetting(type, definition.key,
+                Utility.clamp(value, definition.min, definition.max));
         };
         input.onchange = () => {
             const entered = Number(input.value);
             const value = Utility.clamp(
-                Number.isFinite(entered) ? entered : definition.min,
+                entered,
                 definition.min,
                 definition.max
             );

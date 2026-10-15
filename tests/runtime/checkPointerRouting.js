@@ -342,6 +342,53 @@ module.exports = async function checkPointerRouting() {
         window.dispatchEvent(new KeyboardEvent("keyup", {key, bubbles: true}));
         check(!app[getter](), "Modifier up state remained set: " + key);
     }
+    phase("nontext selections and unrelated selected-text keys remain application input");
+    document.activeElement.blur();
+    let selectionHost = document.createElement("div");
+    selectionHost.style.userSelect = "text";
+    selectionHost.appendChild(document.createElement("canvas"));
+    document.body.appendChild(selectionHost);
+    let pageSelection = window.getSelection();
+    try {
+        let selectedRange = document.createRange();
+        selectedRange.selectNodeContents(selectionHost);
+        pageSelection.removeAllRanges();
+        pageSelection.addRange(selectedRange);
+        check(!pageSelection.isCollapsed && pageSelection.toString() === "", "Nontext selection fixture unexpectedly selected text");
+        let nontextKey = new KeyboardEvent("keydown", {key: "F13", ctrlKey: true, bubbles: true, cancelable: true});
+        window.dispatchEvent(nontextKey);
+        check(nontextKey.defaultPrevented, "Nontext DOM selection bypassed application key handling");
+        selectionHost.textContent = "Selected diagnostics";
+        selectedRange.selectNodeContents(selectionHost);
+        pageSelection.removeAllRanges();
+        pageSelection.addRange(selectedRange);
+        for (let control of [false, true]) {
+            let unrelatedKey = new KeyboardEvent("keydown", {key: "F13", ctrlKey: control, bubbles: true, cancelable: true});
+            window.dispatchEvent(unrelatedKey);
+            check(unrelatedKey.defaultPrevented && pageSelection.toString() === "Selected diagnostics",
+                "Unrelated key bypassed application handling or destroyed selected text: " + unrelatedKey.defaultPrevented + "/" + pageSelection.toString());
+        }
+    } finally {
+        pageSelection.removeAllRanges();
+        selectionHost.remove();
+    }
+    phase("missing display-scale metadata retains one device pixel per CSS pixel");
+    let displayScaleDescriptor = Object.getOwnPropertyDescriptor(window, "devicePixelRatio");
+    let originalRulers = app.isRulersVisible();
+    try {
+        Object.defineProperty(window, "devicePixelRatio", {configurable: true, value: undefined});
+        app.setRulersVisible(true);
+        app.updateCanvasBounds(false);
+        app.renderRulers(workspace);
+        check(app.canvas.getCanvas().width === Math.max(1, Math.round(app.getViewWidth()))
+            && app.canvas.getContext().getTransform().a === 1
+            && app.horizontalRuler.width === Math.max(1, Math.round(app.getViewWidth())),
+        "Missing display scale changed the canvas/ruler backing ratio");
+    } finally {
+        Object.defineProperty(window, "devicePixelRatio", displayScaleDescriptor);
+        app.setRulersVisible(originalRulers);
+        app.updateCanvasBounds(false);
+    }
     app.closeDocumentWorkspace(workspace, false);
     check(!app.onMouseDown(0, 0, MouseButton.LEFT) && !app.onMouseMove(0, 0) && !app.onMouseUp(0, 0, MouseButton.LEFT),
         "Empty workspace consumed drawing input");

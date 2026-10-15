@@ -117,6 +117,7 @@ module.exports = async function checkDocumentIO() {
         jpegImage.close();
         await rejects(() => ImageEncoder.encode(transparent, "jxl"), /JXL encoding is not available/);
         await rejects(() => ImageEncoder.encode(transparent, "heic"), /HEIC encoding is not available/);
+        await rejects(() => ImageEncoder.encode(transparent, "jxr"), /JXR encoding is not available/);
         check(ImageEncoder.mimeFor("unknown") === "application/octet-stream", "Unknown codec MIME fallback changed");
     } finally {
         window.portableImageCodec = portable;

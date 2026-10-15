@@ -406,6 +406,15 @@ module.exports = async function checkGpu() {
     path.dispose();
     cpu.dispose();
     gpu.dispose();
+    SettingsDialog.open("graphics");
+    check(SettingsDialog.instance.page.textContent.includes("Graphics acceleration is available."),
+        "Graphics settings did not report the working native WebGL renderer");
+    SettingsDialog.instance.selectSection("diagnostics");
+    let gpuDiagnostics = [...SettingsDialog.instance.page.querySelectorAll(".settings-diagnostics-table span")]
+        .map(cell => cell.textContent);
+    check(gpuDiagnostics[gpuDiagnostics.indexOf("WebGL") + 1] === "Available",
+        "Diagnostics did not report the working native WebGL renderer");
+    SettingsDialog.instance.close();
     check(mismatches.length === 0, "GPU/CPU differences: " + JSON.stringify(mismatches));
     return {ok: true};
 };

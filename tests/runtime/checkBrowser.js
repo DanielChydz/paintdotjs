@@ -137,6 +137,12 @@ module.exports = async function checkBrowser() {
     document.querySelectorAll(".unsaved-changes-dialog .task-dialog-choice")[2].click();
     await waitFor(() => !DocumentIO.webCloseDialogOpen);
     check(workspace.document !== null && workspace.isDirty(), "Browser close cancellation lost work");
+    SettingsDialog.open("diagnostics");
+    let browserDiagnostics = [...SettingsDialog.instance.page.querySelectorAll(".settings-diagnostics-table span")]
+        .map(cell => cell.textContent);
+    check(browserDiagnostics[browserDiagnostics.indexOf("Electron") + 1] === "No",
+        "Browser diagnostics incorrectly advertised Electron integration");
+    SettingsDialog.instance.close();
     app.closeDocumentWorkspace(workspace, false);
     return {ok: true};
 };

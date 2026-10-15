@@ -132,3 +132,71 @@ test("palette registries recover invalid roots and retain filenames matching pro
         assert.equal(Object.getPrototypeOf(restored), null);
     }
 });
+
+function standaloneViewFixture(settings) {
+    let state = {fills: [], patterns: []};
+    function Canvas() {
+        this.width = 320;
+        this.height = 200;
+        this.style = {};
+        this.context = {fillRect: (...args) => state.fills.push(args)};
+    }
+    Canvas.prototype.getContext = function () { return this.context; };
+    let element = () => ({style: {}, children: [], append(...children) { this.children.push(...children); }});
+    let nodes = {canvas: new Canvas(), editor: element(), environment: element(), view: element()};
+    let context = vm.createContext({
+        document: {getElementById: id => nodes[id], createElement: tag => tag === "canvas" ? new Canvas() : element()},
+        HTMLCanvasElement: Canvas, Language: {code: "en-US"},
+        ImageUtil: {createTransparentPattern: (...args) => {
+            let pattern = {args};
+            state.patterns.push(pattern);
+            return pattern;
+        }}
+    });
+    if (settings !== undefined) {
+        context.AppSettingsStore = {get: (key, fallback) => Object.hasOwn(settings, key) ? settings[key] : fallback};
+    }
+    for (let relative of ["util/MouseButton", "util/Point", "document/layer/bitmap/Surface", "AppView", "AppWorkspace"]) {
+        let filename = path.resolve(__dirname, "../js/src/engine", relative + ".js");
+        vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    }
+    return {...vm.runInContext("({AppView, AppWorkspace, Point})", context), state, nodes};
+}
+
+test("standalone workspaces recover missing settings and preserve configured units and checkerboard brightness", () => {
+    for (let [settings, unit, brightness] of [[undefined, "pixel", .75],
+        [{"workspace.measurementUnit": "inch", "canvas.checkerboardBrightness": 50}, "inch", .5],
+        [{"workspace.measurementUnit": "unknown"}, "pixel", .75]]) {
+        let {AppWorkspace, state, nodes} = standaloneViewFixture(settings);
+        let workspace = new AppWorkspace();
+        assert.equal(workspace.getMeasurementUnit(), unit);
+        assert.equal(workspace.getDocumentWorkspaces().length, 0);
+        assert.equal(workspace.getActiveTool(), null);
+        assert.equal(nodes.editor.children.length, 3);
+        workspace.canvas.renderCheckerboard(1, 2, 3, 4);
+        workspace.canvas.renderCheckerboard(1, 2, 3, 4);
+        assert.equal(state.patterns.length, 1, "Repeated painting must reuse its checkerboard pattern");
+        assert.equal(state.patterns[0].args[2], brightness);
+        assert.deepEqual(state.fills, [[1, 2, 3, 4], [1, 2, 3, 4]]);
+        assert.equal(workspace.canvas.context.fillStyle, state.patterns[0]);
+    }
+});
+
+test("standalone views delegate pointer conversion without requiring a tool registry", () => {
+    let {AppView, Point} = standaloneViewFixture();
+    let view = new AppView();
+    let continuousArguments = [];
+    let workspace = {toDocumentPosition: (point, continuous) => {
+        continuousArguments.push(continuous);
+        return new Point(point.x + 10, point.y + 20);
+    }};
+    let point = view.toToolDocumentPosition(workspace, 2.5, 3.5);
+    assert.deepEqual([point.x, point.y], [12.5, 23.5]);
+    let sample = {x: 2.5, y: 3.5, pressure: .3, timeStamp: 10};
+    let converted = view.toDocumentPointerInput(workspace, {pointerType: "pen", samples: [sample]});
+    assert.deepEqual(continuousArguments, [false, false]);
+    assert.deepEqual([converted.samples[0].x, converted.samples[0].y, converted.samples[0].pressure, converted.samples[0].timeStamp],
+        [12.5, 23.5, .3, 10]);
+    assert.notEqual(converted.samples[0], sample);
+    assert.deepEqual([sample.x, sample.y], [2.5, 3.5]);
+});

@@ -213,7 +213,7 @@ class SaveImageDialog {
                 const format = this.find(formatSelect.value);
                 const result = {};
                 if (format.quality !== undefined) {
-                    result.quality = qualities.get(format.id) ?? format.quality;
+                    result.quality = qualities.get(format.id);
                 }
                 if (format.id === "jpeg") {
                     result.subsampling = chroma.value;
@@ -226,7 +226,7 @@ class SaveImageDialog {
                 chromaGroup.hidden = format.id !== "jpeg";
                 defaults.hidden = format.quality === undefined;
                 if (format.quality !== undefined) {
-                    setQuality(qualities.get(format.id) ?? format.quality);
+                    setQuality(qualities.get(format.id));
                 }
             };
             const render = async () => {

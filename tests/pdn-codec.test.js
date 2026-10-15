@@ -351,3 +351,15 @@ test("PDN headers reject invalid dimensions and unsafe XML values before seriali
     assert.ok(length < 200);
     assert.match(new TextDecoder().decode(largest.subarray(7, 7 + length)), /width="32768" height="32768" layers="64"/);
 });
+
+test("PDN template patching supplies stable names for unnamed layers", async () => {
+    let {deserialize} = await import("ms-nrbf-js");
+    let codec = loadCodec();
+    let template = new Uint8Array(fs.readFileSync(path.resolve(__dirname, "../assets/pdn/templates/3.bin")));
+    let layers = [null, "", "Named"].map(name => ({properties: {name, visible: true, opacity: 255, blendMode: "normal"}}));
+    let graph = codec.patchTemplate(template, 2, 1, layers);
+    let entries = deserialize(graph).members.layers.members["ArrayList+_items"];
+    assert.deepEqual(entries.slice(0, 3).map(entry => entry.members["Layer+properties"].members.name), ["Layer 1", "Layer 2", "Named"]);
+    assert.equal(layers[0].properties.name, null);
+    assert.equal(layers[1].properties.name, "");
+});

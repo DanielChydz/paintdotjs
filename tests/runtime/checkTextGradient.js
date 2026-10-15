@@ -212,6 +212,20 @@ module.exports = async function checkTextGradient() {
     text.placeCaretAt(new Point(1000, text.getTextTop() + text.getLineHeight() + 1));
     await frame();
     check(text.editor.selectionStart === 7, "Multiline caret placement omitted the newline offset");
+    for (let alignment of ["left", "center", "right"]) {
+        ToolType.TEXT.setSetting("align", alignment);
+        text.onSettingChanged("align", alignment);
+        context.save();
+        context.font = text.getFontString();
+        let lineWidth = context.measureText("abcd").width;
+        context.restore();
+        let lineStart = text.textOrigin.x - (alignment === "center" ? lineWidth / 2 : alignment === "right" ? lineWidth : 0);
+        text.placeCaretAt(new Point(lineStart + glyphWidth * 1.1, text.getTextTop() + 1));
+        await frame();
+        check(text.editor.selectionStart === 1, "Aligned text click placed the caret in the wrong glyph: " + alignment);
+    }
+    ToolType.TEXT.setSetting("align", "left");
+    text.onSettingChanged("align", "left");
     text.onMouseDown(31, text.getTextTop() + 1, MouseButton.LEFT);
     await frame();
     check(text.pending && text.editor.value === "abcd\nxy", "Inside-text click restarted the editor");

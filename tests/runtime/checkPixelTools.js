@@ -460,6 +460,13 @@ module.exports = async function checkPixelTools() {
     copy.dispose();
     check(masked.surface.width === 2, "Disposing clone destroyed original");
     masked.dispose();
+    let disposedCloneRejected = false;
+    try {
+        masked.clone();
+    } catch (error) {
+        disposedCloneRejected = /disposed/.test(error.message);
+    }
+    check(disposedCloneRejected, "Disposed masked surface produced a live-looking clone with no owned geometry");
     path.dispose();
     transform.dispose();
     target.dispose();
