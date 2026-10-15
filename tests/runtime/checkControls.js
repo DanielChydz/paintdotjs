@@ -105,6 +105,22 @@ module.exports = async function checkControls() {
     colors.setMainColor(Color.BLACK.copy());
     circle.onMouseEvent(circleBounds.left + 180, circleBounds.top + 90, MouseButton.LEFT);
     check(colors.mainColor.getRed() === 255 && colors.mainColor.getGreen() === 0, "Black wheel selection remained invisible");
+    phase("color wheel and slider DOM gestures update the selected color and stop after release");
+    let colorGesture = (element, start, end) => {
+        element.dispatchEvent(new MouseEvent("mousedown", {clientX: start[0], clientY: start[1], button: 0, bubbles: true}));
+        document.dispatchEvent(new MouseEvent("mousemove", {clientX: end[0], clientY: end[1], buttons: 1, bubbles: true}));
+        document.dispatchEvent(new MouseEvent("mouseup", {clientX: end[0], clientY: end[1], button: 0, bubbles: true}));
+    };
+    colorGesture(circle.canvas, [circleBounds.left + 90, circleBounds.top + 90],
+        [circleBounds.left + 179, circleBounds.top + 90]);
+    check(colors.mainColor.getRed() === 255 && colors.mainColor.getGreen() < 5,
+        "Wheel DOM drag did not select its red edge");
+    let redBounds = colors.redSlider.canvas.getBoundingClientRect();
+    colorGesture(colors.redSlider.getElement(), [redBounds.right, redBounds.top], [redBounds.left, redBounds.top]);
+    check(colors.mainColor.getRed() === 0, "Slider DOM drag did not reach its zero endpoint");
+    let releasedColor = packed(colors.mainColor);
+    document.dispatchEvent(new MouseEvent("mousemove", {clientX: redBounds.right, clientY: redBounds.top, bubbles: true}));
+    check(packed(colors.mainColor) === releasedColor, "Released color controls retained a drag listener");
     let primary = packed(colors.mainColor);
     let secondary = packed(colors.secondaryColor);
     document.getElementById("swapColorsButton").click();
@@ -161,6 +177,13 @@ module.exports = async function checkControls() {
     check(await colors.importPaletteFiles(files) === 2, "Palette import did not filter invalid files");
     check(await colors.importPaletteFiles([files[2], files[3]]) === 0, "Empty import reported success");
     check(Object.keys(colors.getUserPalettes()).length === 2, "Imported palettes were not persisted");
+    check(await colors.importPaletteFiles([new window.File(["FF112233"], ".txt")]) === 1
+        && colors.parsePalette(colors.getUserPalettes()["Imported Palette"])[0].toHex() === "#112233ff",
+        "Palette without a basename did not receive its imported name");
+    let iconlessPaletteEntry = colors.createPaletteMenuEntry("colors.palette.iconless", "Plain palette", null, () => {});
+    iconlessPaletteEntry.initialize(colors);
+    check(!iconlessPaletteEntry.hasIcon() && iconlessPaletteEntry.getText() === "Plain palette",
+        "Iconless palette entry lost its label or displayed an icon");
     let directoryPicker = Object.getOwnPropertyDescriptor(window, "showDirectoryPicker");
     let inputClick = HTMLInputElement.prototype.click;
     try {

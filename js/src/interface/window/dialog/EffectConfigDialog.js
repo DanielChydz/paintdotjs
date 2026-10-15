@@ -60,18 +60,12 @@ class EffectConfigDialog {
                 cancelScheduledPreview();
                 const generation = previewGeneration;
                 previewFrame = requestAnimationFrame(() => {
-                    if (generation !== previewGeneration) {
-                        return;
-                    }
                     previewFrame = null;
                     backdrop.classList.add("effect-preview-rendering");
                     dialog.setAttribute("aria-busy", "true");
                     // Run after the frame is painted so opening or manipulating
                     // a dialog never waits behind a long synchronous effect.
                     previewTimer = setTimeout(() => {
-                        if (generation !== previewGeneration) {
-                            return;
-                        }
                         previewTimer = null;
                         const start = performance.now();
                         const complete = () => {

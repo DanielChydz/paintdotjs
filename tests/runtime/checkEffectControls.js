@@ -342,6 +342,30 @@ module.exports = async function checkEffectControls() {
             console.error = originalConsoleError;
         }
     }
+    phase("canceling scheduled effect previews releases both frame and timer callbacks");
+    for (let afterFrame of [false, true]) {
+        let previewCalls = 0;
+        pending = EffectConfigDialog.open({title: "Scheduled cancellation", controls: [], values: {},
+            onPreview: () => ++previewCalls});
+        if (afterFrame) {
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            check(form().hasAttribute("aria-busy"), "Scheduled effect did not enter its painted busy frame");
+        }
+        form().querySelector(".app-dialog-close").click();
+        check(await pending === null, "Canceling a scheduled effect returned values");
+        await new Promise(resolve => setTimeout(resolve, 30));
+        check(previewCalls === 0 && form() === null, "Canceled frame/timer executed an obsolete effect preview");
+    }
+    phase("rapid effect changes render only the final values");
+    pending = open(definition);
+    let coalescedRange = form().querySelector("input[type=range]");
+    for (let value of [10, 20, 30]) {
+        input(coalescedRange, value);
+    }
+    await ready();
+    check(previews.length === 1 && previews[0].amount === 30,
+        "Rapid changes rendered an obsolete effect value instead of coalescing");
+    await cancel(pending);
     phase("late asynchronous effect completion cannot revive a closed dialog");
     let completePreview = null;
     pending = EffectConfigDialog.open({title: "Late preview contract", controls: [], values: {},

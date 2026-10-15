@@ -15,8 +15,8 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,271 | 41,368 | 99.76% | 97 |
-| Branches | 9,733 | 9,940 | 97.91% | 207 |
+| Lines/statements | 41,282 | 41,362 | 99.8% | 80 |
+| Branches | 9,757 | 9,951 | 98.05% | 194 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
 - **197 tests passed; zero failures.**
@@ -89,6 +89,17 @@ No automatic approval review rejected these authorized actions.
   handle hit tests distinguish exact painted boundaries from padded boundaries.
 
 ## Resumed-session production fixes
+
+- `EffectConfigDialog`: rely on the existing cancelAnimationFrame/clearTimeout
+  ownership for queued preview callbacks, removing two unreachable generation
+  checks inside already canceled synchronous tasks. Keep the generation check
+  after asynchronous preview completion. Native tests cancel before the frame,
+  between frame and timer, and after async preview starts; rapid updates render
+  only final values. All pass in the full coverage run.
+- Additional native contracts verify slider/wheel DOM drags and release cleanup,
+  pointer-driven list dragging, antialiased clone pixels and offscreen no-op
+  history, nameless palette imports, iconless palette rows, blank layer names,
+  empty opacity and stale layer-dialog callbacks.
 
 - `ToolMenu.createSizeControl`: committing nonnumeric text or Infinity through
   change/Enter previously stored NaN as the brush width. Native regression failed
@@ -367,22 +378,22 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 10 | 6 |
 | [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
-| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 6 | 17 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 6 | 12 |
-| [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
-| [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 4 | 4 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 4 | 3 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 2 | 18 |
+| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 2 | 15 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 2 | 13 |
 | [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 2 | 5 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 2 | 5 |
-| [LayerPropertiesDialog.js](./js/src/interface/window/dialog/LayerPropertiesDialog.js) | 2 | 4 |
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 2 | 3 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 2 | 3 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 2 | 3 |
+| [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 2 | 2 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 2 | 2 |
 | [DropMenuItem.js](./js/src/interface/item/menu/action/drop/DropMenuItem.js) | 2 | 2 |
 | [FormRegistry.js](./js/src/interface/window/FormRegistry.js) | 2 | 1 |
+| [ViewMenu.js](./js/src/interface/panel/header/main/menu/ViewMenu.js) | 2 | 1 |
+| [MeasurementUnitSelectorItem.js](./js/src/interface/panel/footer/menu/MeasurementUnitSelectorItem.js) | 2 | 1 |
 
 Known audit points:
 

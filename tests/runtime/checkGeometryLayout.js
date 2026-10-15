@@ -311,7 +311,9 @@ module.exports = async function checkGeometryLayout() {
         first.getElement().querySelector("input").dispatchEvent(new PointerEvent("pointerdown", {button: 0, bubbles: true}));
         check(session.getDraggingItem() === null, "Right click or visibility checkbox began dragging a row");
         let start = coordinate(first);
-        list.startPointerDrag(first, event(start));
+        first.getElement().dispatchEvent(new PointerEvent("pointerdown", {pointerId: 91, button: 0, buttons: 1,
+            clientX: orientation === ScrollOrientation.HORIZONTAL ? start : 110,
+            clientY: orientation === ScrollOrientation.VERTICAL ? start : 160, bubbles: true}));
         check(session.getDraggingItem() === first && session.dragPointerId === 91, "Scroll drag did not retain its item/pointer");
         list.continuePointerDrag(event(start + 1));
         check(!session.hasPassedDragThreshold(), "Tiny pointer movement started a reorder");

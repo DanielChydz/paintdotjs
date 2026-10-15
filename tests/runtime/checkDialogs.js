@@ -144,6 +144,25 @@ module.exports = async function checkDialogs() {
     cancel();
     check(await resultOf(pending) === null, "Layer cancellation committed changes");
 
+    phase("blank layer names, empty opacity and stale close callbacks preserve dialog ownership");
+    pending = LayerPropertiesDialog.open(new LayerProperties(null, true, false, 255));
+    form = document.querySelector(".layer-properties-dialog");
+    check(form.querySelector("input[type=text]").value === "", "Missing layer name did not show an empty field");
+    let staleLayerClose = form.querySelector(".app-dialog-close");
+    cancel();
+    check(await resultOf(pending) === null, "Unnamed layer cancellation returned properties");
+    pending = LayerPropertiesDialog.open(properties);
+    form = document.querySelector(".layer-properties-dialog");
+    staleLayerClose.click();
+    check(form.isConnected, "Stale close callback removed a newer layer dialog");
+    input(form.querySelector("input[type=text]"), "   ");
+    input(form.querySelector("input[type=number]"), "");
+    check(form.querySelector("input[type=range]").value === "0", "Empty layer opacity did not normalize to zero");
+    submit(form);
+    updated = await resultOf(pending);
+    check(updated.name === "Original" && updated.opacity === 0 && properties.opacity === 255,
+        "Blank layer name lost its prior name or empty opacity mutated the source properties");
+
     let source = new ImageData(8, 6);
     for (let offset = 0; offset < source.data.length; ++offset) {
         source.data[offset] = offset % 4 === 3 ? 255 : offset % 256;

@@ -351,6 +351,31 @@ module.exports = async function checkPixelTools() {
     check(cloneTool.getAnchor().mode === "relative", "Clone source did not become aligned");
     undoRedo(before, pixels(), "Clone stamp");
 
+    phase("antialiased clone coverage and offscreen strokes preserve pixels and history");
+    prepare([[ToolType.CLONE_STAMP, {width: 8, hardness: 100, spacing: 15, smoothing: false, antialias: true}]]);
+    app.setActiveToolFromType(ToolType.CLONE_STAMP);
+    cloneTool = app.getActiveTool();
+    app.controlKeyDown = true;
+    cloneTool.onMouseDown(10, 10, MouseButton.LEFT);
+    cloneTool.onMouseUp(10, 10, MouseButton.LEFT);
+    app.controlKeyDown = false;
+    before = pixels();
+    cloneTool.onMouseDown(40, 12, MouseButton.LEFT);
+    cloneTool.onMouseMove(40, 16);
+    cloneTool.onMouseUp(40, 16, MouseButton.LEFT);
+    equal(at(40, 12), [0, 0, 255, 255], "Antialiased clone lost its fully covered source pixel");
+    equal(at(34, 12), [0, 0, 0, 0], "Antialiased clone changed pixels beyond its brush");
+    undoRedo(before, pixels(), "Antialiased clone");
+    let offscreenBefore = pixels();
+    let offscreenHistory = history.undoStack.length;
+    cloneTool.onMouseMove(-100, -100);
+    check(!cloneTool.destinationPreview.isVisible(), "Offscreen clone retained its destination preview");
+    cloneTool.onMouseDown(-100, -100, MouseButton.LEFT);
+    cloneTool.onMouseMove(-110, -110);
+    cloneTool.onMouseUp(-110, -110, MouseButton.LEFT);
+    equal(pixels(), offscreenBefore, "Offscreen clone changed destination pixels");
+    check(history.undoStack.length === offscreenHistory, "Offscreen clone recorded an empty stroke");
+
     phase("spaced recoloring keeps the gaps between separate dabs untouched");
     prepare([[ToolType.RECOLOR, {width: 4, spacing: 400, hardness: 100, tolerance: 0,
         smoothing: false, recolorSampling: "secondary", antialias: false}]]);
