@@ -65,6 +65,38 @@ module.exports = async function checkPixelTools() {
         equal(pixels(), after, name + " redo changed final pixels");
     };
 
+    phase("contiguous flood fill matches an independent four-neighbor search around a hole");
+    prepare([[ToolType.PAINT_BUCKET, {tolerance: 0, floodMode: "contiguous", antialias: false}]]);
+    let floodSource = new ImageData(64, 64);
+    let floodBits = new Uint8Array(64 * 64);
+    for (let y = 0; y < 64; ++y) {
+        for (let x = 0; x < 64; ++x) {
+            let blue = x < 4 || y < 4 || x >= 60 || y >= 60 || (x >= 20 && x < 40 && y >= 20 && y < 40);
+            floodBits[y * 64 + x] = blue ? 1 : 0;
+            floodSource.data.set(blue ? [0, 0, 255, 255] : [255, 255, 255, 255], (y * 64 + x) * 4);
+        }
+    }
+    surface.context.putImageData(floodSource, 0, 0);
+    let floodExpected = new Uint8ClampedArray(floodSource.data);
+    let seen = new Set([0]);
+    let queue = [[0, 0]];
+    for (let head = 0; head < queue.length; ++head) {
+        let [x, y] = queue[head];
+        floodExpected.set([255, 0, 0, 255], (y * 64 + x) * 4);
+        for (let [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+            let index = ny * 64 + nx;
+            if (nx >= 0 && ny >= 0 && nx < 64 && ny < 64 && !seen.has(index) && floodBits[index]) {
+                seen.add(index);
+                queue.push([nx, ny]);
+            }
+        }
+    }
+    app.setActiveToolFromType(ToolType.PAINT_BUCKET);
+    let ringBucket = app.getActiveTool();
+    ringBucket.onMouseDown(0, 0, MouseButton.LEFT);
+    check(ringBucket.onKeyPress("Escape"), "Escape did not finish a pending flood operation");
+    equal(pixels(), floodExpected, "Scanline flood fill disagreed with independent four-neighbor connectivity");
+    undoRedo(floodSource.data, floodExpected, "Contiguous ring flood");
     phase("contiguous and global paint bucket");
     for (let floodMode of ["contiguous", "global"]) {
         prepare([[ToolType.PAINT_BUCKET, {tolerance: 0, floodMode, antialias: false}]]);

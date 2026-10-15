@@ -237,6 +237,31 @@ module.exports = async function checkGeometryLayout() {
     check(number.value === stopped, "Released numeric button retained its repeat timer");
     wrapper.remove();
 
+    phase("concave stencil tracing preserves holes and islands through independent native rasterization");
+    for (let rows of [
+        ["111111", "100001", "101101", "101101", "100001", "111111"],
+        ["110011", "110011", "111111", "111111", "110011", "110011"],
+        ["111111", "110011", "110011", "110011", "111111", "111111"]
+    ]) {
+        let originalBits = rows.join("").split("").map(Number);
+        let concaveStencil = new BitVector2D(6, 6);
+        for (let y = 0; y < 6; ++y) {
+            for (let x = 0; x < 6; ++x) {
+                concaveStencil.set(x, y, originalBits[y * 6 + x] !== 0);
+            }
+        }
+        let tracedPath = GraphicsPath.pathFromStencil(concaveStencil, new Rectangle(0, 0, 6, 6));
+        let tracedSurface = Surface.create(6, 6);
+        tracedSurface.context.fillStyle = "black";
+        FillSelectionFunction.tracePath(tracedSurface.context, tracedPath);
+        tracedSurface.context.fill("evenodd");
+        let tracedPixels = tracedSurface.context.getImageData(0, 0, 6, 6).data;
+        check(tracedPixels.every((value, index) => value === (index % 4 === 3 ? originalBits[Math.floor(index / 4)] * 255 : 0)),
+            "Concave stencil tracing changed a hole, connected edge, or island: " + rows.join("/"));
+        check(concaveStencil.isEmpty(), "Stencil tracing left unprocessed source pixels");
+        tracedSurface.dispose();
+        tracedPath.dispose();
+    }
     phase("horizontal and vertical scroll-list drag swapping");
     for (let orientation of [ScrollOrientation.HORIZONTAL, ScrollOrientation.VERTICAL]) {
         let session = new ScrollSession();

@@ -134,5 +134,31 @@ module.exports = async function checkUILifecycle() {
     helpAction.runPerformAction();
     check(!help.isOpen(), "Help shortcut did not close its menu");
     check(FormRegistry.get("missing-lifecycle-form") === null, "Missing form lookup did not return null");
+    phase("new-dialog cancellation is idempotent and size preferences tolerate denied storage");
+    let newFile = NewFileDialog.open(4, 3);
+    let newClose = document.querySelector(".new-file-dialog .app-dialog-close");
+    newClose.click();
+    newClose.click();
+    check(await newFile === null && NewFileDialog.activePromise === null, "Repeated new-dialog cancel retained its singleton");
+    let stored = localStorage.getItem(ImageSizeDialog.storageKey);
+    let getStored = Storage.prototype.getItem;
+    let setStored = Storage.prototype.setItem;
+    let deniedWrites = 0;
+    try {
+        Storage.prototype.getItem = () => { throw new DOMException("Storage blocked", "SecurityError"); };
+        Storage.prototype.setItem = () => {
+            ++deniedWrites;
+            throw new DOMException("Quota exhausted", "QuotaExceededError");
+        };
+        let fallback = ImageSizeDialog.loadPreferences();
+        check(fallback.resampling === "adaptiveHighQuality" && fallback.gammaCorrect
+            && fallback.fill === "transparent" && fallback.anchor === "top", "Blocked size preferences lost defaults");
+        ImageSizeDialog.savePreferences("resize", {maintainRatio: true, resampling: "nearestNeighbor", gammaCorrect: false});
+        check(deniedWrites === 1, "Size preferences did not attempt exactly one optional write");
+    } finally {
+        Storage.prototype.getItem = getStored;
+        Storage.prototype.setItem = setStored;
+    }
+    check(localStorage.getItem(ImageSizeDialog.storageKey) === stored, "Denied size preferences changed persisted data");
     host.remove();
 };

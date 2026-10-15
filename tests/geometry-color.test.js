@@ -464,3 +464,16 @@ test("scan conversion advances past a completed roof into the next pair of side 
     assert.deepEqual(Array.from(Utility.getScans(vertices), scan => [scan.x, scan.y, scan.length]),
         [[0, 0, 0], [-2, 1, 4], [-2, 2, 4], [-2, 3, 4]]);
 });
+
+test("single-rectangle regions produce independent paths with unchanged coordinates", () => {
+    let {Rectangle, Region, GraphicsPath} = loadGeometry();
+    let rectangle = new Rectangle(2, 3, 4, 5);
+    let region = Region.fromRectangle(rectangle);
+    let converted = GraphicsPath.fromRegion(region);
+    assert.deepEqual(rectangleValues(converted.getBounds()), [2, 3, 4, 5]);
+    assert.deepEqual(Array.from(converted.getPathPoints(), pointValues), [[2, 3], [6, 3], [6, 8], [2, 8], [2, 3]]);
+    rectangle.x = 100;
+    assert.deepEqual(rectangleValues(converted.getBounds()), [2, 3, 4, 5]);
+    region.dispose();
+    converted.dispose();
+});

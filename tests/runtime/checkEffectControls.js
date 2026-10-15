@@ -308,4 +308,44 @@ module.exports = async function checkEffectControls() {
     check(Number(range.value) === 0, "Double thumb press did not restore its default");
     range.dispatchEvent(new PointerEvent("pointercancel", {bubbles: true}));
     await cancel(pending);
+    phase("preview callback failures release busy state and preserve cancellation");
+    for (let asynchronous of [false, true]) {
+        let failure = new Error(asynchronous ? "asynchronous preview failure" : "synchronous preview failure");
+        let failures = [];
+        let originalConsoleError = console.error;
+        try {
+            console.error = (...args) => failures.push(args);
+            pending = EffectConfigDialog.open({title: "Failure contract", controls: [], values: {},
+                onPreview: () => {
+                    if (asynchronous) {
+                        return Promise.reject(failure);
+                    }
+                    throw failure;
+                }});
+            await waitFor(() => failures.length === 1 && !form().hasAttribute("aria-busy"));
+            check(failures[0][0] === "Effect preview failed" && failures[0][1] === failure,
+                "Preview failure lost its original diagnostic");
+            let closeButton = form().querySelector(".app-dialog-close");
+            closeButton.click();
+            closeButton.click();
+            check(await pending === null && form() === null, "Preview failure prevented idempotent cancellation");
+        } finally {
+            console.error = originalConsoleError;
+        }
+    }
+    phase("late asynchronous effect completion cannot revive a closed dialog");
+    let completePreview = null;
+    pending = EffectConfigDialog.open({title: "Late preview contract", controls: [], values: {},
+        onPreview: () => new Promise(resolve => { completePreview = resolve; })});
+    await waitFor(() => completePreview !== null && form().hasAttribute("aria-busy"));
+    let closedDialog = form();
+    closedDialog.querySelector(".app-dialog-close").click();
+    check(await pending === null, "Cancel did not settle an in-flight preview dialog");
+    completePreview();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    check(!closedDialog.isConnected && !closedDialog.hasAttribute("aria-busy") && form() === null,
+        "Late preview completion restored a closed dialog or its busy state");
+    check(EffectConfigDialog.themeColor("--missing-effect-contract-color", "#123456") === "#123456",
+        "Missing theme variable did not use its requested fallback");
+
 };

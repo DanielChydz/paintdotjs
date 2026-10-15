@@ -17,11 +17,11 @@ Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,087 | 41,398 | 99.24% | 311 |
-| Branches | 9,484 | 9,818 | 96.59% | 334 |
+| Lines/statements | 41,112 | 41,398 | 99.3% | 286 |
+| Branches | 9,505 | 9,828 | 96.71% | 323 |
 | Functions | 2,530 | 2,530 | 100% | 0 |
 
-- **182 tests passed; zero failures.**
+- **183 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -118,6 +118,15 @@ No automatic approval review rejected these authorized actions.
   canvas so a width change cannot revive a stale preview. Assert unchanged pixels.
 
 ## Additional resumed-session test coverage
+
+- Independent native Canvas masks validate concave stencil outlines, holes and
+  islands; a separate queue-based four-neighbor oracle validates scanline flood
+  filling around an enclosing hole with a disconnected blue island. Single-
+  rectangle region conversion asserts coordinates and clone independence.
+- Effect preview failure tests cover thrown/rejected callbacks, original error
+  diagnostics, cleared busy state, repeated cancellation and late completion
+  after close. New-file cancel and blocked/quota-exhausted image-size preferences
+  are also verified without changing persisted data.
 
 - Shape regressions cover separate antialiased rectangle interior/outline colors
   with exact undo/redo, unknown persisted shape fallback, filled-arrow/flat line
@@ -277,23 +286,23 @@ remaining gaps are mostly alternate modes, guards, fallbacks and races.
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 31 | 16 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 24 | 26 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 22 | 25 |
-| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 15 | 20 |
 | [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 15 | 8 |
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 15 | 7 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 14 | 16 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 14 | 15 |
-| [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 13 | 10 |
 | [AppView.js](./js/src/engine/AppView.js) | 12 | 25 |
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 11 | 23 |
+| [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 9 | 8 |
 | [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 8 | 5 |
 | [MoveContextHistoryMemento.js](./js/src/engine/document/history/memento/MoveContextHistoryMemento.js) | 8 | 1 |
 | [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 7 | 9 |
 | [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 6 | 17 |
-| [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 6 | 5 |
+| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 6 | 16 |
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 6 | 4 |
 | [CloneStampTool.js](./js/src/engine/document/tool/tool/CloneStampTool.js) | 6 | 4 |
-| [GraphicsPath.js](./js/src/engine/document/selection/GraphicsPath.js) | 6 | 3 |
 | [DocumentWorkspace.js](./js/src/engine/document/DocumentWorkspace.js) | 6 | 1 |
+| [ToolSelector.js](./js/src/interface/panel/header/tool/ToolSelector.js) | 5 | 3 |
+| [CurveEditor.js](./js/src/interface/window/effect/CurveEditor.js) | 4 | 3 |
 
 Known audit points:
 
