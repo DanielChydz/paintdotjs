@@ -16,4 +16,17 @@ class MoveToolBaseMode {
     static TRANSLATE = 0;
     static SCALE = 1;
     static ROTATE = 2;
+
+    static getName(mode) {
+        switch (mode) {
+            case MoveToolBaseMode.TRANSLATE:
+                return "translate";
+            case MoveToolBaseMode.SCALE:
+                return "scale";
+            case MoveToolBaseMode.ROTATE:
+                return "rotate";
+            default:
+                throw new Error("Invalid enum value");
+        }
+    }
 }

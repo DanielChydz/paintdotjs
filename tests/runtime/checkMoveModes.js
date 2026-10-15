@@ -67,6 +67,27 @@ module.exports = async function checkMoveModes() {
     check(!lifecycleWorkspace.isScratchSurfaceBorrowed
         && subscriptionCounts().every((value, index) => value === beforeActivation[index]),
     "Deactivating retried Move retained scratch ownership or subscriptions");
+    phase("abandoned failed Move activation disposes only its own render resources");
+    let renderersBeforeAbandon = lifecycleWorkspace.getSurfaceBox().getRendererList().length;
+    lifecycleWorkspace.borrowScratchSurface("abandoned activation owner");
+    let abandonedFailure;
+    try {
+        app.setActiveToolFromType(ToolType.MOVE);
+    } catch (error) {
+        abandonedFailure = error;
+    }
+    let abandonedMove = app.getActiveTool();
+    check(abandonedFailure?.message.includes("abandoned activation owner") && abandonedMove.renderArgs !== null,
+        "Abandoned activation did not retain its partial render state for cleanup");
+    abandonedMove.dispose();
+    check(abandonedMove.renderArgs === null && abandonedMove.context === null
+        && lifecycleWorkspace.getSurfaceBox().getRendererList().length === renderersBeforeAbandon
+        && lifecycleWorkspace.isScratchSurfaceBorrowed
+        && lifecycleWorkspace.borrowScratchSurfaceReason === "abandoned activation owner"
+        && subscriptionCounts().every((value, index) => value === beforeActivation[index]),
+    "Disposing failed Move activation leaked resources or released another owner's scratch surface");
+    app.setActiveTool(null);
+    lifecycleWorkspace.returnScratchSurface();
     app.setActiveToolFromType(ToolType.MOVE);
     let lifecycleMove = app.getActiveTool();
     let lifecycleSurface = firstLayer.getSurface();

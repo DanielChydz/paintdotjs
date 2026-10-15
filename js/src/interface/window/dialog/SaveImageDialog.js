@@ -93,7 +93,7 @@ class SaveImageDialog {
             let mover = null;
             let closed = false;
             let timer = null;
-            let resizeFrame = null;
+            const resizeUpdates = new Debounced();
             let generation = 0;
             let previewUrl = null;
             let currentBlob = null;
@@ -177,18 +177,9 @@ class SaveImageDialog {
                 }
             };
             const resizeObserver = new ResizeObserver(() => {
-                // Writing stage dimensions from inside ResizeObserver can resize
-                // the observed viewport again in the same delivery cycle. Defer
-                // and coalesce the layout write to avoid the browser's
-                // "undelivered notifications" loop warning.
-                if (resizeFrame !== null) {
-                    return;
-                }
-                resizeFrame = requestAnimationFrame(() => {
-                    resizeFrame = null;
-                    if (closed) {
-                        return;
-                    }
+                // Defer layout writes beyond ResizeObserver delivery. The shared
+                // scheduler coalesces requests and cancels them when closing.
+                resizeUpdates.debounce("layout", () => {
                     if (autoFit) {
                         fitPreview();
                     }
@@ -292,9 +283,7 @@ class SaveImageDialog {
                 if (timer !== null) {
                     clearTimeout(timer);
                 }
-                if (resizeFrame !== null) {
-                    cancelAnimationFrame(resizeFrame);
-                }
+                resizeUpdates.cancelDebounce("layout");
                 document.removeEventListener("keydown", onKeyDown, true);
                 resizeObserver.disconnect();
                 if (mover !== null) {

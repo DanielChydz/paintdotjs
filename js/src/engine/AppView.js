@@ -164,16 +164,12 @@ class AppView {
             };
         };
         const finishInterruptedPointer = event => {
-            if (!this.pointerDown) {
-                return;
-            }
+            // Callers own the active pointer; its last position is recorded
+            // before tool dispatch and cleared together with pointer ownership.
             try {
                 const point = event === null
                     ? this.autoScrollPointer
                     : getPointerPosition(event);
-                if (point === null) {
-                    return;
-                }
                 const input = event === null ? {
                     pressure: point.pressure,
                     pointerType: point.pointerType,

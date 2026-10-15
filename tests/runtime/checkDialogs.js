@@ -114,6 +114,20 @@ module.exports = async function checkDialogs() {
         input(numbers[0], 200);
         check(Number(numbers[1].value) === 240 && Number(numbers[2].value) === 120,
             "Percentage resizing returned wrong dimensions");
+        let inactiveSummary = form.querySelector(".image-size-summary").textContent;
+        let inactiveWidth = numbers[1].value;
+        let inactivePrintHeight = numbers[5].value;
+        check(numbers[1].disabled && numbers[5].disabled, "Percentage mode left absolute controls enabled");
+        input(numbers[1], 5000);
+        check(numbers[0].value === "200" && numbers[2].value === "120"
+            && form.querySelector(".image-size-summary").textContent === inactiveSummary,
+        "Programmatic input on disabled pixel width recalculated percentage-mode dimensions");
+        numbers[1].value = inactiveWidth;
+        input(numbers[5], 10);
+        check(numbers[0].value === "200" && numbers[1].value === "240" && numbers[2].value === "120"
+            && form.querySelector(".image-size-summary").textContent === inactiveSummary,
+        "Programmatic input on disabled print height recalculated percentage-mode dimensions");
+        numbers[5].value = inactivePrintHeight;
         submit(form);
         let result = await resultOf(pending);
         check(result.width === 240 && result.height === 120, "Image-size result lost the chosen dimensions");
@@ -134,6 +148,11 @@ module.exports = async function checkDialogs() {
     maintainResize.checked = true;
     change(maintainResize);
     numbers = [...form.querySelectorAll("input[type=number]")];
+    let inactivePercentage = numbers[0].value;
+    input(numbers[0], 250);
+    check(numbers[1].value === "120" && numbers[2].value === "60",
+        "Programmatic input on disabled percentage changed absolute dimensions");
+    numbers[0].value = inactivePercentage;
     input(numbers[2], 30);
     check(numbers[1].value === "60" && numbers[2].value === "30", "Changing resize height broke the maintained ratio");
     input(numbers[3], "");

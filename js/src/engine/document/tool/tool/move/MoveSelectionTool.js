@@ -140,23 +140,7 @@ class MoveSelectionTool extends MoveToolBase {
         this.tracking = false;
         this.positionNubs(this.context.currentMode);
 
-        let resourceName;
-        switch (this.context.currentMode) {
-            default:
-                throw new Error("Invalid enum argument");
-
-            case MoveToolBaseMode.ROTATE:
-                resourceName = "moveSelectionTool.historyMemento.rotate";
-                break;
-
-            case MoveToolBaseMode.SCALE:
-                resourceName = "moveSelectionTool.historyMemento.scale";
-                break;
-
-            case MoveToolBaseMode.TRANSLATE:
-                resourceName = "moveSelectionTool.historyMemento.translate";
-                break;
-        }
+        let resourceName = "moveSelectionTool.historyMemento." + MoveToolBaseMode.getName(this.context.currentMode);
 
         this.context.startAngle += this.angleDelta;
 

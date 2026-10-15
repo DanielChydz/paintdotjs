@@ -462,29 +462,9 @@ class MoveTool extends MoveToolBase {
         this.tracking = false;
         this.positionNubs(this.context.currentMode);
 
-        let resourceName;
-        switch (this.context.currentMode) {
-            default:
-                throw new Error("Invalid enum argument");
-
-            case MoveToolBaseMode.ROTATE:
-                resourceName = "moveTool.historyMemento.rotate";
-                break;
-
-            case MoveToolBaseMode.SCALE:
-                resourceName = "moveTool.historyMemento.scale";
-                break;
-
-            case MoveToolBaseMode.TRANSLATE:
-                resourceName = "moveTool.historyMemento.translate";
-                break;
-        }
+        let resourceName = "moveTool.historyMemento." + MoveToolBaseMode.getName(this.context.currentMode);
 
         this.context.startAngle += this.angleDelta;
-
-        if (this.context.liftTransform == null) {
-            this.context.liftTransform = new Matrix();
-        }
 
         this.context.liftTransform.reset();
         this.context.liftTransform.multiply(this.context.deltaTransform, MatrixOrder.APPEND);

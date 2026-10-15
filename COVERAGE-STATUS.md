@@ -8,16 +8,16 @@ unimplemented stubs/TODOs, choose implementation without asking again.
 
 The target is **100% line and branch coverage of all first-party runtime
 sources**, meaningful regressions, fixes for demonstrated bugs, and verified
-commits. **The target is not complete.** Line and branch coverage still fail
-the strict 100% gate. All functions are covered in the latest measurement.
+commits. **The target is not complete.** Branch coverage still fails
+the strict 100% gate. All lines and functions are covered in the latest measurement; 118 branch alternatives remain.
 
 Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,322 | 41,356 | 99.91% | 34 |
-| Branches | 9,847 | 9,985 | 98.61% | 138 |
-| Functions | 2,530 | 2,530 | 100% | 0 |
+| Lines/statements | 41,281 | 41,281 | 100% | 0 |
+| Branches | 9,861 | 9,979 | 98.81% | 118 |
+| Functions | 2,532 | 2,532 | 100% | 0 |
 
 - **198 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
@@ -90,12 +90,32 @@ No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
 
+- **100% lines/functions milestone**: 198 tests pass across all 254 runtime files.
+  Branch coverage is 98.81% (118 uncovered alternatives). Continue toward the
+  requested 100% branches; do not mark the task complete yet.
+- Transform mode names/validation live in MoveToolBaseMode and are shared by
+  dispatch/history naming. Validate before selection mutation. Scaling uses the
+  already validated edge vector to derive its opposite anchor, replacing eight
+  duplicated anchor branches; all handle/flip/center/shift pixel tests pass.
+- Remove checks dominated by prior invariants: interrupted-pointer callers own a
+  stored pointer; transform multiplication already requires a lift matrix; level
+  updates are called only with an active handle; positive source alpha makes
+  combined blend alpha positive.
+- Debounced.cancelDebounce releases frame handles and supports reuse. Save preview
+  resizing uses that existing scheduler and cancels it on close. Native tests
+  verify cancellation, scheduling again, fit/manual zoom and queued encode cancel.
+- Remaining line guards are covered through meaningful contracts: inactive size
+  input events cannot recalculate active dimensions; reentrant color callbacks do
+  not recurse/duplicate model events; supplied stale strip rows cannot reorder
+  closed workspaces; abandoned failed Move activation frees its own render state
+  without returning a scratch surface borrowed by someone else.
+
 - `Tool.onActivate`: acquire scratch ownership before subscribing to selection and
   history. A native regression demonstrated four leaked listeners after a busy
   surface rejected activation. Retrying Move now replaces old render arguments,
   registers exactly one listener set, and deactivation returns to baseline.
   Painting, pending-shape, Move and brush-interruption scenarios pass. The table
-  above predates this latest fix until the next full coverage run.
+  above includes this fix in the latest successful full coverage run.
 
 - `ToolOptionDropdown`: observe the actual scrolling font menu, not the full
   results container. The strengthened native regression failed before this fix:
@@ -439,26 +459,26 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 9 | 5 |
-| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 6 | 12 |
-| [ImageSizeDialog.js](./js/src/interface/window/dialog/ImageSizeDialog.js) | 6 | 3 |
-| [AppView.js](./js/src/engine/AppView.js) | 4 | 9 |
-| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 2 | 15 |
-| [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 2 | 3 |
-| [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 2 | 2 |
-| [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 2 | 2 |
-| [MoveSelectionTool.js](./js/src/engine/document/tool/tool/move/MoveSelectionTool.js) | 1 | 1 |
 | [DocumentIO.js](./js/src/io/DocumentIO.js) | 0 | 17 |
+| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 0 | 14 |
 | [TextTool.js](./js/src/engine/document/tool/tool/TextTool.js) | 0 | 12 |
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 0 | 9 |
 | [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 0 | 8 |
+| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 0 | 8 |
+| [AppView.js](./js/src/engine/AppView.js) | 0 | 7 |
 | [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 0 | 6 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 0 | 4 |
 | [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 0 | 3 |
 | [SurfaceBoxBaseRenderer.js](./js/src/engine/document/render/renderer/SurfaceBoxBaseRenderer.js) | 0 | 3 |
-| [Surface.js](./js/src/engine/document/layer/bitmap/Surface.js) | 0 | 3 |
 | [MaskedSurface.js](./js/src/engine/document/layer/bitmap/MaskedSurface.js) | 0 | 3 |
 | [PdnDocumentCodec.js](./js/src/io/PdnDocumentCodec.js) | 0 | 2 |
+| [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 0 | 2 |
+| [RectangleSelectTool.js](./js/src/engine/document/tool/tool/RectangleSelectTool.js) | 0 | 2 |
+| [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 0 | 2 |
+| [Surface.js](./js/src/engine/document/layer/bitmap/Surface.js) | 0 | 2 |
+| [ImageEncoder.js](./js/src/io/ImageEncoder.js) | 0 | 1 |
+| [SwatchItem.js](./js/src/interface/window/form/colors/SwatchItem.js) | 0 | 1 |
+| [ErrorForm.js](./js/src/interface/window/form/ErrorForm.js) | 0 | 1 |
 
 Known audit points:
 

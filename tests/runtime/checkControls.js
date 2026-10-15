@@ -131,6 +131,30 @@ module.exports = async function checkControls() {
     await rejects(() => colors.setMainColor({}), /Not a color/);
     await rejects(() => colors.setSecondaryColor({}), /Not a color/);
 
+    phase("reentrant color notifications do not recurse or duplicate model changes");
+    let colorCallback = colors.colorCircle.changeCallback;
+    let colorNotifications = 0;
+    let modelChanges = 0;
+    let onModelColor = () => ++modelChanges;
+    colors.changed.add(onModelColor);
+    try {
+        colors.colorCircle.setChangeCallback(color => {
+            ++colorNotifications;
+            colorCallback(color);
+            colors.updateElements("circle");
+        });
+        colors.setSelectedIsPrimary(true);
+        colorNotifications = 0;
+        modelChanges = 0;
+        colors.setMainColor(Color.fromRGBA(31, 47, 63, 79));
+        check(colorNotifications === 1 && modelChanges === 1 && !colors.updating
+            && colors.mainColor.toHex() === "#1f2f3f4f" && colors.redField.getValue() === 31
+            && colors.greenField.getValue() === 47 && colors.blueField.getValue() === 63,
+        "Reentrant color rendering changed model channels, duplicated events or retained the update lock");
+    } finally {
+        colors.colorCircle.setChangeCallback(colorCallback);
+        colors.changed.remove(onModelColor);
+    }
     phase("palette parsing and persistence");
     let palette = colors.parsePalette("; comment\n#80402010 ; translucent\n112233\ninvalid\n");
     check(palette.length === 96 && palette[0].toHex() === "#40201080"

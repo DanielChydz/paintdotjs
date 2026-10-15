@@ -20,13 +20,18 @@ class Debounced {
     }
 
     debounce(id, callback) {
-        if (this.lastAnimationFrames.has(id)) {
-            cancelAnimationFrame(this.lastAnimationFrames.get(id));
-        }
+        this.cancelDebounce(id);
         this.lastAnimationFrames.set(id, requestAnimationFrame(() => {
             this.lastAnimationFrames.delete(id);
             callback();
         }));
+    }
+
+    cancelDebounce(id) {
+        if (this.lastAnimationFrames.has(id)) {
+            cancelAnimationFrame(this.lastAnimationFrames.get(id));
+            this.lastAnimationFrames.delete(id);
+        }
     }
 
     debounceTimeout(id, delay, callback) {

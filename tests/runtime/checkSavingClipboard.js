@@ -134,6 +134,21 @@ module.exports = async function checkSavingClipboard() {
         }
         check(await pending === null, "Cancelled save returned data");
     }
+    phase("canceling a queued quality change prevents another encoding");
+    let queuedEncodes = 0;
+    let queuedSave = SaveImageDialog.open({canvas, initialFormat: "jpeg", encode: (format, options) => {
+        ++queuedEncodes;
+        return encode(format, options);
+    }});
+    await waitFor(ready);
+    let queuedQuality = form().querySelector("input[type=number]");
+    input(queuedQuality, "");
+    check(queuedQuality.value === "0", "Empty save quality did not normalize to zero");
+    input(queuedQuality, 71);
+    cancel(form());
+    check(await queuedSave === null, "Canceling queued quality returned save data");
+    await new Promise(resolve => setTimeout(resolve, 140));
+    check(queuedEncodes === 1 && form() === null, "Canceled quality timer started another encoding or revived its dialog");
     let pending = SaveImageDialog.open({canvas, encode: async () => {
         throw new Error("Injected encoder failure");
     }});

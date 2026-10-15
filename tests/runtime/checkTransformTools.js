@@ -38,6 +38,18 @@ module.exports = async function checkTransformTools() {
         app.setActiveToolFromType(ToolType.MOVE_SELECTION);
         return app.getActiveTool();
     };
+    phase("transform mode names validate history and dispatch identifiers");
+    for (let [mode, name] of [[MoveToolBaseMode.TRANSLATE, "translate"],
+        [MoveToolBaseMode.SCALE, "scale"], [MoveToolBaseMode.ROTATE, "rotate"]]) {
+        check(MoveToolBaseMode.getName(mode) === name, "Transform mode lost its stable history/dispatch name");
+    }
+    let invalidModeRejected = false;
+    try {
+        MoveToolBaseMode.getName(-1);
+    } catch (error) {
+        invalidModeRejected = error.message === "Invalid enum value";
+    }
+    check(invalidModeRejected, "Unknown transform mode was accepted");
     phase("all scale handles, opposite anchors, shift and centered scaling");
     for (let modifiers of ["none", "shift", "alt", "both"]) {
         for (let edge of [

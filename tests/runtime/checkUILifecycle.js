@@ -148,6 +148,20 @@ module.exports = async function checkUILifecycle() {
         number.dispatchEvent(new KeyboardEvent("keydown", {bubbles: true, ...options}));
     }
     check(number.value === "7", "Unsupported gesture changed the number");
+    phase("canceled frame updates release ownership and can be scheduled again");
+    let frameUpdates = new Debounced();
+    let frameCalls = 0;
+    frameUpdates.cancelDebounce("layout");
+    frameUpdates.debounce("layout", () => ++frameCalls);
+    frameUpdates.cancelDebounce("layout");
+    frameUpdates.cancelDebounce("layout");
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    check(frameCalls === 0 && frameUpdates.lastAnimationFrames.size === 0,
+        "Canceling a queued frame retained ownership or ran a stale callback");
+    frameUpdates.debounce("layout", () => ++frameCalls);
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    check(frameCalls === 1 && frameUpdates.lastAnimationFrames.size === 0,
+        "A canceled frame could not be scheduled again or retained its completed handle");
     phase("modal attention is idempotent and missing dialogs do not crash event blocking");
     let observer = ModalDialogController.observer;
     ModalDialogController.initialize();

@@ -140,6 +140,16 @@ module.exports = async function checkDocumentChrome() {
         && strip.documentListPopup.querySelectorAll(".document-list-entry").length === 14
         && app.getDocumentWorkspaces().every((workspace, index) => workspace === orderAfterClose[index]),
     "Stale tab drag or delayed thumbnail update revived or reordered a closed document");
+    let staleInsertionIndex = strip.documentsListItem.items.length;
+    strip.documentsListItem.add(staleItem);
+    try {
+        strip.documentsListItem.itemSwapper(staleItem, item);
+        check(strip.documentsListItem.items[staleInsertionIndex] === staleItem
+            && app.getDocumentWorkspaces().every((workspace, index) => workspace === orderAfterClose[index]),
+        "Strip swapped an explicitly supplied row whose workspace was already closed");
+    } finally {
+        strip.documentsListItem.items.splice(staleInsertionIndex, 1);
+    }
     await DocumentContextMenu.runForWorkspace(transient, () => {
         throw new Error("Closed context target executed its callback");
     });

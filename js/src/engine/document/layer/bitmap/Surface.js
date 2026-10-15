@@ -94,6 +94,7 @@ class Surface {
             }
 
             const backdropAlpha = targetData[offset + 3] / 255;
+            // Positive source coverage makes the combined alpha positive too.
             const outputAlpha = sourceAlpha + backdropAlpha * (1 - sourceAlpha);
 
             for (let channel = 0; channel < 3; ++channel) {
@@ -103,7 +104,7 @@ class Surface {
                 const premultiplied = sourceAlpha * (1 - backdropAlpha) * foreground
                     + sourceAlpha * backdropAlpha * blended
                     + (1 - sourceAlpha) * backdropAlpha * backdrop;
-                targetData[offset + channel] = outputAlpha === 0 ? 0 : premultiplied / outputAlpha;
+                targetData[offset + channel] = premultiplied / outputAlpha;
             }
             targetData[offset + 3] = outputAlpha * 255;
         }

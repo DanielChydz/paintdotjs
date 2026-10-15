@@ -1216,9 +1216,6 @@ class EffectConfigDialog {
             return Math.max(0, Math.min(255, Math.round((bounds.bottom - event.clientY) / bounds.height * 255)));
         };
         const update = event => {
-            if (dragging < 0) {
-                return;
-            }
             const current = positions();
             const minimum = dragging === 0 ? 0 : Math.ceil(current[dragging - 1]) + 1;
             const maximum = dragging === current.length - 1 ? 255 : Math.floor(current[dragging + 1]) - 1;

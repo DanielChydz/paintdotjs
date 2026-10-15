@@ -615,6 +615,8 @@ class MoveToolBase extends Tool {
                 newMouseXY.getY() - this.context.startMouseXY.getY()
             );
 
+            const modeName = MoveToolBaseMode.getName(this.context.currentMode);
+
             this.preRender();
 
             this.dontDrop = true;
@@ -630,8 +632,8 @@ class MoveToolBase extends Tool {
 
             let interim = this.getSelection().getInterimTransformCopy();
 
-            switch (this.context.currentMode) {
-                case MoveToolBaseMode.TRANSLATE:
+            switch (modeName) {
+                case "translate":
                     // Snap the movement delta, not each pointer position. This
                     // advances to the adjacent grid pixel as soon as the drag
                     // crosses half a pixel and is independent of where inside
@@ -642,7 +644,7 @@ class MoveToolBase extends Tool {
                     );
                     translateMatrix.translate(newOffset.getX(), newOffset.getY(), MatrixOrder.APPEND);
                     break;
-                case MoveToolBaseMode.ROTATE:
+                case "rotate":
                     let rect = this.context.liftedBounds;
                     let center = new Point(
                         rect.getLeft() + (rect.getWidth() / 2.0),
@@ -686,7 +688,7 @@ class MoveToolBase extends Tool {
                     this.app.setCursor(direction + "-resize");
 
                     break;
-                case MoveToolBaseMode.SCALE:
+                case "scale":
                     let xyAxes = this.getEdgeVector(this.context.startEdge);
                     const scalesHorizontally = xyAxes.getX() !== 0;
                     const scalesVertically = xyAxes.getY() !== 0;
@@ -738,50 +740,9 @@ class MoveToolBase extends Tool {
                         theEdge = this.flipEdgeVertically(theEdge);
                     }
 
-                    switch (theEdge) {
-                        default:
-                            throw new Error("Invalid enum value");
-
-                        case MoveToolBaseEdge.TOP_LEFT:
-                            xTranslate = -spBounds2.getLeft() - spBounds2.getWidth();
-                            yTranslate = -spBounds2.getTop() - spBounds2.getHeight();
-                            break;
-
-                        case MoveToolBaseEdge.TOP:
-                            xTranslate = -spBounds2.getLeft() - (spBounds2.getWidth() / 2);
-                            yTranslate = -spBounds2.getTop() - spBounds2.getHeight();
-                            break;
-
-                        case MoveToolBaseEdge.TOP_RIGHT:
-                            xTranslate = -spBounds2.getLeft();
-                            yTranslate = -spBounds2.getTop() - spBounds2.getHeight();
-                            break;
-
-                        case MoveToolBaseEdge.LEFT:
-                            xTranslate = -spBounds2.getLeft() - spBounds2.getWidth();
-                            yTranslate = -spBounds2.getTop() - (spBounds2.getHeight() / 2);
-                            break;
-
-                        case MoveToolBaseEdge.RIGHT:
-                            xTranslate = -spBounds2.getLeft();
-                            yTranslate = -spBounds2.getTop() - (spBounds2.getHeight() / 2);
-                            break;
-
-                        case MoveToolBaseEdge.BOTTOM_LEFT:
-                            xTranslate = -spBounds2.getLeft() - spBounds2.getWidth();
-                            yTranslate = -spBounds2.getTop();
-                            break;
-
-                        case MoveToolBaseEdge.BOTTOM:
-                            xTranslate = -spBounds2.getLeft() - (spBounds2.getWidth() / 2);
-                            yTranslate = -spBounds2.getTop();
-                            break;
-
-                        case MoveToolBaseEdge.BOTTOM_RIGHT:
-                            xTranslate = -spBounds2.getLeft();
-                            yTranslate = -spBounds2.getTop();
-                            break;
-                    }
+                    const edgeVector = this.getEdgeVector(theEdge);
+                    xTranslate = -spBounds2.getLeft() - spBounds2.getWidth() * (1 - edgeVector.x) / 2;
+                    yTranslate = -spBounds2.getTop() - spBounds2.getHeight() * (1 - edgeVector.y) / 2;
 
                     const scaleFromCenter = this.app.isAltKeyDown();
                     if (scaleFromCenter) {
@@ -822,8 +783,6 @@ class MoveToolBase extends Tool {
                     this.app.setCursorImg("hand_closed_cursor");
 
                     break;
-                default:
-                    throw new Error("Invalid enum value");
             }
 
             this.context.deltaTransform.reset();
