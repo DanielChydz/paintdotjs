@@ -90,6 +90,13 @@ No automatic approval review rejected these authorized actions.
 
 ## Resumed-session production fixes
 
+- `Tool.onActivate`: acquire scratch ownership before subscribing to selection and
+  history. A native regression demonstrated four leaked listeners after a busy
+  surface rejected activation. Retrying Move now replaces old render arguments,
+  registers exactly one listener set, and deactivation returns to baseline.
+  Painting, pending-shape, Move and brush-interruption scenarios pass. The table
+  above predates this latest fix until the next full coverage run.
+
 - `ToolOptionDropdown`: observe the actual scrolling font menu, not the full
   results container. The strengthened native regression failed before this fix:
   offscreen font previews were loaded immediately. It now checks unloaded state

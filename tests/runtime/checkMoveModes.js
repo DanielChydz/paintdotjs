@@ -39,6 +39,35 @@ module.exports = async function checkMoveModes() {
     } finally {
         window.requestIdleCallback = requestIdle;
     }
+    phase("retrying Move activation after a busy scratch surface does not duplicate event subscriptions");
+    app.setActiveTool(null);
+    let subscriptionCounts = () => [lifecycleWorkspace.getSelection().changing.listeners.length,
+        lifecycleWorkspace.getSelection().changed.listeners.length, lifecycleWorkspace.getHistory().executing.listeners.length,
+        lifecycleWorkspace.getHistory().executed.listeners.length];
+    let beforeActivation = subscriptionCounts();
+    lifecycleWorkspace.borrowScratchSurface("activation failure regression");
+    let failedActivation;
+    try {
+        app.setActiveToolFromType(ToolType.MOVE);
+    } catch (error) {
+        failedActivation = error;
+    }
+    let retryMove = app.getActiveTool();
+    check(failedActivation?.message.includes("activation failure regression") && !retryMove.isActive(),
+        "Move did not reject activation while another operation owned the scratch surface");
+    check(subscriptionCounts().every((value, index) => value === beforeActivation[index]),
+        "Failed Move activation leaked selection/history listeners");
+    let interruptedRenderArgs = retryMove.renderArgs;
+    lifecycleWorkspace.returnScratchSurface();
+    app.setActiveTool(retryMove);
+    check(retryMove.isActive() && retryMove.renderArgs !== interruptedRenderArgs
+        && subscriptionCounts().every((value, index) => value === beforeActivation[index] + 1),
+    "Retried Move activation reused stale render arguments or registered duplicate listeners");
+    app.setActiveTool(null);
+    check(!lifecycleWorkspace.isScratchSurfaceBorrowed
+        && subscriptionCounts().every((value, index) => value === beforeActivation[index]),
+    "Deactivating retried Move retained scratch ownership or subscriptions");
+    app.setActiveToolFromType(ToolType.MOVE);
     let lifecycleMove = app.getActiveTool();
     let lifecycleSurface = firstLayer.getSurface();
     let idlePixels = lifecycleSurface.context.getImageData(0, 0, 32, 32).data;

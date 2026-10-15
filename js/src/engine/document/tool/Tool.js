@@ -283,14 +283,15 @@ class Tool {
 
     onActivate() {
         this.selection = this.getSelection();
+        this.historyStack = this.getDocumentWorkspace().getHistory();
+        // Acquire the fallible resource before subscribing. A busy scratch
+        // surface must leave activation safe to retry without duplicate events.
+        this.scratchSurface = this.getDocumentWorkspace().borrowScratchSurface(this.type.getName());
+
         this.selection.changing.add(this.selectionChangingListener);
         this.selection.changed.add(this.selectionChangedListener);
-
-        this.historyStack = this.getDocumentWorkspace().getHistory();
         this.historyStack.executing.add(this.historyExecutingListener);
         this.historyStack.executed.add(this.historyExecutedListener);
-
-        this.scratchSurface = this.getDocumentWorkspace().borrowScratchSurface(this.type.getName());
         this.active = true;
     }
 
