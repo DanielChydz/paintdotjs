@@ -1,7 +1,25 @@
 # Runtime coverage handoff
 
-The completed checkpoint below predates the open-artwork migration. See
-ARTWORK-MIGRATION.md for that active task; measure fresh after its source changes.
+## Verified after open-artwork migration (2026-10-16)
+
+The requested 100% target is maintained after replacing proprietary resources.
+All 210 tests pass. All 255 runtime JavaScript files remain included, with no new
+coverage exclusions or ignore directives.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 40,972 | 40,972 | 100% | 0 |
+| Branches | 9,942 | 9,942 | 100% | 0 |
+| Functions | 2,515 | 2,515 | 100% | 0 |
+
+Source/test lint, headers, version, bundled-asset and whitespace checks pass, as does
+`npx c8 report --check-coverage --lines 100 --branches 100`.
+Current logs: `/tmp/paintdotjs-open-coverage.log`, `/tmp/paintdotjs-open-strict.log`.
+The asset task and licensing/provenance checks are documented in ARTWORK-MIGRATION.md.
+
+## Historical checkpoint before artwork migration
+
+The sections below describe the pre-migration measurements and artifacts.
 
 ## Completed checkpoint (2026-10-16)
 

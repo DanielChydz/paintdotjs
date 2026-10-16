@@ -109,7 +109,7 @@ function extractArchive(archive, destination) {
                 const unixType = (entry.externalFileAttributes >>> 16) & 0o170000;
                 if (relative.startsWith('/') || relative === '..' || relative.startsWith('../')
                     || path.posix.isAbsolute(relative) || unixType === 0o120000) {
-                    return fail(new Error(`Unsafe path in official archive: ${entry.fileName}`));
+                    return fail(new Error(`Unsafe path in archive: ${entry.fileName}`));
                 }
                 const target = path.join(destination, ...relative.split('/'));
                 if (normalized.endsWith('/')) {

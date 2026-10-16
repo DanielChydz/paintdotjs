@@ -389,10 +389,6 @@ class PdnDocumentCodec {
             const nameEnd = this.skipLengthPrefixedString(repaired, nameRecordOffset + 5);
             const propertyOffset = nameEnd + 5; // MemberReference for metadata items.
             const recordOffset = propertyOffset + 3; // visible, background, opacity.
-            if (recordOffset + 4 > repaired.length) {
-                return null;
-            }
-
             const brokenBlendMode = new DataView(
                 repaired.buffer,
                 repaired.byteOffset + recordOffset,

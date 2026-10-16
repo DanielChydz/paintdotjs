@@ -396,3 +396,44 @@ test("independent PDN schemas cover all supported layer counts and reproduce com
     let malformed = new Uint8Array(16).fill(0x80);
     assert.equal(codec.isLayerNameRecord(malformed, 0), false);
 });
+
+
+test("legacy blend repair retains negative enum object ids without old template bytes", async () => {
+    let codec = loadCodec({fetch: templateFetch});
+    let template = new Uint8Array(fs.readFileSync(path.resolve(__dirname, "../assets/pdn/templates/2.bin")));
+    let marker = new TextEncoder().encode("PDJ_LAYER_0000");
+    let enumStart = codec.findByteSequence(template, marker) + marker.length + 8;
+    let enumEnd = codec.findBlendModeValueOffset(template, enumStart) + 4;
+    let firstEnum = Buffer.from(template.subarray(enumStart, enumEnd));
+    firstEnum.writeInt32LE(-30, 1);
+    let int32 = value => {
+        let bytes = Buffer.alloc(4);
+        bytes.writeInt32LE(value);
+        return bytes;
+    };
+    // Independently construct the old writer's record contract. No original
+    // Paint.NET graph/resource bytes are inputs to this fixture.
+    let parts = [Buffer.from("isDisposed\0userMetadataItems")];
+    for (let [index, id] of [28, 33].entries()) {
+        let name = Buffer.from("Legacy " + index);
+        parts.push(Buffer.from([6]), int32(id), Buffer.from([name.length]), name,
+            Buffer.from([9]), int32(123), Buffer.from([1, 0, 117]));
+        parts.push(index === 0 ? firstEnum : Buffer.concat([Buffer.from([1]), int32(-35), int32(-30), int32(0)]));
+    }
+    let original = new Uint8Array(Buffer.concat(parts));
+    for (let mode = 0; mode < 14; ++mode) {
+        let broken = original.slice();
+        let expected = original.slice();
+        for (let id of [28, 33]) {
+            let signature = Buffer.concat([Buffer.from([6]), int32(id)]);
+            let nameStart = codec.findByteSequence(original, signature);
+            let record = codec.skipLengthPrefixedString(original, nameStart + 5) + 8;
+            new DataView(broken.buffer).setInt32(record, mode, true);
+            new DataView(expected.buffer).setInt32(codec.findBlendModeValueOffset(original, record), mode, true);
+        }
+        let snapshot = broken.slice();
+        let repaired = await codec.repairLegacyBlendModeRecords(broken, 2);
+        assert.deepEqual(repaired, expected, "Legacy enum identity or unaffected bytes changed for mode " + mode);
+        assert.deepEqual(broken, snapshot, "Recovery mutated the caller's graph");
+    }
+});

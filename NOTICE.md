@@ -26,7 +26,7 @@ attribution above does not grant permission to use Paint.NET artwork.
   `assets/licenses/Lucide-LICENSE.txt`.
 - Inter variable font: Copyright 2020 The Inter Project Authors. SIL Open Font
   License 1.1, included in `assets/licenses/Inter-OFL.txt`.
-- Original paint.js pixel-ribbon mark, document mark, cursor composition and
+- Original paint.js pixel-ribbon mark, document mark, sample artwork, cursor composition and
   English labels: Copyright 2026 paint.js contributors, MIT license.
 
 Sources, pinned revisions and asset provenance are recorded in `artwork/SOURCES.md`.

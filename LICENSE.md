@@ -6,7 +6,11 @@ Portions Copyright (C) Microsoft Corporation. All Rights Reserved.
 
 JavaScript port and port-specific changes Copyright (C) 2024-present LabyStudio.
 
-This software is licensed under the MIT License, with three (3) exceptions inherited from Paint.NET:
+This software retains the MIT terms and three historical exceptions inherited from
+Paint.NET 3.36.7, reproduced below for the original portions. These notices are not
+permission to use modern Paint.NET artwork. Current paint.js builds do not include
+or download Paint.NET artwork, fonts, cursors or translated resources. Current
+asset licenses and attribution are documented in NOTICE.md and assets/licenses/.
 
 1. The Paint.NET logo and icon artwork are Copyright (C) Rick Brewster.
    Licensed under Creative Commons Attribution-NonCommercial-NoDerivs 2.5

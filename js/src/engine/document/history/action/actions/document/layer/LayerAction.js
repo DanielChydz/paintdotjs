@@ -24,7 +24,8 @@ class LayerAction extends DocumentWorkspaceAction {
         super(
             "menu.layers." + commandId,
             "menu.layers." + nameId + ".text",
-            "layerForm." + toolTipId + ".toolTipText",
+            toolTipId === null ? "menu.layers." + nameId + ".text"
+                : "layerForm." + toolTipId + ".toolTipText",
             shortcutKeyCombo
         );
         this.requiresActiveLayer = requiresActiveLayer;

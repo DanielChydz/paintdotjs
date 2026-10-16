@@ -40,6 +40,14 @@ module.exports = async function checkOpenAssets() {
             missingLabels.push(action.getActionId() + " -> " + label);
         }
     }
+    let missingDescriptions = [];
+    for (let action of ActionRegistry.getActionList()) {
+        let key = action.getDescriptionTranslationId();
+        if (key !== null && key !== undefined && i18n(key) === key) {
+            missingDescriptions.push([key, action.getDisplayName()]);
+        }
+    }
+    check(missingDescriptions.length === 0, "Missing descriptions: " + JSON.stringify(missingDescriptions));
     check(missingLabels.length === 0, "Untranslated actions: " + missingLabels.join(", "));
     for (let workspace of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(workspace, false);

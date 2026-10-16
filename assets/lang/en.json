@@ -81,6 +81,24 @@
     },
     "hex": {
       "text": "Hex"
+    },
+    "redLabel": {
+      "text": "Red"
+    },
+    "greenLabel": {
+      "text": "Green"
+    },
+    "blueLabel": {
+      "text": "Blue"
+    },
+    "hueLabel": {
+      "text": "Hue"
+    },
+    "saturationLabel": {
+      "text": "Saturation"
+    },
+    "valueLabel": {
+      "text": "Value"
     }
   },
   "crystalizeEffect": {
@@ -186,7 +204,28 @@
   },
   "layerForm": {
     "text": "Layers",
-    "name": "Layer"
+    "name": "Layer",
+    "addNewLayerButton": {
+      "toolTipText": "Add layer"
+    },
+    "deleteLayerButton": {
+      "toolTipText": "Delete layer"
+    },
+    "duplicateLayerButton": {
+      "toolTipText": "Duplicate layer"
+    },
+    "mergeLayerDownButton": {
+      "toolTipText": "Merge down"
+    },
+    "propertiesButton": {
+      "toolTipText": "Layer properties…"
+    },
+    "moveLayerUpButton": {
+      "toolTipText": "Move layer up"
+    },
+    "moveLayerDownButton": {
+      "toolTipText": "Move layer down"
+    }
   },
   "levelsEffect": {
     "text": "Levels",
@@ -615,10 +654,10 @@
     "text": "Move selection",
     "name": "Move selection",
     "historyMemento": {
-      "dropSelection": {
-        "text": "Drop selection",
-        "name": "Drop selection"
-      }
+      "dropSelection": "Finish moving selection",
+      "translate": "Move selection",
+      "scale": "Scale selection",
+      "rotate": "Rotate selection"
     },
     "helpText": "Drag to move the selection boundary."
   },
@@ -626,10 +665,10 @@
     "text": "Move",
     "name": "Move",
     "historyMemento": {
-      "dropPixels": {
-        "text": "Drop pixels",
-        "name": "Drop pixels"
-      }
+      "dropPixels": "Finish moving pixels",
+      "translate": "Move pixels",
+      "scale": "Scale pixels",
+      "rotate": "Rotate pixels"
     },
     "helpText": "Drag to move selected pixels or use the handles to transform them."
   },

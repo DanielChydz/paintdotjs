@@ -24,23 +24,23 @@ A manual in-memory compatibility check read pre-migration graphs via git show HE
 Script: /tmp/paintdotjs-open-assets/verify-legacy.mjs (pin the pre-migration
 commit 3ae2261 before rerunning after a migration commit). Old bytes were not written to the repo.
 
-Verification so far: full suite 205 tests passed with new resources/templates;
-subsequent PDN compatibility changes passed 14 codec tests. Source/test lint,
-headers/version checks and whitespace checks passed before the last codec edits.
-Assets hash catalog needs regeneration after asset changes.
+Verified source checkpoint: 210 tests passed; 100% of 40,972 runtime lines,
+9,942 branches and 2,515 functions across all 255 runtime files. Strict coverage
+check, source/test lint, headers, version and asset/whitespace checks passed.
+Logs: /tmp/paintdotjs-open-coverage.log, /tmp/paintdotjs-open-strict.log.
+
+Native desktop and Node-disabled browser smoke checks decode every bundled image,
+load Inter, check both licenses, action labels and tooltips, and check the About
+mark. README header/app/web screenshots and sample document now use original art.
+All dynamic labels (including color channels and Move history) are authored locally.
+A missing tooltip id now falls back to its own action name instead of a .null key.
+Artwork regeneration was run twice and catalogued outputs compared byte-for-byte:
+identical. ImageMagick timestamps are stripped. Old .tmp/paintdotnet archive removed.
 
 Remaining before completion:
-- Native asset/font/license/branding checks now pass in desktop and Node-disabled
-  browser mode, and fresh app/web screenshots are saved. Finish visual polish of
-  the header/cursors and replace the unattributed sample photograph with own art.
-- Audit dynamic resource labels and UI appearance; fill any missing icon mappings.
-- Recheck package/Pages output includes licenses and all assets, starts offline,
-  and contains no old extracted artwork/font/archive. Delete the known obsolete
-  .tmp/paintdotnet cache and rebuild old generated distribution artifacts.
-- Finish documentation/licensing audit; preserve original MIT source attributions.
-- Full lint/header/version/tests and coverage measurement after final edits; update
-  COVERAGE-STATUS.md honestly (its 100% snapshot predates this new task).
-- Verify the final DEB and web/desktop UI; commit final changes; clean worktree.
+- Rebuild and audit Pages and DEB/package output, include licenses and all assets,
+  verify the actual packaged application reloads offline with the new assets.
+- Update final coverage/distribution notes and commit the remaining verification.
 
 Regeneration (offline, Node 24; graphics regeneration also needs Pillow/convert):
 python3 scripts/generate_artwork.py

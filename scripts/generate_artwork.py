@@ -6,7 +6,7 @@ import json
 import pathlib
 import re
 import subprocess
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ASSETS = ROOT / 'assets'
@@ -20,7 +20,7 @@ def svg(body, width=24, height=24):
 def raster(source, output, size):
     output.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run(['convert', '-background', 'none', '-density', '384', 'svg:-',
-                    '-resize', f'{size[0]}x{size[1]}!', 'PNG32:' + str(output)],
+                    '-resize', f'{size[0]}x{size[1]}!', '-strip', 'PNG32:' + str(output)],
                    input=source.encode(), check=True, capture_output=True)
 
 
@@ -53,6 +53,25 @@ for relative, name in mapping.items():
         source = svg('')
     else:
         source = lucide(name, '#c6dce9' if '_dark' in relative else '#3285a0')
+    # Small previews describe the actual drawing style rather than reusing a
+    # generic symbol for options whose visual distinction matters.
+    if 'enum_dash_style_' in relative:
+        style = pathlib.Path(relative).stem.removeprefix('enum_dash_style_')
+        pattern = {'solid': 'none', 'dash': '6 3', 'dot': '1 3', 'dash_dot': '6 3 1 3', 'dash_dot_dot': '6 3 1 3 1 3'}[style]
+        source = svg(f'<path d="M2 12h20" fill="none" stroke="#3285a0" stroke-width="2" stroke-linecap="round" stroke-dasharray="{pattern}"/>')
+    if 'enum_line_curve_cap_' in relative:
+        start = '_start' in relative
+        cap_x = 4 if start else 20
+        direction = 1 if start else -1
+        body = '<path d="M4 12h16" stroke="#3285a0" stroke-width="2"/>'
+        if 'arrow' in relative:
+            fill = '#3285a0' if 'filled' in relative else 'none'
+            body += f'<path d="M{cap_x + direction * 6} 7L{cap_x} 12l{direction * 6} 5z" fill="{fill}" stroke="#3285a0" stroke-width="2"/>'
+        elif 'rounded' in relative:
+            body += f'<circle cx="{cap_x}" cy="12" r="2.5" fill="#3285a0"/>'
+        else:
+            body += f'<path d="M{cap_x} 8v8" stroke="#3285a0" stroke-width="2"/>'
+        source = svg(body)
     size = 24 if '_24' in relative else 16
     if 'banner_logo' in relative:
         size = 128
@@ -73,6 +92,8 @@ for relative in json.loads((ART / 'cursors.json').read_text()):
         if name.startswith(prefix):
             glyph = icon
             break
+    if name == 'hand_closed_cursor':
+        glyph = 'grab'
     # All cursor glyphs have an explicit source in the mapping's vendor set.
     source_file = ART / 'lucide' / (glyph + '.svg')
     if not source_file.exists():
@@ -105,4 +126,21 @@ print('Generated original branding, cursors and licensed Lucide UI assets.')
 
 (ASSETS / "lang/en.json").write_bytes((ART / "en.json").read_bytes())
 
-raster(mark, ROOT / '.github/assets/header.png', (128, 128))
+# Original repository banner, typeset using the bundled OFL font.
+header = Image.new('RGBA', (960, 240), '#142b3b')
+header.alpha_composite(Image.open(ASSETS / 'icon.png').resize((190, 190), Image.Resampling.LANCZOS), (24, 25))
+draw = ImageDraw.Draw(header)
+font = ImageFont.truetype(str(ASSETS / 'font/Inter.ttf'), 84)
+small_font = ImageFont.truetype(str(ASSETS / 'font/Inter.ttf'), 27)
+draw.text((244, 40), 'paint.js', font=font, fill='#f3fbff')
+draw.text((250, 146), 'Open source image editor', font=small_font, fill='#a8c8d9')
+header.save(ROOT / '.github/assets/header.png')
+
+# Original sample document replaces the old unattributed stock photograph.
+sample = svg('''<defs><linearGradient id="sky" x2="1" y2="1"><stop stop-color="#182d55"/><stop offset="1" stop-color="#346f89"/></linearGradient></defs>
+<rect width="1280" height="720" fill="url(#sky)"/>
+<path d="M140 640C140 80 540 30 960 640Z" fill="#ffcb75"/>
+<path d="M390 640C390 80 790 30 1060 640Z" fill="#bba0ef"/>
+<path d="M640 640C640 80 1040 30 1140 640Z" fill="#47d4c0"/>''', 1280, 720)
+(ART / 'sample.svg').write_text(sample + '\n')
+raster(sample, ROOT / 'run/test.png', (1280, 720))

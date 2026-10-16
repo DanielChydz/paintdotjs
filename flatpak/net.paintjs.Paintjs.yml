@@ -49,8 +49,6 @@ modules:
       - install -Dm644 flatpak/net.paintjs.Paintjs.png /app/share/icons/hicolor/512x512/apps/net.paintjs.Paintjs.png
       - install -Dm644 desktop-resources/file-icon.svg /app/share/icons/hicolor/scalable/mimetypes/net.paintjs.Paintjs.application-x-paintdotnet.svg
       - install -Dm644 flatpak/net.paintjs.Paintjs-mime.xml /app/share/mime/packages/net.paintjs.Paintjs.xml
-      - mkdir -p /app/share/paintdotjs
-      - cp -a assets /app/share/paintdotjs/assets
       - install -Dm644 LICENSE.md /app/share/licenses/net.paintjs.Paintjs/LICENSE.md
       - install -Dm644 NOTICE.md /app/share/licenses/net.paintjs.Paintjs/NOTICE.md
     subdir: main

@@ -163,6 +163,11 @@ class AboutDialog {
                     this.createLink("LabyStudio", "https://github.com/LabyStudio"),
                     " is unofficial and is not affiliated with or endorsed by Paint.NET."
                 );
+                // Asset credits
+                credits.appendChild(document.createElement("br"));
+                let assetCredits = document.createElement("span");
+                assetCredits.textContent = "Interface icons: Lucide (ISC). Typeface: Inter (SIL OFL 1.1). Original project logo and cursor compositions.";
+                credits.appendChild(assetCredits);
             }
 
             // Project details
