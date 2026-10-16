@@ -307,12 +307,25 @@ module.exports = async function checkEffectControls() {
         "A zero maximum was incorrectly replaced by the default maximum");
     standaloneRange.remove();
 
-    phase("rotation sphere, shift snapping, pan capture and exponential zoom");
+    phase("rotation sphere renders both themes independently of the system preference");
     let originalScheme = document.documentElement.dataset.colorScheme;
-    document.documentElement.dataset.colorScheme = "light";
+    let spherePixels = [];
+    try {
+        for (let scheme of ["light", "dark"]) {
+            document.documentElement.dataset.colorScheme = scheme;
+            let visual = EffectConfigDialog.createRollVisual({angle: 0, rollDirection: 0, rollAmount: 0}, () => {});
+            visual.redraw();
+            let canvas = visual.element;
+            spherePixels.push(canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height).data);
+        }
+        check(spherePixels[0].some((value, index) => value !== spherePixels[1][index]),
+            "Rotation sphere did not adapt its rendered colors to the theme");
+    } finally {
+        document.documentElement.dataset.colorScheme = originalScheme;
+    }
+    phase("rotation sphere, shift snapping, pan capture and exponential zoom");
     pending = open(BitmapEffectEngine.ROTATE_ZOOM);
     await ready();
-    document.documentElement.dataset.colorScheme = originalScheme;
     let sphere = form().querySelector(".rotate-roll-visual");
     check(sphere !== null, "Rotation sphere was not created");
     let ignoredSphere = JSON.stringify(previews.at(-1));

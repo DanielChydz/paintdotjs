@@ -57,3 +57,14 @@ if (missing.length > 0) {
     throw new Error(`Runtime files missing from coverage:\n${missing.join("\n")}`);
 }
 console.log(`Verified coverage includes all ${expected.length} runtime source files.`);
+
+for (let [filename, coverage] of Object.entries(report)) {
+    for (let [id, hits] of Object.entries(coverage.b)) {
+        for (let [index, count] of hits.entries()) {
+            if (count === 0) {
+                let location = coverage.branchMap[id].locations[index];
+                console.error(`Uncovered branch: ${path.relative(root, filename)}:${location.start.line}:${location.start.column + 1}`);
+            }
+        }
+    }
+}

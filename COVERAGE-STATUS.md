@@ -2,14 +2,15 @@
 
 ## Current verified checkpoint (2026-10-16)
 
-All 240 tests pass, with zero failures, skips or TODO tests. The full clean run
-of `npm run test:coverage:check` includes all 280 runtime source files. No coverage
+All 241 tests pass, with zero failures, skips or TODO tests. The full clean run
+of `npm run test:coverage:check` on Ubuntu 24.04 with Node 24.21.0 includes
+all 280 runtime source files. No coverage
 exclusions or ignore directives were added.
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
 | Lines/statements | 45,825 | 45,825 | 100% | 0 |
-| Branches | 11,694 | 11,694 | 100% | 0 |
+| Branches | 11,693 | 11,693 | 100% | 0 |
 | Functions | 2,822 | 2,822 | 100% | 0 |
 
 New tests cover plugin validation, pixels, workers, configuration, codecs and
@@ -28,9 +29,16 @@ refresh after document disposal but before the layer-list animation frame runs.
 `LayerItem.renderThumbnail()` skips the disposed surface. The regression fails
 with the original null-canvas exception before the fix and passes afterward.
 
+The rotation-control regression explicitly renders light and dark themes and
+checks their pixel output. Previously it restored the system theme after drawing
+light mode, so a light-mode CI runner never exercised the dark rendering paths.
+Ubuntu reproduced the two missing branches before this change and reaches 100%
+afterward. The coverage runner now prints uncovered branch locations, with a
+self-contained contract test, and the release workflow saves JSON reports on failure.
+
 Source/test lint, source headers, bundled assets, version information and whitespace
 checks pass. The strict coverage report also passes with all four metrics set to
-100%. Log: `/tmp/paintdotjs-layer-thumbnail-coverage.log`.
+100%. Log: `/tmp/paintdotjs-ubuntu24-fixed-coverage.log`.
 No release package was rebuilt for this fix; native GPU hardware was not exercised.
 
 ## Historical checkpoint after upstream 2.4.3 integration (2026-10-16)
