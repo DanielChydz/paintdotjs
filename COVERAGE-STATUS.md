@@ -8,14 +8,14 @@ verified batches regularly. Implement concrete TODOs/stubs instead of deleting t
 The target is **100% line and branch coverage of all first-party runtime
 sources**, meaningful regressions, fixes for demonstrated bugs, and verified
 commits. **The target is not complete.** Branch coverage still fails
-the strict 100% gate. All lines and functions are covered in the latest measurement; 49 branch alternatives remain.
+the strict 100% gate. All lines and functions are covered in the latest measurement; 39 branch alternatives remain.
 
 Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,277 | 41,277 | 100% | 0 |
-| Branches | 9,979 | 10,028 | 99.51% | 49 |
+| Lines/statements | 41,275 | 41,275 | 100% | 0 |
+| Branches | 10,000 | 10,039 | 99.61% | 39 |
 | Functions | 2,532 | 2,532 | 100% | 0 |
 
 - **209 tests passed; zero failures.**
@@ -31,6 +31,21 @@ Reports: `coverage/coverage-summary.json`, `coverage/coverage-final.json`,
 `coverage/index.html`. Latest full-run log: `/tmp/paintdotjs-coverage-current.log`.
 Strict-gate log: `/tmp/paintdotjs-strict-coverage-current.log`.
 Generated reports and bundles are not committed sources.
+
+## Verified pixel and legacy import batch (2026-10-16)
+
+- Real legacy PDN imports recover missing names/opacity while preserving pixels.
+  Image import handles extension-only filenames and recovers a first active layer
+  after the collection becomes empty.
+- Baked nonrectangular masks now have a GPU-versus-CPU pixel oracle. Native brush
+  tests verify quarter-area alpha for subpixel pressure stamps, secondary-color
+  unsampled strokes and distance retention below the configured brush spacing.
+- Error recovery saves a single document through the actual filesystem writer,
+  decodes the saved PNG and verifies both pixels and singular success text.
+- PDN repair returns its validated graph after the loop; its removed counter was
+  incremented exactly once for each validated layer and could never differ.
+- All 209 tests and lint/header/version/whitespace checks passed. Coverage remains
+  100% lines/functions, with 99.61% branches (39 alternatives remaining).
 
 ## Verified slider and UI batch (2026-10-16)
 
@@ -505,16 +520,13 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 0 | 9 |
-| [DocumentIO.js](./js/src/io/DocumentIO.js) | 0 | 7 |
 | [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 0 | 4 |
 | [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 0 | 4 |
-| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 0 | 4 |
+| [DocumentIO.js](./js/src/io/DocumentIO.js) | 0 | 3 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 0 | 3 |
 | [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 0 | 3 |
 | [RectangleSelectTool.js](./js/src/engine/document/tool/tool/RectangleSelectTool.js) | 0 | 2 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 0 | 2 |
-| [PdnDocumentCodec.js](./js/src/io/PdnDocumentCodec.js) | 0 | 1 |
-| [SwatchItem.js](./js/src/interface/window/form/colors/SwatchItem.js) | 0 | 1 |
 | [ErrorForm.js](./js/src/interface/window/form/ErrorForm.js) | 0 | 1 |
 | [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 0 | 1 |
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 0 | 1 |
@@ -523,7 +535,7 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 | [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 0 | 1 |
 | [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 0 | 1 |
 | [GradientTool.js](./js/src/engine/document/tool/tool/GradientTool.js) | 0 | 1 |
-| [MaskedSurface.js](./js/src/engine/document/layer/bitmap/MaskedSurface.js) | 0 | 1 |
+| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 0 | 1 |
 
 Known audit points:
 

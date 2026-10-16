@@ -279,6 +279,13 @@ module.exports = async function checkGpu() {
     cpu.clear();
     baked.renderResampled(cpu, polygonTransform, ResamplingAlgorithm.LINEAR, false, "high");
     check(baked.compositeCanvas === null, "A baked mask allocated an unnecessary final mask canvas");
+    gpu.clear();
+    check(baked.renderResampledGpu(gpu, polygonTransform, ResamplingAlgorithm.LINEAR, false, "high"),
+        "A baked nonrectangular mask unexpectedly rejected GPU resampling");
+    let bakedCpu = cpu.context.getImageData(0, 0, 24, 24).data;
+    let bakedGpu = gpu.context.getImageData(0, 0, 24, 24).data;
+    check(bakedGpu.every((value, index) => Math.abs(value - bakedCpu[index]) <= 3),
+        "Baked nonrectangular GPU mask differs from the CPU reference");
     erased.dispose();
     baked.dispose();
     trianglePath.dispose();

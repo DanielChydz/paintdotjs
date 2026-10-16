@@ -306,6 +306,18 @@ module.exports = async function checkSavingClipboard() {
     let decoded = await window.portableImageCodec.decode(bytes, "png");
     equal(decoded.rgba, surface.context.getImageData(0, 0, 32, 16).data, "Saved PNG changed pixels");
 
+    phase("error recovery saves a single document through the actual native writer");
+    ErrorForm.show(ErrorForm.fromError(new Error("Recoverable save fixture"), "QA"));
+    let recoveryForm = ErrorForm.instance;
+    workspace.setDirty(true);
+    await recoveryForm.saveAll();
+    check(recoveryForm.saveStatus.textContent === "1 image saved. Check the selected folder or Downloads.",
+        "Single-document recovery did not report a singular successful save");
+    check(!workspace.isDirty(), "Recovery save left the document dirty");
+    let recoveryDecoded = await window.portableImageCodec.decode(fs.readFileSync(filePath), "png");
+    equal(recoveryDecoded.rgba, surface.context.getImageData(0, 0, 32, 16).data,
+        "Recovery save wrote different pixels");
+    recoveryForm.getWindow().close();
     phase("merged whole-document copy preserves composited pixels when system clipboard permission is denied");
     app.setActiveTool(null);
     workspace.getSelection().reset();

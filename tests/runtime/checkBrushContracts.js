@@ -167,6 +167,39 @@ module.exports = async function checkBrushContracts() {
     check(same(evenSprite.canvas.getContext("2d").getImageData(center, center, 1, 1).data, [255, 0, 0, 255])
         && evenSprite.canvas.getContext("2d").getImageData(0, 0, 1, 1).data[3] === 0,
         "Hard brush sprite did not retain its opaque center and transparent corner");
+    phase("subpixel pressure stamp area and unsampled secondary-color strokes");
+    let fullDab = Surface.create(24, 24);
+    let smallDab = Surface.create(24, 24);
+    brush.drawBrushStamp(fullDab.context, 10.5, 10.5, 1, 1, 1, new Color(255, 0, 0));
+    brush.drawBrushStamp(smallDab.context, 10.5, 10.5, 1, .5, 1, new Color(255, 0, 0));
+    let fullPixels = fullDab.context.getImageData(0, 0, 24, 24).data;
+    let smallPixels = smallDab.context.getImageData(0, 0, 24, 24).data;
+    check(fullPixels.some((value, index) => index % 4 === 3 && value > 0), "Pressure stamp oracle was empty");
+    check(smallPixels.every((value, index) => index % 4 !== 3 || Math.abs(value - fullPixels[index] / 4) <= 1),
+        "A half-pixel pressure stamp did not preserve quarter-pixel area through alpha");
+    fullDab.dispose();
+    smallDab.dispose();
+    let basic = new DrawingTool(ToolType.PAINT_BRUSH, 1, false, false);
+    app.setActiveTool(basic);
+    ToolType.PAINT_BRUSH.setSettings({width: 1, fillStyle: "solid", antialias: true});
+    FormRegistry.get("colorsForm").setSecondaryColor(new Color(0, 0, 255));
+    surface.clear();
+    basic.onMouseDown(10, 10, MouseButton.RIGHT);
+    basic.onMouseMove(15, 10);
+    basic.onMouseUp(15, 10, MouseButton.RIGHT);
+    let basicPixel = surface.getColorAt(12, 10);
+    check(basicPixel.blue === 255 && basicPixel.red === 0 && basicPixel.alpha > 0,
+        "An unsampled antialiased right-button stroke missed its snapped secondary color");
+    app.setActiveToolFromType(ToolType.PAINT_BRUSH);
+    let spaced = app.getActiveTool();
+    ToolType.PAINT_BRUSH.setSettings({width: 10, spacing: 100, smoothing: false});
+    surface.clear();
+    spaced.onMouseDown(8, 8, MouseButton.LEFT);
+    spaced.onMouseMove(8.25, 8);
+    check(Math.abs(spaced.distanceSinceLastSample - .25) < 1e-9,
+        "A segment shorter than brush spacing did not retain its unsampled distance");
+    spaced.onMouseUp(8.25, 8, MouseButton.LEFT);
+    surface.context.putImageData(new ImageData(new Uint8ClampedArray(expected), 32, 32), 0, 0);
     phase("brush and eraser setting changes preserve hover visibility outside the canvas");
     for (let type of [ToolType.PAINT_BRUSH, ToolType.ERASER]) {
         app.setActiveToolFromType(type);

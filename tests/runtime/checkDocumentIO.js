@@ -155,6 +155,10 @@ module.exports = async function checkDocumentIO() {
     check(imported.getDocument().getLayers().getLayerCount() === 1 && !imported.isDirty(),
         "PDN import initialized an incorrect workspace");
     app.closeDocumentWorkspace(imported, false);
+    let unnamedImage = await DocumentIO.openImage(new window.File([await ImageEncoder.encode(source, "png")], ".png", {type: "image/png"}));
+    check(unnamedImage.getActiveLayer().properties.name === i18n("layer.backgroundLayer.defaultName"),
+        "An extension-only image filename did not receive the default background name");
+    app.closeDocumentWorkspace(unnamedImage, false);
     let legacy = {
         format: "paint.js.pdn/1", width: 3, height: 2, resolution: 120, activeLayer: 0,
         layers: [{name: "Legacy", png: source.toDataURL(), visible: false, opacity: 77}]
@@ -164,6 +168,14 @@ module.exports = async function checkDocumentIO() {
     imported = await DocumentIO.createWorkspaceFromPdnData(decoded, "legacy.pdn");
     check(imported.getActiveLayer().properties.opacity === 77, "Legacy PDN opacity was lost");
     app.closeDocumentWorkspace(imported, false);
+    let legacyDefaults = {...legacy, layers: [{name: "", png: source.toDataURL()}]};
+    let recoveredLegacy = await DocumentIO.openPdn(new window.File([JSON.stringify(legacyDefaults)], "legacy-defaults.pdn"));
+    check(recoveredLegacy.getActiveLayer().properties.name === "Layer"
+        && recoveredLegacy.getActiveLayer().properties.opacity === 255,
+        "Legacy layer metadata did not recover default name and opacity");
+    equal(recoveredLegacy.getActiveLayer().getSurface().context.getImageData(0, 0, 3, 2).data,
+        pixels.data, "Legacy defaults changed decoded pixels");
+    app.closeDocumentWorkspace(recoveredLegacy, false);
     await rejects(() => DocumentIO.readPdn(new Blob(["invalid"])), /Unsupported .pdn document format/);
     await rejects(() => DocumentIO.readPdn(new Blob(['{"format":"other","layers":[]}'])),
         /Unsupported .pdn document format/);
@@ -227,6 +239,17 @@ module.exports = async function checkDocumentIO() {
         "Crop did not preserve selected pixels");
     workspace.getHistory().stepBackward();
     check(workspace.getDocument().getWidth() === 3, "Crop undo lost the original dimensions");
+    phase("image layer import recovers an empty layer collection");
+    let layerless = app.createBlankDocumentInNewWorkspace(3, 2);
+    app.setActiveTool(null);
+    layerless.getDocument().getLayers().removeLayerAt(0);
+    check(layerless.getActiveLayer() === null, "Removing the last layer retained an active layer");
+    await DocumentIO.addFileAsLayer(new window.File([await ImageEncoder.encode(source, "png")], "recovered.png", {type: "image/png"}));
+    check(layerless.getActiveLayerIndex() === 0 && layerless.getDocument().getLayers().size() === 1
+        && layerless.isDirty(), "Image import did not recover the first active layer");
+    equal(layerless.getActiveLayer().getSurface().context.getImageData(0, 0, 3, 2).data,
+        pixels.data, "Import into an empty layer collection changed pixels");
+    app.closeDocumentWorkspace(layerless, false);
     target.width = 0;
     target.height = 0;
     app.closeDocumentWorkspace(workspace, false);

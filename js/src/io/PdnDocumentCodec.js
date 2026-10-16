@@ -342,7 +342,6 @@ class PdnDocumentCodec {
         const template = new Uint8Array(await response.arrayBuffer());
         const repaired = graph.slice();
         const encoder = new TextEncoder();
-        const repairedOffsets = [];
 
         for (let index = 0; index < layerCount; ++index) {
             const marker = encoder.encode("PDJ_LAYER_" + String(index).padStart(4, "0"));
@@ -382,10 +381,9 @@ class PdnDocumentCodec {
             const valueOffset = this.findBlendModeValueOffset(repaired, recordOffset);
             new DataView(repaired.buffer, repaired.byteOffset + valueOffset, 4)
                 .setInt32(0, brokenBlendMode, true);
-            repairedOffsets.push(recordOffset);
         }
 
-        return repairedOffsets.length === layerCount ? repaired : null;
+        return repaired;
     }
 
     static findBlendModeValueOffset(bytes, recordOffset) {

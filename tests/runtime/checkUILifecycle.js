@@ -292,6 +292,11 @@ module.exports = async function checkUILifecycle() {
     let swatch = new SwatchItem();
     check(swatch.buildElement().querySelector(".arrow-down") !== null,
         "A standalone palette selector omitted its downward arrow");
+    swatch.appendTo(host, colorsForm);
+    swatch.element.style.cssText = "position:fixed;top:" + window.innerHeight + "px;height:20px";
+    check(swatch.buildElement().querySelector(".arrow-up") !== null,
+        "A palette selector below the viewport did not reverse its arrow");
+    swatch.element.remove();
     let inlineIcon = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>');
     let inlineDropdown = new ToolOptionDropdown({values: [["inline", "Inline", inlineIcon]], value: "inline"});
     check(inlineDropdown.getIconSource(["inline", "Inline", inlineIcon]) === inlineIcon,
