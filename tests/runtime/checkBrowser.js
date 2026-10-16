@@ -143,6 +143,23 @@ module.exports = async function checkBrowser() {
     check(browserDiagnostics[browserDiagnostics.indexOf("Electron") + 1] === "No",
         "Browser diagnostics incorrectly advertised Electron integration");
     SettingsDialog.instance.close();
+    let pluginDialog = paintDotJs.dialogs.create({title: "Browser plugin dialog"});
+    check(!pluginDialog.backdrop.classList.contains("dialog-backdrop-app"), "Plugin dialog used desktop styling");
+    pluginDialog.destroy();
+    let catalogLoad = PluginCatalog.load;
+    PluginCatalog.load = async () => [];
+    try {
+        let previous = document.createElement("button");
+        document.body.appendChild(previous);
+        previous.focus();
+        PluginBrowserDialog.open();
+        previous.remove();
+        check(!PluginBrowserDialog.instance.backdrop.classList.contains("dialog-backdrop-app"),
+            "Plugin browser used desktop styling");
+        PluginBrowserDialog.instance.close();
+    } finally {
+        PluginCatalog.load = catalogLoad;
+    }
     app.closeDocumentWorkspace(workspace, false);
     return {ok: true};
 };

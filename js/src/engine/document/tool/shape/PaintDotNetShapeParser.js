@@ -257,7 +257,7 @@ class PaintDotNetShapeParser {
         if (value === null || value.trim() === "") {
             return fallback;
         }
-        const normalized = value.toLowerCase();
+        const normalized = value.trim().toLowerCase();
         if (normalized === "nonzero") {
             return "nonzero";
         }
@@ -271,10 +271,10 @@ class PaintDotNetShapeParser {
         if (value === null || value.trim() === "") {
             return fallback;
         }
-        if (value.toLowerCase() === "true") {
+        if (value.trim().toLowerCase() === "true") {
             return true;
         }
-        if (value.toLowerCase() === "false") {
+        if (value.trim().toLowerCase() === "false") {
             return false;
         }
         throw new Error(`${fileName} contains an invalid ${label}.`);
@@ -296,7 +296,11 @@ class PaintDotNetShapeParser {
         if (value === null) {
             throw new Error(`${fileName} is missing ${label}.`);
         }
-        const matches = value.match(/[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/g) || [];
+        const number = /[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/g;
+        if (/[^,\s]/.test(value.replace(number, ""))) {
+            throw new Error(`${fileName} contains invalid ${label}.`);
+        }
+        const matches = value.match(number) || [];
         const numbers = matches.map(Number);
         if ((expectedCount !== null && numbers.length !== expectedCount) || !numbers.every(Number.isFinite)) {
             throw new Error(`${fileName} contains invalid ${label}.`);

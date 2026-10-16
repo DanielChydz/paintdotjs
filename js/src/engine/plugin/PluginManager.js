@@ -456,14 +456,15 @@ class PluginManager {
         if (record === undefined || record.enabled === enabled) {
             return false;
         }
+        const plugin = enabled
+            ? await this.evaluateSource(record.source, record.fileName, record.manifest || null) : null;
+        await this.writeRecord({...record, enabled});
         if (enabled) {
-            const plugin = await this.evaluateSource(record.source, record.fileName, record.manifest || null);
             this.activatePlugin(plugin);
         } else {
             this.deactivatePlugin(id);
         }
         record.enabled = enabled;
-        await this.writeRecord(record);
         this.clearLoadError(id);
         this.dispatchChanged();
         return true;
@@ -475,8 +476,8 @@ class PluginManager {
         if (index < 0) {
             return false;
         }
-        this.deactivatePlugin(id);
         await this.deleteRecord(id);
+        this.deactivatePlugin(id);
         this.records.splice(index, 1);
         this.clearLoadError(id);
         this.dispatchChanged();
@@ -662,7 +663,7 @@ class PluginManager {
                 if (result instanceof Promise) {
                     throw new Error(`${plugin.name}: ${name} render() must be synchronous in API version 1.`);
                 }
-                if (result === undefined || result === destination || result === destination.data) {
+                if (result === undefined || result === destination.data) {
                     return destination;
                 }
                 if (result instanceof ImageData) {
@@ -863,12 +864,7 @@ class PluginManager {
     }
 
     static readAllRecords() {
-        return new Promise((resolve, reject) => {
-            const request = this.database.transaction(this.storeName, "readonly")
-                .objectStore(this.storeName).getAll();
-            request.onsuccess = () => resolve(request.result || []);
-            request.onerror = () => reject(request.error || new Error("Could not read plugins."));
-        });
+        return this.runRequest("readonly", store => store.getAll()).then(records => records || []);
     }
 
     static writeRecord(record) {
@@ -883,7 +879,7 @@ class PluginManager {
         return new Promise((resolve, reject) => {
             const transaction = this.database.transaction(this.storeName, mode);
             const request = callback(transaction.objectStore(this.storeName));
-            request.onsuccess = () => resolve(request.result);
+            transaction.oncomplete = () => resolve(request.result);
             request.onerror = () => reject(request.error || new Error("Plugin storage operation failed."));
             transaction.onabort = () => reject(transaction.error || new Error("Plugin storage transaction failed."));
         });

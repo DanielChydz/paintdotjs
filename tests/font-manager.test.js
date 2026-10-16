@@ -134,6 +134,23 @@ function fontFixture(options = {}) {
     return {state, storage, records, fonts, database, manager, context, window, file, openDatabase};
 }
 
+test("removing custom UI fonts restores the bundled UI family for individual and bulk deletion", async () => {
+    let {manager, context, file} = fontFixture();
+    let selected = "Noto Sans";
+    context.AppSettingsStore = {get: () => selected, set: (key, value) => {
+        assert.equal(key, "ui.fontFamily");
+        selected = value;
+    }};
+    let first = await manager.addFont(file("first.ttf"));
+    selected = first.family;
+    await manager.removeFont(first.id);
+    assert.equal(selected, "Noto Sans");
+    let second = await manager.addFont(file("second.ttf"));
+    selected = second.family;
+    assert.equal(await manager.removeAllFonts(), 1);
+    assert.equal(selected, "Noto Sans");
+});
+
 test("font metadata validation rejects damaged caches and omits heavyweight byte buffers", async () => {
     let {manager, storage, state, records} = fontFixture();
     assert.equal(manager.isInitializing(), false);

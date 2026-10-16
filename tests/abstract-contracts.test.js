@@ -42,12 +42,12 @@ function contractFixture() {
     for (let relative of [
         "engine/document/history/HistoryFunction.js", "engine/document/history/HistoryMemento.js",
         "engine/document/render/SurfaceBoxRenderer.js", "interface/UIElement.js",
-        "interface/item/Item.js", "interface/window/window/AbstractWindow.js"
+        "interface/item/Item.js", "interface/window/window/AbstractWindow.js", "interface/window/settings/entry/SettingsEntry.js"
     ]) {
         let filename = path.resolve(__dirname, "../js/src", relative);
         vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
     }
-    let api = vm.runInContext("({HistoryFunction, HistoryMemento, SurfaceBoxRenderer, UIElement, Item, AbstractWindow})", context);
+    let api = vm.runInContext("({HistoryFunction, HistoryMemento, SurfaceBoxRenderer, UIElement, Item, AbstractWindow, SettingsEntry})", context);
     return {state, app, document, ...api};
 }
 
@@ -385,4 +385,9 @@ test("direct tool memento undo restores its tool after the active tool has been 
     assert.deepEqual(state.switches, ["brush"]);
     reverse.performUndo();
     assert.equal(state.value, 10);
+});
+
+test("settings entries require a concrete renderer", () => {
+    let {SettingsEntry} = contractFixture();
+    assert.throws(() => new SettingsEntry({}, {id: "fixture"}).render(), /fixture does not implement render/);
 });

@@ -15,6 +15,11 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "extension tool integration preserves text erase, tiny-canvas handles and nested menus", file: "checkExtensionTools.js"},
+    {name: "plugin file formats integrate with document opening and native save previews", file: "checkPluginFiles.js"},
+    {name: "extension settings, local catalog, import failures and keyboard focus behave correctly", file: "checkExtensionSettings.js"},
+    {name: "plugin rendering, configuration, file types, workers and menus obey native contracts", file: "checkPluginContracts.js"},
+    {name: "custom XAML geometries, native bounds and shape persistence obey their contracts", file: "checkExtensionGeometry.js"},
     {name: "upstream plugins, custom XAML shapes and ZIP icon packs integrate with the fork", file: "checkUpstreamFeatures.js"},
     {name: "desktop bundled open icons, font, licenses and independent branding", file: "checkOpenAssetsDesktop.js"},
     {name: "browser bundled open icons, font, licenses and independent branding", file: "checkOpenAssets.js", browser: true},

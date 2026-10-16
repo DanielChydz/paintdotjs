@@ -27,7 +27,7 @@ class SettingsIconPacksEntry extends SettingsEntry {
             input.accept = ".zip,application/zip,application/x-zip-compressed";
             input.hidden = true;
             input.onchange = async () => {
-                if (input.files !== null && input.files.length > 0) {
+                if (input.files.length > 0) {
                     await this.importAssetPack(input.files[0]);
                 }
                 input.value = "";

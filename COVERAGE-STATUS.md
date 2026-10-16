@@ -1,6 +1,34 @@
 # Runtime coverage handoff
 
-## Current checkpoint after upstream 2.4.3 integration (2026-10-16)
+## Current verified checkpoint (2026-10-16)
+
+All 240 tests pass, with zero failures, skips or TODO tests. The full clean run
+of `npm run test:coverage:check` includes all 280 runtime source files. No coverage
+exclusions or ignore directives were added.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 45,820 | 45,820 | 100% | 0 |
+| Branches | 11,692 | 11,692 | 100% | 0 |
+| Functions | 2,822 | 2,822 | 100% | 0 |
+
+New tests cover plugin validation, pixels, workers, configuration, codecs and
+menus; shape parsing, native geometry and persistence; asset packs, translations,
+settings, focus handling and storage failures. Integration scenarios run in real
+Electron under Xvfb, including the browser runtime without Node integration.
+
+Regression fixes make plugin, shape and asset-pack storage wait for IndexedDB
+transaction completion; failed plugin enable, disable or removal keeps runtime
+state intact. Shape number lists reject embedded garbage, and XML boolean/fill
+values accept surrounding whitespace. Unreachable DOM fallbacks and redundant
+angle normalization were removed without excluding their files from coverage.
+
+Source/test lint, source headers, bundled assets, version information and whitespace
+checks pass. The strict coverage report also passes with all four metrics set to
+100%. Logs: `/tmp/paintdotjs-final-coverage.log`, `/tmp/paintdotjs-final-strict.log`.
+No release package was rebuilt; native GPU hardware was not exercised.
+
+## Historical checkpoint after upstream 2.4.3 integration (2026-10-16)
 
 All 211 tests pass, including real plugin-package, XAML-shape and ZIP icon-pack
 integration. All 280 runtime source files remain in coverage; no exclusions or

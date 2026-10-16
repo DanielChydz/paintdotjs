@@ -613,16 +613,16 @@ class TextTool extends DrawingTool {
         const text = this.editor.value;
         const selectionStart = this.editor.selectionStart;
         const selectionEnd = this.editor.selectionEnd;
-        if (selectionStart !== null && selectionEnd !== null && selectionStart !== selectionEnd) {
+        if (selectionStart !== selectionEnd) {
             this.caretElement.hidden = true;
             return;
         }
-        const position = selectionStart === null ? text.length : selectionStart;
+        const position = selectionStart;
         const beforeCaret = text.substring(0, position);
         const lineIndex = (beforeCaret.match(/\n/g) || []).length;
         const lineStart = beforeCaret.lastIndexOf("\n") + 1;
         const prefix = beforeCaret.substring(lineStart);
-        const line = text.split("\n")[lineIndex] || "";
+        const line = text.split("\n")[lineIndex];
         const context = this.getActiveLayer().getSurface().context;
         context.save();
         context.font = this.getFontString();

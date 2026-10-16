@@ -450,12 +450,7 @@ class AssetPackManager {
     }
 
     static readAllPacks() {
-        return new Promise((resolve, reject) => {
-            const request = this.database.transaction(this.storeName, "readonly")
-                .objectStore(this.storeName).getAll();
-            request.onsuccess = () => resolve(request.result || []);
-            request.onerror = () => reject(request.error || new Error("Could not read icon packs."));
-        });
+        return this.runRequest("readonly", store => store.getAll()).then(records => records || []);
     }
 
     static writePack(pack) {
@@ -470,7 +465,7 @@ class AssetPackManager {
         return new Promise((resolve, reject) => {
             const transaction = this.database.transaction(this.storeName, mode);
             const request = callback(transaction.objectStore(this.storeName));
-            request.onsuccess = () => resolve(request.result);
+            transaction.oncomplete = () => resolve(request.result);
             request.onerror = () => reject(request.error || new Error("Asset-pack storage operation failed."));
             transaction.onabort = () => reject(transaction.error || new Error("Asset-pack storage transaction failed."));
         });

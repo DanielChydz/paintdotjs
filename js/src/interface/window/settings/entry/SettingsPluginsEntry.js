@@ -28,7 +28,7 @@ class SettingsPluginsEntry extends SettingsEntry {
             input.multiple = true;
             input.hidden = true;
             input.onchange = async () => {
-                if (input.files !== null && input.files.length > 0) {
+                if (input.files.length > 0) {
                     await this.importPluginFiles(Array.from(input.files));
                 }
                 input.value = "";

@@ -210,7 +210,7 @@ class ShapeManager {
         return new Promise((resolve, reject) => {
             const transaction = this.database.transaction(this.storeName, mode);
             const request = callback(transaction.objectStore(this.storeName));
-            request.onsuccess = () => resolve(request.result);
+            transaction.oncomplete = () => resolve(request.result);
             request.onerror = () => reject(request.error || new Error("Shape storage operation failed."));
             transaction.onabort = () => reject(transaction.error || new Error("Shape storage transaction failed."));
         });

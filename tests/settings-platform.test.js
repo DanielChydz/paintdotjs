@@ -268,3 +268,19 @@ test("language changes enable reload only for a pending preference and route the
     assert.equal(reload.disabled, true);
     assert.ok(note.textContent.includes("Missing translations"));
 });
+
+test("icon pack settings reload translations through the browser", () => {
+    let reloads = 0;
+    let element = () => ({children: [], classList: {add() {}},
+        append(...children) { this.children.push(...children); },
+        appendChild(child) { this.children.push(child); }});
+    let context = vm.createContext({document: {createElement: element},
+        window: {location: {reload: () => ++reloads}}});
+    require("./support/loadSettingsEntries")(context);
+    let dialog = {page: element(), addHeading() {}, addSectionHeading() {}, addNote: element};
+    context.dialog = dialog;
+    vm.runInContext('new SettingsIconPacksEntry(dialog, {id: "assets"}).render()', context);
+    let button = dialog.page.children[0].children.find(child => child.textContent === "Reload translations");
+    button.onclick();
+    assert.equal(reloads, 1);
+});

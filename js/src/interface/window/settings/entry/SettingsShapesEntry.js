@@ -28,7 +28,7 @@ class SettingsShapesEntry extends SettingsEntry {
             input.multiple = true;
             input.hidden = true;
             input.onchange = async () => {
-                await this.importShapes(Array.from(input.files || []));
+                await this.importShapes(Array.from(input.files));
                 input.value = "";
             };
             controls.appendChild(input);

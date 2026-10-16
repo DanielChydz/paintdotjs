@@ -136,12 +136,6 @@ class ToolInfoItem extends LabelMenuItem {
                 || (flipped && Math.abs(rotation - 180) > 0.0001)
                 || tool.context.currentMode === MoveToolBaseMode.ROTATE) {
                 let angle = -rotation;
-                while (angle > 180) {
-                    angle -= 360;
-                }
-                while (angle < -180) {
-                    angle += 360;
-                }
                 values.push(new Intl.NumberFormat(locale, {
                     minimumFractionDigits: 2, maximumFractionDigits: 2, roundingMode: "halfEven"
                 }).format(angle === 0 ? 0 : angle));
