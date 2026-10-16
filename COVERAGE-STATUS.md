@@ -1,36 +1,63 @@
 # Runtime coverage handoff
 
-## Resumed checkpoint (2026-10-16)
+## Completed checkpoint (2026-10-16)
 
-The user asked to resume. Continue toward 100% line and branch coverage and commit
-verified batches regularly. Implement concrete TODOs/stubs instead of deleting them.
-
-The target is **100% line and branch coverage of all first-party runtime
-sources**, meaningful regressions, fixes for demonstrated bugs, and verified
-commits. **The target is not complete.** Branch coverage still fails
-the strict 100% gate. All lines and functions are covered in the latest measurement; 39 branch alternatives remain.
-
-Latest complete, successful `npm run test:coverage`:
+**The requested coverage target is complete.** The user asked to resume from the
+saved checkpoint and continue until 100% lines and branches. The full coverage
+suite now passes, as does the strict 100% line/branch gate.
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 41,275 | 41,275 | 100% | 0 |
-| Branches | 10,000 | 10,039 | 99.61% | 39 |
+| Lines/statements | 41,276 | 41,276 | 100% | 0 |
+| Branches | 10,072 | 10,072 | 100% | 0 |
 | Functions | 2,532 | 2,532 | 100% | 0 |
 
-- **209 tests passed; zero failures.**
+- **211 tests passed; zero failures, skips or TODO tests.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
-- Full source/test lint, source headers, version checks and `git diff --check`
-  passed for this checkpoint.
-- `npx c8 report --check-coverage --lines 100 --branches 100` correctly fails.
-  A successful measurement is not satisfaction of the target.
-- V8 may expose additional branches after new scenarios; always measure fresh.
+- Source/test lint, source headers, version checks and `git diff --check` passed.
+- `npx c8 report --check-coverage --lines 100 --branches 100` passed.
+- Native Canvas, pointer capture, GPU/CPU pixel comparisons, real FontFace and
+  clipboard workflows remain in use. VM tests cover explicit boundary contracts.
 
 Reports: `coverage/coverage-summary.json`, `coverage/coverage-final.json`,
-`coverage/index.html`. Latest full-run log: `/tmp/paintdotjs-coverage-current.log`.
+`coverage/index.html`. Full-run log: `/tmp/paintdotjs-coverage-current.log`.
 Strict-gate log: `/tmp/paintdotjs-strict-coverage-current.log`.
 Generated reports and bundles are not committed sources.
+
+## Final coverage closure batch (2026-10-16)
+
+- Native shape tests cover negative constrained drags, filled rounded rectangles,
+  right-button line rendering, line body translation, collapsing an editable line
+  endpoint, normalized one-dimensional paths and collapsed ratio selections.
+- Native tool tests cover idle selection events, valid complement polygon clipping,
+  Shift-global fill, a seed outside the selection, secondary-source recoloring,
+  whole-document keyboard Move with an unknown saved interpolation mode, and
+  gradients clipped to a selection.
+- Successful supported file pickers are checked independently of filter rejection
+  retries. Clipboard dimensions return only after decoded-image cleanup. Unknown
+  tool options share an explicit empty fallback after dispatch.
+- File inputs owned by font/palette dialogs always have a FileList; removed null
+  alternatives that cannot occur while their type remains file. Empty lists and
+  drops without transfer data retain their supported behavior.
+- Font settings distinguish a genuinely pending metadata read from a completed
+  empty library. No successful font decode is fabricated for this scenario.
+- Effect tests cover unknown legacy layouts/channels and clearing hover coordinates.
+- Standalone save tests run in real browser frames, loading original sources and
+  dependencies in their own realm. They check absent/invalid settings and actual
+  zero-sized SVG image loading. A Node VM fixture with cross-realm native DOM
+  dependencies was replaced after renderer crashes; it is not part of the suite.
+- Recovery saves both one and two documents through the real native writer,
+  reads saved PNGs back and checks exact pixels and singular/plural status text.
+- The slider maximum-zero regression was fixed earlier in commit 83fa493. The test
+  demonstrated incorrect thumb hit testing before the production fix.
+
+## Historical checkpoints
+
+The sections below preserve earlier decisions, measurements and interrupted work.
+Their incomplete/pause statements describe those older checkpoints, not the final
+status above. Keep concrete TODO implementations and meaningful regression oracles
+when extending coverage; continue committing verified changes regularly.
 
 ## Verified pixel and legacy import batch (2026-10-16)
 
@@ -101,10 +128,14 @@ committed as `adfeb59`. Further verified batches were committed as `189caf9`,
 and `0d52f4c`; use `git log` for newer checkpoint commits. Continue committing
 verified batches, not only when the overall 100% target passes.
 
-The DEB from the earlier session is
-`dist/paintdotjs-2.1.16-linux-amd64.deb`. It predates the document-action dispatcher
-and all resumed-session fixes. Rebuild and inspect it after final verification.
-Do not run coverage and packaging/build commands concurrently.
+The final DEB was rebuilt successfully after the passing strict gate:
+`dist/paintdotjs-2.1.16-linux-amd64.deb` (package paintdotjs, version 2.1.16,
+architecture amd64). Its metadata, app.asar, PDN template and bundled Segoe UI font
+were inspected. SHA-256:
+`6dc5a3d22e4d817d253a468c8e8a1d37dc9c14d796eae455724d6224452ef690`.
+Packaging log: `/tmp/paintdotjs-final-deb.log`. Reports describe the verified source
+snapshot; packaging rebuilt bundles only after report generation. For a new report,
+run the full mapped coverage build again. Never run coverage and packaging together.
 
 This environment's sandbox causes `spawnSync ... EPERM` (even after producing
 partial child output), obscuring test failures. Tests/coverage/header checks
@@ -512,30 +543,10 @@ Move snapshot tests assert 54x30x4 bytes for the overlapping example and
 (40x20 + 34x24)x4 bytes in two chunks for the disjoint clipped example.
 Ellipse tests measure chord error through 16,000px dimensions.
 
-## Remaining coverage priorities
+## Coverage audit
 
-Inspect original-source statement and branch ranges in the latest detailed
-report. Remaining gaps include alternate modes, guards, fallbacks and races.
-
-| Source | Uncovered lines | Uncovered branches |
-|---|---:|---:|
-| [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 0 | 9 |
-| [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 0 | 4 |
-| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 0 | 4 |
-| [DocumentIO.js](./js/src/io/DocumentIO.js) | 0 | 3 |
-| [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 0 | 3 |
-| [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 0 | 3 |
-| [RectangleSelectTool.js](./js/src/engine/document/tool/tool/RectangleSelectTool.js) | 0 | 2 |
-| [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 0 | 2 |
-| [ErrorForm.js](./js/src/interface/window/form/ErrorForm.js) | 0 | 1 |
-| [ColorsForm.js](./js/src/interface/window/form/ColorsForm.js) | 0 | 1 |
-| [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 0 | 1 |
-| [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 0 | 1 |
-| [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 0 | 1 |
-| [MoveTool.js](./js/src/engine/document/tool/tool/move/MoveTool.js) | 0 | 1 |
-| [RecolorTool.js](./js/src/engine/document/tool/tool/RecolorTool.js) | 0 | 1 |
-| [GradientTool.js](./js/src/engine/document/tool/tool/GradientTool.js) | 0 | 1 |
-| [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 0 | 1 |
+The latest successful report has no uncovered runtime lines, functions or branch
+ranges. All first-party runtime sources remain included.
 
 Known audit points:
 
@@ -574,7 +585,7 @@ npm run dist:deb
 dpkg-deb --field dist/paintdotjs-2.1.16-linux-amd64.deb Package Version Architecture Depends
 ```
 
-The strict gate will fail until the target is achieved. Keep that failure honest.
+The strict gate passes at this checkpoint. Keep the thresholds at 100% when changing runtime sources.
 Do not install dependencies unless a chosen command actually reports missing ones
 or dependency manifests change.
 

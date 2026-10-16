@@ -182,6 +182,27 @@ module.exports = async function checkMoveModes() {
     check(!lifecycleSelectionMove.tracking && !lifecycleSelectionMove.context.lifted && lifecycleSelection.isEmpty(),
         "External selection reset retained an active selection-Move gesture");
     app.closeDocumentWorkspace(lifecycleWorkspace, false);
+    phase("keyboard Move covers the whole document with an unknown saved interpolation mode");
+    let keyboardWorkspace = app.createBlankDocumentInNewWorkspace(8, 8);
+    app.setActiveTool(null);
+    let keyboardSurface = keyboardWorkspace.getActiveLayer().getSurface();
+    keyboardSurface.clear();
+    keyboardSurface.context.fillStyle = "red";
+    keyboardSurface.context.fillRect(2, 2, 2, 2);
+    ToolType.MOVE.setSetting("resampling", "removed-plugin-mode");
+    app.setActiveToolFromType(ToolType.MOVE);
+    let keyboardMove = app.getActiveTool();
+    let keyboardUndoBaseline = keyboardWorkspace.getHistory().undoStack.length;
+    check(keyboardMove.onKeyPress(KeyButton.RIGHT), "Arrow key did not lift the whole document without a selection");
+    check(keyboardSurface.getColorAt(2, 2).alpha === 0 && keyboardSurface.getColorAt(4, 2).red === 255,
+        "Unknown interpolation mode fallback did not translate document pixels");
+    keyboardMove.drop();
+    while (keyboardWorkspace.getHistory().undoStack.length > keyboardUndoBaseline) {
+        keyboardWorkspace.getHistory().stepBackward();
+    }
+    check(keyboardSurface.getColorAt(2, 2).red === 255 && keyboardSurface.getColorAt(4, 2).alpha === 0,
+        "Whole-document keyboard Move did not undo its translated pixels");
+    app.closeDocumentWorkspace(keyboardWorkspace, false);
     phase("Move activation without an active layer retains an empty render destination");
     app.setActiveTool(null);
     let emptyWorkspace = app.createBlankDocumentInNewWorkspace(8, 8);

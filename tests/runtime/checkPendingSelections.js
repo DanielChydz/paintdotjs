@@ -451,6 +451,22 @@ module.exports = async function checkPendingSelections() {
     app.controlKeyDown = false;
     app.altKeyDown = false;
     app.shiftKeyDown = false;
+    phase("idle selection events and collapsed fixed-ratio drags");
+    tool = reset(ToolType.RECTANGLE_SELECT, {selectionMode: "fixedRatio", selectionWidth: 2, selectionHeight: 1});
+    check(!tool.onMouseMove(10, 10) && !tool.onMouseUp(10, 10, MouseButton.LEFT),
+        "An idle selection consumed pointer movement or release");
+    for (let end of [new Point(32, 60), new Point(60, 40)]) {
+        tool.onMouseDown(32, 40, MouseButton.LEFT);
+        tool.onMouseMove(end.x, end.y);
+        tool.onMouseUp(end.x, end.y, MouseButton.LEFT);
+        check(selection.isEmpty(), "A zero-width or zero-height ratio drag created selected pixels");
+    }
+    tool.tracePoints = [new Point(-10, -10), new Point(20, 20)];
+    tool.combineMode = CombineMode.COMPLEMENT;
+    let clippedComplement = tool.createSelectionPolygon();
+    check(clippedComplement.every(point => point.x >= 0 && point.y >= 0 && point.x <= 128 && point.y <= 128),
+        "Complement polygon preparation failed to clip valid enum input to document bounds");
+
     phase("antialiased rectangles keep independent interior and outline colors");
     colors.setMainColor(new Color(255, 0, 0));
     colors.setSecondaryColor(new Color(0, 0, 255));
@@ -486,6 +502,54 @@ module.exports = async function checkPendingSelections() {
     check(surface.getColorAt(50, 50).alpha === 255 && surface.getColorAt(20, 50).alpha === 0,
         "Unknown saved shape failed to render its bounded rectangular fallback");
     tool.cancelPending();
+    phase("negative constrained shapes, rounded fills and degenerate line hit tests");
+    tool = reset(ToolType.SHAPES, {shape: "roundedRectangle", drawType: "fill", radius: 8, width: 2});
+    app.shiftKeyDown = true;
+    tool.onMouseDown(72, 72, MouseButton.RIGHT);
+    tool.onMouseMove(32, 48);
+    tool.onMouseUp(32, 48, MouseButton.RIGHT);
+    check(tool.endPoint.x === 32 && tool.endPoint.y === 32, "Negative Shift drag did not retain both signs");
+    check(surface.getColorAt(52, 52).blue === 255 && surface.getColorAt(52, 52).alpha === 255
+        && surface.getColorAt(32, 32).alpha === 0, "Filled rounded rectangle lost its interior or rounded corner");
+    tool.cancelPending();
+    tool = reset(ToolType.LINE, {width: 2, fillStyle: "solid"});
+    tool.onMouseDown(64, 64, MouseButton.RIGHT);
+    tool.onMouseUp(64, 64, MouseButton.RIGHT);
+    check(!tool.pending && !tool.hitTestPendingShape(new Point(64, 64)),
+        "A zero-length initial line remained pending");
+    tool.cancelPending();
+    tool = reset(ToolType.LINE, {width: 2, fillStyle: "solid"});
+    tool.onMouseDown(20, 64, MouseButton.RIGHT);
+    tool.onMouseUp(100, 64, MouseButton.RIGHT);
+    tool.onMouseMove(120, 120);
+    check(tool.moveNubs === null, "A line unexpectedly gained bounding box handles");
+    tool.onMouseDown(34, 64, MouseButton.LEFT);
+    check(tool.interactionMode === MoveToolBaseMode.TRANSLATE, "Line body did not begin translation away from its control points");
+    tool.onMouseMove(34, 74);
+    tool.onMouseUp(34, 74, MouseButton.LEFT);
+    check(surface.getColorAt(50, 74).blue === 255 && surface.getColorAt(50, 64).alpha === 0,
+        "Translating a line body did not move its secondary-color pixels");
+    tool.cancelPending();
+    tool = reset(ToolType.LINE, {width: 2, fillStyle: "solid"});
+    tool.onMouseDown(32, 40, MouseButton.LEFT);
+    tool.onMouseUp(72, 60, MouseButton.LEFT);
+    tool.onMouseDown(32, 40, MouseButton.LEFT);
+    tool.onMouseMove(72, 60);
+    tool.onMouseUp(72, 60, MouseButton.LEFT);
+    check(tool.pending && tool.startPoint.equals(tool.endPoint)
+        && tool.hitTestPendingShape(new Point(72, 60)) && !tool.hitTestPendingShape(new Point(100, 100)),
+        "Collapsing an editable line endpoint lost finite endpoint hit testing");
+    tool.cancelPending();
+    let verticalPath = new Path2D();
+    tool.addAbsoluteNormalizedPath(verticalPath, new Rectangle(10, 20, 40, 50), [[4, 0], [4, 10]]);
+    let horizontalPath = new Path2D();
+    tool.addAbsoluteNormalizedPath(horizontalPath, new Rectangle(10, 20, 40, 50), [[0, 4], [10, 4]]);
+    surface.context.lineWidth = 2;
+    check(surface.context.isPointInStroke(verticalPath, 10, 45) && !surface.context.isPointInStroke(verticalPath, 20, 45),
+        "Normalizing a vertical path divided by zero or shifted its x origin");
+    check(surface.context.isPointInStroke(horizontalPath, 30, 20) && !surface.context.isPointInStroke(horizontalPath, 30, 30),
+        "Normalizing a horizontal path divided by zero or shifted its y origin");
+
     phase("line cap combinations and endpoint hit testing preserve editable geometry");
     tool = reset(ToolType.LINE, {width: 4, antialias: true, startCap: "filledArrow", endCap: "flat", fillStyle: "solid"});
     tool.onMouseDown(32, 40, MouseButton.LEFT);

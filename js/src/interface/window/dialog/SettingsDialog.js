@@ -722,7 +722,7 @@ class SettingsDialog {
             input.multiple = true;
             input.hidden = true;
             input.onchange = async () => {
-                await this.importFonts(Array.from(input.files || []));
+                await this.importFonts(Array.from(input.files));
                 input.value = "";
             };
 

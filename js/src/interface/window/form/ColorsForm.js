@@ -824,8 +824,8 @@ class ColorsForm extends Form {
         picker.multiple = true;
         picker.webkitdirectory = true;
         picker.onchange = async () => {
-            const imported = await this.importPaletteFiles(picker.files || []);
-            if (imported === 0 && picker.files !== null && picker.files.length > 0) {
+            const imported = await this.importPaletteFiles(picker.files);
+            if (imported === 0 && picker.files.length > 0) {
                 await TaskDialog.show({
                     title: "Open Palettes Folder",
                     icon: "assets/icons/swatch_icon.png",

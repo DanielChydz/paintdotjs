@@ -358,3 +358,28 @@ test("uncached fonts omit deleted records and can be removed without loaded face
     assert.equal(await manager.removeAllFonts(), 1);
     assert.equal(state.closed, 3);
 });
+
+
+test("font settings distinguish pending metadata loading from a completed empty library", async () => {
+    let {manager, context, window, database} = fontFixture();
+    let release;
+    manager.openDatabase = () => new Promise(resolve => { release = () => resolve(database); });
+    let loading = manager.initialize();
+    assert.equal(manager.isInitializing(), true);
+    context.AppSettingsStore = {apply() {}, watchSystemColorScheme() {}};
+    window.addEventListener = () => {};
+    context.document.createElement = () => ({className: "", textContent: ""});
+    let filename = path.resolve(__dirname, "../js/src/interface/window/dialog/SettingsDialog.js");
+    vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
+    let settings = vm.runInContext("new SettingsDialog()", context);
+    let children = [];
+    settings.fontList = {isConnected: true, innerHTML: "", appendChild: child => children.push(child)};
+    settings.renderFontRows();
+    assert.equal(children.at(-1).textContent, "Loading installed fonts…");
+    release();
+    await loading;
+    settings.renderFontRows();
+    assert.equal(manager.isInitializing(), false);
+    assert.equal(children.at(-1).textContent, "No custom fonts have been added.");
+    assert.equal(manager.getFonts().length, 0);
+});

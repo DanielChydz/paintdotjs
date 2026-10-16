@@ -279,18 +279,20 @@ class DocumentIO {
         }
 
         let image = null;
+        let size = null;
         try {
             image = await this.loadImage(blob);
-            return image.width > 0 && image.height > 0
-                ? {width: image.width, height: image.height}
-                : null;
+            if (image.width > 0 && image.height > 0) {
+                size = {width: image.width, height: image.height};
+            }
         } catch (_) {
-            return null;
+            // Unreadable clipboard images have no usable dimensions.
         } finally {
             if (image !== null && typeof image.close === "function") {
                 image.close();
             }
         }
+        return size;
     }
 
     static async openFilePicker() {

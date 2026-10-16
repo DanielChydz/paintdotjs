@@ -437,6 +437,8 @@ module.exports = async function checkControls() {
     let fontBeforeUp = fontDropdown.value;
     fontDropdown.menu.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowUp", bubbles: true, cancelable: true}));
     check(fontDropdown.value !== fontBeforeUp, "ArrowUp on an open font control did not move to the preceding font");
+    fontDropdown.menu.dispatchEvent(new KeyboardEvent("keydown", {key: "ArrowDown", bubbles: true, cancelable: true}));
+    check(fontDropdown.value === fontBeforeUp, "ArrowDown did not reverse the preceding ArrowUp font selection");
     let previewResults = fontDropdown.menu;
     previewResults.id = "font-preview-viewport-contract";
     previewResults.style.maxHeight = "80px";

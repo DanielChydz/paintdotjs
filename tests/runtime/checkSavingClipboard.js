@@ -294,6 +294,64 @@ module.exports = async function checkSavingClipboard() {
         }
     }
 
+    phase("standalone save configuration and zero-sized vector previews");
+    for (let saved of [undefined, null, "invalid"]) {
+        let iframe = document.createElement("iframe");
+        iframe.style.cssText = "position:fixed;left:0;top:0;width:800px;height:600px;z-index:999999";
+        let loaded = new Promise(resolve => iframe.onload = resolve);
+        iframe.srcdoc = "<!doctype html><html><body></body></html>";
+        document.body.appendChild(iframe);
+        await loaded;
+        try {
+            let realm = iframe.contentWindow;
+            Object.assign(realm, {isApp: false, ImageEncoder});
+            if (saved !== undefined) {
+                realm.AppSettingsStore = {get: () => saved};
+            }
+            for (let relative of ["engine/util/Utility", "engine/util/Debounced",
+                "interface/item/component/NumberInput", "interface/window/DialogMover",
+                "interface/window/dialog/SaveImageDialog"]) {
+                let script = realm.document.createElement("script");
+                script.src = "paintjs://app/js/src/" + relative + ".js";
+                let scriptLoaded = new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error("Standalone save dependency failed to load: " + relative));
+                });
+                realm.document.body.appendChild(script);
+                await scriptLoaded;
+            }
+            let standaloneSave = realm.eval("SaveImageDialog");
+            let pending = standaloneSave.open({canvas, encode: () => Promise.resolve(new realm.Blob([
+                '<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0"></svg>'
+            ], {type: "image/svg+xml"}))});
+            let frameError = null;
+            pending.catch(error => { frameError = error; });
+            let standaloneForm = () => realm.document.querySelector(".save-config-dialog");
+            await waitFor(() => {
+                check(frameError === null, "Standalone save failed: " + frameError);
+                let currentForm = standaloneForm();
+                if (currentForm === null) {
+                    return false;
+                }
+                let status = currentForm.querySelector(".save-config-status").textContent;
+                check(status === "" || status === "Updating preview…", "Standalone preview failed: " + status);
+                return !currentForm.querySelector("button[type=submit]").disabled;
+            });
+            let preview = standaloneForm().querySelector(".save-config-preview-stage img");
+            await preview.decode();
+            await new Promise(resolve => realm.requestAnimationFrame(resolve));
+            check(preview.naturalWidth === 0 && preview.naturalHeight === 0
+                && parseFloat(preview.style.width) > 0 && parseFloat(preview.style.height) > 0,
+            "A loaded zero-sized vector preview did not recover source canvas dimensions");
+            check(standaloneForm().querySelector("select").value === "png", "Standalone save did not choose its default format");
+            standaloneForm().dispatchEvent(new realm.KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
+            check(await pending === null && standaloneForm() === null,
+                "Canceling standalone save retained its dialog or committed data");
+        } finally {
+            iframe.remove();
+        }
+    }
+
     phase("native file write");
     let fs = require("node:fs");
     let filePath = require("node:path").join(require("node:process").env.PAINTDOTJS_TEST_USER_DATA, "saved.png");
@@ -317,6 +375,17 @@ module.exports = async function checkSavingClipboard() {
     let recoveryDecoded = await window.portableImageCodec.decode(fs.readFileSync(filePath), "png");
     equal(recoveryDecoded.rgba, surface.context.getImageData(0, 0, 32, 16).data,
         "Recovery save wrote different pixels");
+    let secondRecovery = app.createBlankDocumentInNewWorkspace(1, 1);
+    secondRecovery.getActiveLayer().getSurface().clear(Color.fromRGBA(0, 255, 0, 255));
+    let secondRecoveryPath = require("node:path").join(require("node:process").env.PAINTDOTJS_TEST_USER_DATA, "saved-second.png");
+    secondRecovery.setFileInfo("saved-second.png", null, secondRecoveryPath, "png", {});
+    await recoveryForm.saveAll();
+    check(recoveryForm.saveStatus.textContent === "2 images saved. Check the selected folder or Downloads.",
+        "Multiple-document recovery did not report a plural successful save");
+    let secondRecoveryPixels = await window.portableImageCodec.decode(fs.readFileSync(secondRecoveryPath), "png");
+    equal(secondRecoveryPixels.rgba, [0, 255, 0, 255], "Multiple-document recovery changed saved pixels");
+    app.closeDocumentWorkspace(secondRecovery, false);
+    app.setActiveDocumentWorkspace(workspace);
     recoveryForm.getWindow().close();
     phase("merged whole-document copy preserves composited pixels when system clipboard permission is denied");
     app.setActiveTool(null);

@@ -922,3 +922,32 @@ test("decoder rejection without an Error still produces a useful format error", 
     context.createImageBitmap = async () => { throw null; };
     await assert.rejects(io.loadImage(new Blob(["invalid"])), /Unsupported image format/);
 });
+
+
+test("file pickers accept supported filters without retrying", async () => {
+    let opening = documentFixture();
+    let file = {name: "supported.png"};
+    let handle = {getFile: async () => file};
+    let openCalls = 0;
+    opening.window.showOpenFilePicker = async options => {
+        ++openCalls;
+        assert.ok(options.types[0].accept["image/png"].includes(".png"));
+        return [handle];
+    };
+    opening.io.openFiles = async files => { opening.state.selected = files; };
+    await opening.io.openFilePicker();
+    assert.equal(openCalls, 1);
+    assert.deepEqual([...opening.state.selected], [file]);
+    assert.equal(opening.io.openedFileHandles.get(file), handle);
+    let saving = savingFixture();
+    let saveCalls = 0;
+    saving.window.showSaveFilePicker = async options => {
+        ++saveCalls;
+        assert.ok(options.types[0].accept["image/png"].includes(".png"));
+        return saving.handle("supported.png");
+    };
+    assert.equal(await saving.io.saveActive(), true);
+    assert.equal(saveCalls, 1);
+    assert.equal(saving.state.writes.length, 1);
+    assert.equal(saving.state.fileInfo[0], "supported.png");
+});

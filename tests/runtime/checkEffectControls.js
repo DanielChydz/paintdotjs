@@ -103,6 +103,9 @@ module.exports = async function checkEffectControls() {
     check(result.amount === 60 && result.enabled === false && result.mode === "b", "Generic controls lost submitted values");
     check(result.curve.length === 2, "Generic curve right-click did not remove its interior point");
 
+    pending = open({...definition, dialog: "removed-specialized-layout"});
+    result = await submit(pending);
+    check(result.amount === 25, "An unknown specialized layout did not recover generic controls");
     phase("generic curve endpoint edits retain domain ordering");
     pending = open(definition);
     await ready();
@@ -134,6 +137,8 @@ module.exports = async function checkEffectControls() {
         "Curve drag did not update input/output coordinates");
     await native("mouseMove", curve, 0.2, 0.8);
     check(form().querySelector(".curves-coordinates").textContent.includes("51"), "Curve hover omitted input coordinates");
+    await native("mouseMove", curve, -0.1, 0.5);
+    check(form().querySelector(".curves-coordinates").textContent === "", "Leaving the specialized curve retained its coordinates");
     await native("mouseDown", curve, 0.6, 0.3, "right");
     await native("mouseUp", curve, 0.6, 0.3, "right");
     await ready();
@@ -216,7 +221,7 @@ module.exports = async function checkEffectControls() {
     }
 
     phase("missing specialized curves receive independent identity channels");
-    pending = open(BitmapEffectEngine.DEFINITIONS.curvesEffect, {channel: "luminosity"});
+    pending = open(BitmapEffectEngine.DEFINITIONS.curvesEffect, {channel: "removed-channel"});
     result = await submit(pending);
     for (let key of ["points", "redPoints", "greenPoints", "bluePoints"]) {
         check(JSON.stringify(result[key]) === "[[0,0],[255,255]]", "Missing curve did not receive identity: " + key);

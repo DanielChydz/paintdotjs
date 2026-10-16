@@ -169,6 +169,11 @@ module.exports = async function checkSettingsControls() {
     capture.dispatchEvent(new KeyboardEvent("keydown", {key: "Delete", bubbles: true, cancelable: true}));
     check(settings.status.textContent.includes("cleared") && ActionRegistry.getActionList()
         .find(action => action.getActionId() === id).getShortcutKey().isEmpty(), "Delete did not clear its shortcut");
+    let unassignedCapture = [...settings.shortcutList.querySelectorAll("input")].find(field => field.value === "Not assigned");
+    check(unassignedCapture !== undefined && unassignedCapture !== null, "No unassigned shortcut row was available after clearing");
+    unassignedCapture.focus();
+    unassignedCapture.blur();
+    check(unassignedCapture.value === "Not assigned", "Blur did not restore the unassigned shortcut label");
     button("Reset all shortcuts").click();
     check(settings.status.textContent.includes("defaults"), "Reset-all shortcut action did not report completion");
 
@@ -227,6 +232,9 @@ module.exports = async function checkSettingsControls() {
     let transfer = new DataTransfer();
     transfer.items.add(fontFile);
     let dropZone = settings.fontDropZone;
+    let fontsBeforeEmptyDrop = FontManager.getFonts().length;
+    await dropZone.ondrop(new DragEvent("drop", {bubbles: true, cancelable: true}));
+    check(FontManager.getFonts().length === fontsBeforeEmptyDrop, "A drop without a transfer payload changed installed fonts");
     dropZone.dispatchEvent(new DragEvent("dragenter", {dataTransfer: transfer, bubbles: true, cancelable: true}));
     check(dropZone.classList.contains("drag-over"), "Font drag did not show hover feedback: "
         + dropZone.className + "; effect=" + transfer.dropEffect);

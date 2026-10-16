@@ -422,9 +422,8 @@ class ToolMenu extends StripPanel {
                     ])),
                     section(antialias), blend, quality, section(finish)
                 ];
-            default:
-                return [];
         }
+        return [];
     }
 
     renderOptions(tool) {

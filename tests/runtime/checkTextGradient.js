@@ -85,6 +85,17 @@ module.exports = async function checkTextGradient() {
     check(gradient.gradientGl === null && gradient.gradientProgram === null && gradient.gradientCanvas === null,
         "Gradient disposal retained GPU resources");
 
+    phase("gradient previews honor a nonempty selection");
+    gradient = start(ToolType.GRADIENT, {gradientType: "linear"});
+    workspace.getSelection().setContinuation(new Rectangle(8, 8, 16, 8), CombineMode.REPLACE);
+    workspace.getSelection().commitContinuation();
+    gradient.onMouseDown(8, 8, MouseButton.LEFT);
+    gradient.onMouseUp(24, 8, MouseButton.LEFT);
+    check(gradient.changedBounds.toString() === new Rectangle(8, 8, 16, 8).toString(),
+        "Selected gradient dirty bounds escaped the selection");
+    check(surface.getColorAt(16, 12).alpha === 255 && surface.getColorAt(4, 12).alpha === 0,
+        "Selected gradient painted outside the selected region or left its interior empty");
+    gradient.cancelPending();
     phase("transparency gradients preserve preview history for both paint buttons");
     colors.setMainColor(Color.fromRGBA(255, 0, 0, 128));
     colors.setSecondaryColor(Color.fromRGBA(0, 0, 255, 64));
