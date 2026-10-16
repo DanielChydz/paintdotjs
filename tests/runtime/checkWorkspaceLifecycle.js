@@ -177,5 +177,32 @@ module.exports = async function checkWorkspaceLifecycle() {
     check(app.autoScrollFrame === scheduledFrame, "Starting auto-scroll twice scheduled competing frames");
     app.stopAutoScroll();
     await frame();
+    phase("queued layer thumbnails ignore a document closed before list reconstruction");
+    let layerForm = FormRegistry.get("layerForm");
+    let layer = workspace.getActiveLayer();
+    let item = layerForm.getItemByLayer(layer);
+    check(item !== null && item.thumbnail !== null, "Active layer thumbnail was not mounted");
+    let originalSetTimeout = window.setTimeout;
+    let scheduled = new Map();
+    try {
+        window.setTimeout = (callback, delay) => {
+            let id = originalSetTimeout(callback, delay);
+            scheduled.set(id, callback);
+            return id;
+        };
+        app.fire("document:render_layer_region", layer, layer.getBounds());
+    } finally {
+        window.setTimeout = originalSetTimeout;
+    }
+    let timer = layerForm.thumbnailUpdates.lastTimeouts.get(layer);
+    let refresh = scheduled.get(timer);
+    check(typeof refresh === "function", "Layer redraw did not schedule a thumbnail refresh");
+    clearTimeout(timer);
     app.closeDocumentWorkspace(workspace, false);
+    check(layer.getSurface() === null && layerForm.getItemByLayer(layer) === item,
+        "Closing did not dispose the layer before its deferred row reconstruction");
+    refresh();
+    check(layer.getSurface() === null, "Thumbnail refresh recreated a disposed layer surface");
+    await frame();
+    check(layerForm.getItemByLayer(layer) === null, "Closed layer row survived reconstruction");
 };
