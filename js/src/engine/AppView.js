@@ -478,8 +478,8 @@ class AppView {
             return;
         }
 
-        // Extracted Paint.NET cursors contain an extra metadata row and column.
-        // Their two red edge pixels encode the native x/y hotspot. Decode and
+        // Project cursor PNGs include an extra metadata row and column.
+        // Two red edge pixels encode the precise x/y hotspot. Decode and
         // crop that metadata before handing the image to the browser.
         if (cached instanceof Promise) {
             cached.then(cursor => {

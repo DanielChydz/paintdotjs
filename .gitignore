@@ -16,8 +16,3 @@ service_worker.js
 !/run/test.png
 .tmp
 scripts/__pycache__/
-assets/*
-!assets/pdn/
-assets/pdn/*
-!assets/pdn/templates/
-!assets/pdn/templates/**

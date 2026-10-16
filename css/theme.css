@@ -87,8 +87,8 @@
 
     --image-transparency: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPjxwYXRoIGZpbGw9IiM4ZjhmOGYiIGQ9Ik0wIDBoNHY0SDB6bTQgNGg0djRINHoiLz48cGF0aCBmaWxsPSIjYmZiZmJmIiBkPSJNNCAwaDR2NEg0ek0wIDRoNHY0SDB6Ii8+PC9zdmc+');
 
-    /* Actually we need Microsoft Sans Serif but Segoe UI is the closest we can get */
-    --font-family: 'Segoe UI', sans-serif;
+    /* Bundled open UI font with a native system fallback. */
+    --font-family: 'Inter', sans-serif;
     --font-size: 8.25pt;
     --font-weight: 500;
 
@@ -180,8 +180,11 @@
     opacity: .88;
 }
 
-/* Windows Font */
+/* Inter, SIL Open Font License 1.1; see assets/licenses/Inter-OFL.txt. */
 @font-face {
-    font-family: "Segoe UI";
-    src: url("../assets/font/segoe_ui.ttf") format('truetype');
+    font-family: "Inter";
+    src: url("../assets/font/Inter.ttf") format('truetype');
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
 }

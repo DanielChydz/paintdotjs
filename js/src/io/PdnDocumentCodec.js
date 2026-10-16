@@ -17,14 +17,15 @@
  *
  * A PDN3 file consists of a small XML header, an NRBF object graph and one
  * deferred, chunked BGRA pixel block per layer. The object graph templates in
- * assets/pdn/templates were produced by Paint.NET 5.1.12 itself. Keeping the
+ * assets/pdn/templates are generated independently from the NRBF schema in
+ * scripts/resource/PdnTemplateFactory.js, without Paint.NET binaries. Keeping the
  * binary-format details here prevents them from leaking into the UI/file code.
  */
 class PdnDocumentCodec {
 
     static MAGIC = [0x50, 0x44, 0x4e, 0x33];
-    static TEMPLATE_WIDTH = 257;
-    static TEMPLATE_HEIGHT = 263;
+    static TEMPLATE_WIDTH = 8291;
+    static TEMPLATE_HEIGHT = 8293;
     static PIXEL_CHUNK_SIZE = 262144;
 
     static isNativePdn(bytes) {
@@ -330,6 +331,19 @@ class PdnDocumentCodec {
         return match === null ? 0 : Number(match[1]);
     }
 
+    static isLayerNameRecord(bytes, offset) {
+        if (offset < 0) {
+            return false;
+        }
+        try {
+            let end = this.skipLengthPrefixedString(bytes, offset + 5);
+            return end + 12 <= bytes.length && bytes[end] === 9
+                && bytes[end + 5] <= 1 && bytes[end + 6] <= 1;
+        } catch (_) {
+            return false;
+        }
+    }
+
     static async repairLegacyBlendModeRecords(graph, layerCount) {
         if (!Number.isInteger(layerCount) || layerCount < 1 || layerCount > 64) {
             return null;
@@ -343,6 +357,11 @@ class PdnDocumentCodec {
         const repaired = graph.slice();
         const encoder = new TextEncoder();
 
+        // The previous writer declared the document's isDisposed field before
+        // its metadata. Independent templates declare the shared metadata first.
+        const legacyLayout = this.findByteSequence(graph, encoder.encode("isDisposed"))
+            < this.findByteSequence(graph, encoder.encode("userMetadataItems"));
+
         for (let index = 0; index < layerCount; ++index) {
             const marker = encoder.encode("PDJ_LAYER_" + String(index).padStart(4, "0"));
             const markerOffset = this.findByteSequence(template, marker);
@@ -353,8 +372,17 @@ class PdnDocumentCodec {
             // BinaryObjectString + object id uniquely identifies the layer-name
             // record even after the placeholder has been replaced by any name.
             const nameRecordSignature = template.subarray(markerOffset - 6, markerOffset - 1);
-            const nameRecordOffset = this.findByteSequence(repaired, nameRecordSignature);
-            if (nameRecordOffset < 0) {
+            let signature = nameRecordSignature;
+            const legacyNameId = legacyLayout ? 20 + 4 * layerCount + 5 * index : null;
+            if (legacyNameId !== null) {
+                // Object-id allocation used by the old paint.js writer. These
+                // numeric format facts preserve recovery without the old bytes.
+                signature = new Uint8Array(5);
+                signature[0] = 6;
+                new DataView(signature.buffer).setInt32(1, legacyNameId, true);
+            }
+            const nameRecordOffset = this.findByteSequence(repaired, signature);
+            if (!this.isLayerNameRecord(repaired, nameRecordOffset)) {
                 return null;
             }
 
@@ -376,7 +404,13 @@ class PdnDocumentCodec {
 
             const templatePropertyOffset = markerOffset + marker.length + 5;
             const templateRecordOffset = templatePropertyOffset + 3;
-            repaired.set(template.subarray(templateRecordOffset, templateRecordOffset + 4), recordOffset);
+            if (legacyNameId === null) {
+                repaired.set(template.subarray(templateRecordOffset, templateRecordOffset + 4), recordOffset);
+            } else {
+                repaired[recordOffset] = index === 0 ? 5 : 1;
+                new DataView(repaired.buffer, repaired.byteOffset, repaired.byteLength)
+                    .setInt32(recordOffset + 1, -(legacyNameId + 2), true);
+            }
 
             const valueOffset = this.findBlendModeValueOffset(repaired, recordOffset);
             new DataView(repaired.buffer, repaired.byteOffset + valueOffset, 4)

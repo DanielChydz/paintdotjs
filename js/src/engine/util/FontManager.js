@@ -56,7 +56,7 @@ class FontManager {
 
     static getTextToolChoices() {
         const builtIn = [
-            ["Calibri", "Calibri"], ["Segoe UI", "Segoe UI"], ["Arial", "Arial"],
+            ["Inter", "Inter"], ["sans-serif", "sans-serif"], ["system-ui", "system-ui"],
             ["serif", "Serif"], ["monospace", "Monospace"]
         ];
         return [...builtIn, ...this.getFonts().map(font => [font.family, font.name])];
@@ -161,9 +161,9 @@ class FontManager {
 
         if (typeof ToolType !== "undefined"
             && ToolType.TEXT.getSetting("fontFamily") === record.family) {
-            ToolType.TEXT.setSetting("fontFamily", "Segoe UI");
+            ToolType.TEXT.setSetting("fontFamily", "sans-serif");
             window.app?.fire?.("app:tool_setting_changed", ToolType.TEXT,
-                "fontFamily", "Segoe UI");
+                "fontFamily", "sans-serif");
         }
         this.notifyChanged();
         return true;
@@ -189,9 +189,9 @@ class FontManager {
         this.writeMetadataCache();
 
         if (selectedWasCustom) {
-            ToolType.TEXT.setSetting("fontFamily", "Segoe UI");
+            ToolType.TEXT.setSetting("fontFamily", "sans-serif");
             window.app?.fire?.("app:tool_setting_changed", ToolType.TEXT,
-                "fontFamily", "Segoe UI");
+                "fontFamily", "sans-serif");
         }
         this.notifyChanged();
         return count;

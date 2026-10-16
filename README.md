@@ -34,8 +34,7 @@ AUR helper, for example:
 yay -S paintdotjs-bin
 ```
 
-During installation, the AUR package fetches the required artwork and translations from the official
-Paint.NET download.
+All interface artwork and fonts are bundled locally under open licenses; no Paint.NET download is used.
 
 ### Flatpak
 
@@ -54,8 +53,7 @@ the downloaded file.
 Download the latest universal `.dmg` from [GitHub Releases](https://github.com/LabyStudio/paintdotjs/releases/latest),
 open it, and drag paint.js into the Applications folder.
 
-The macOS app fetches the required artwork and translations from the official Paint.NET download on
-first launch.
+The macOS app includes the same open artwork and fonts as the web and Linux builds.
 
 ## Differences from Paint.NET
 
@@ -138,10 +136,11 @@ required functionality.
 npm run app
 ```
 
-The repository does not redistribute Paint.NET's modern artwork and translations because they are
-not part of the MIT-compatible Paint.NET 3.36.7 source release on which this project is based. On the
-first build, paint.js fetches the required assets from the official Paint.NET download. This lets the
-interface follow Paint.NET v5.1.12+ without redistributing those files in this repository.
+The application ships its interface assets locally. Lucide icons use the ISC license,
+Inter uses SIL OFL 1.1, and the project supplies its own logo, cursors and English
+labels. See [artwork/SOURCES.md](artwork/SOURCES.md) and [NOTICE.md](NOTICE.md).
+Neither builds nor first launch download Paint.NET artwork, fonts or translations.
+`npm run check-assets` only verifies the bundled files and their hashes.
 
 ### Build an Ubuntu package
 
@@ -325,7 +324,7 @@ an HTML report to `coverage/index.html` and machine-readable reports to `coverag
 It includes **every first-party runtime JavaScript file**, including files that
 were never executed: `js/`, `src/`, and the desktop runtime helpers
 `scripts/asset_archive.js`, `scripts/install_desktop_assets.js`, and
-`scripts/resource/ResourceReader.js`. It verifies that no source file disappeared
+`scripts/resource/ResourceReader.js`, and `scripts/resource/AssetCatalog.js`. It verifies that no source file disappeared
 from the report.
 
 Coverage combines Node.js, VM-loaded engine code, the real Electron renderer, and

@@ -363,3 +363,36 @@ test("PDN template patching supplies stable names for unnamed layers", async () 
     assert.equal(layers[0].properties.name, null);
     assert.equal(layers[1].properties.name, "");
 });
+
+
+test("independent PDN schemas cover all supported layer counts and reproduce committed graphs", async () => {
+    let {serialize, deserialize} = await import("ms-nrbf-js");
+    let PdnTemplateFactory = require("../scripts/resource/PdnTemplateFactory");
+    let codec = loadCodec();
+    for (let count of [0, -1, 65, 1.5]) {
+        assert.throws(() => PdnTemplateFactory.create(count), /1 to 64 layers/);
+    }
+    for (let count = 1; count <= 64; ++count) {
+        let graph = serialize(PdnTemplateFactory.create(count));
+        assert.deepEqual(graph, fs.readFileSync(path.resolve(__dirname, "../assets/pdn/templates", count + ".bin")),
+            "Committed PDN schema has drifted from its independent source: " + count);
+        let layers = Array.from({length: count}, (_, index) => ({properties: {
+            name: "Independent layer " + index, visible: true, opacity: 77, blendMode: "multiply"
+        }}));
+        let patched = codec.patchTemplate(new Uint8Array(graph), 2, 1, layers);
+        let root = deserialize(patched);
+        assert.equal(root.members.width, 2);
+        assert.equal(root.members.height, 1);
+        let objects = root.members.layers.members["ArrayList+_items"];
+        assert.equal(objects.length, count);
+        for (let [index, layer] of objects.entries()) {
+            assert.equal(layer.members.surface.members.width, 2);
+            assert.equal(layer.members.surface.members.height, 1);
+            assert.equal(layer.members["Layer+properties"].members.name, layers[index].properties.name);
+            assert.equal(layer.members["Layer+properties"].members.opacity, 77);
+        }
+    }
+    assert.equal(codec.isLayerNameRecord(new Uint8Array(0), -1), false);
+    let malformed = new Uint8Array(16).fill(0x80);
+    assert.equal(codec.isLayerNameRecord(malformed, 0), false);
+});

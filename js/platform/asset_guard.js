@@ -54,7 +54,7 @@
 
                 // Explanation
                 const explanation = document.createElement('p');
-                explanation.textContent = 'This paint.js checkout has not prepared the Paint.NET assets yet.';
+                explanation.textContent = 'The bundled paint.js interface assets are missing.';
 
                 // Setup command
                 const instruction = document.createElement('p');
@@ -66,7 +66,7 @@
                 // Note
                 const note = document.createElement('p');
                 note.className = 'missing-assets-note';
-                note.textContent = 'The assets are downloaded separately because they cannot be included in the repository.';
+                note.textContent = 'Restore the assets directory from this checkout or reinstall the application. No assets are downloaded.';
 
                 dialog.append(title, explanation, instruction, command, note);
             }

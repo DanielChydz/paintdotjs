@@ -235,7 +235,7 @@ class ToolType {
             tolerance: 25, alphaMode: "premultiplied", recolorSampling: "once"
         }, brushSettings));
         ToolType.TEXT.setSettings({
-            fontFamily: "Calibri", fontSize: 12, fontUnit: "points",
+            fontFamily: "Inter", fontSize: 12, fontUnit: "points",
             bold: false, italic: false, underline: false, strikeout: false,
             textRendering: "smooth", align: "left", antialias: true,
             blendMode: "normal", renderingQuality: "high"

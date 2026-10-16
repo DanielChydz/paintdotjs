@@ -14,3 +14,22 @@ terms. See [LICENSE.md](LICENSE.md) for the complete licensing terms and inherit
 
 Copies or substantial portions of paint.js must retain the applicable copyright, license, and
 attribution notices.
+
+## Bundled interface assets
+
+The application does not distribute or download Paint.NET logo artwork, toolbar
+icons, cursors, fonts or translation resource files. The original source-code
+attribution above does not grant permission to use Paint.NET artwork.
+
+- Lucide Static 0.468.0: Copyright Lucide Contributors; portions Copyright Cole
+  Bemis / Feather. ISC license with upstream attribution retained in
+  `assets/licenses/Lucide-LICENSE.txt`.
+- Inter variable font: Copyright 2020 The Inter Project Authors. SIL Open Font
+  License 1.1, included in `assets/licenses/Inter-OFL.txt`.
+- Original paint.js pixel-ribbon mark, document mark, cursor composition and
+  English labels: Copyright 2026 paint.js contributors, MIT license.
+
+Sources, pinned revisions and asset provenance are recorded in `artwork/SOURCES.md`.
+Legacy resource identifiers are retained for code compatibility; the corresponding
+images are new artwork, not Paint.NET assets. No endorsement by the icon or font
+projects is implied.

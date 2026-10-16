@@ -11,8 +11,7 @@
     "url": "https://github.com/LabyStudio/paintdotjs.git"
   },
   "paintdotjs": {
-    "paintDotNetVersion": "5.1.12",
-    "paintDotNetSha256": "d5ae7043f2fb9d365b48dfe243a2aca1c74924de99b04b6445916c95354aefa3"
+    "assetSet": "paintjs-open-v1"
   },
   "scripts": {
     "lint": "eslint js src scripts webpack.config.js",
@@ -39,7 +38,7 @@
     "dist:deb": "npm run desktop:build && electron-builder --linux deb --publish never",
     "dist:mac": "npm run desktop:build && electron-builder --mac dmg zip --universal",
     "install:local": "node ./scripts/install_local.js",
-    "assets:manifest": "node ./scripts/check_assets.js --refresh-manifest",
+    "assets:manifest": "node scripts/generate_asset_manifest.js",
     "gen-imports": "node ./scripts/generate_imports.js",
     "pwa": "npm run pages",
     "prepublish": "npm run web"
@@ -114,16 +113,8 @@
         "to": "desktop/icon.png"
       },
       {
-        "from": "assets/font",
-        "to": "assets/font"
-      },
-      {
-        "from": "assets/pdn",
-        "to": "assets/pdn"
-      },
-      {
-        "from": "assets/codecs",
-        "to": "assets/codecs"
+        "from": "assets",
+        "to": "assets"
       }
     ],
     "publish": [

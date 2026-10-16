@@ -429,7 +429,7 @@ module.exports = async function checkControls() {
     fontChoices = [...fontChoices.filter(entry => entry[0] !== font.family),
         fontChoices.find(entry => entry[0] === font.family)];
     let fontDropdown = new ToolOptionDropdown({
-        value: "Arial", values: fontChoices, width: 160, fontPreview: true, fitSelected: true,
+        value: "sans-serif", values: fontChoices, width: 160, fontPreview: true, fitSelected: true,
         leadingIcon: "text_icon.png", onChange: value => changes.push(value)
     });
     document.body.appendChild(fontDropdown.getElement());
@@ -570,7 +570,7 @@ module.exports = async function checkControls() {
         app.setActiveToolFromType(previousToolType);
     }
     check(await FontManager.removeFont(font.id), "Stored font was not removed");
-    check(ToolType.TEXT.getSetting("fontFamily") === "Segoe UI" && FontManager.getFonts().length === 0,
+    check(ToolType.TEXT.getSetting("fontFamily") === "sans-serif" && FontManager.getFonts().length === 0,
         "Removing selected font did not restore a built-in family");
     check(!await FontManager.removeFont(font.id), "Missing font removal reported success");
     await FontManager.addFont(new window.File([fontBytes], "Another.ttf"));

@@ -1,0 +1,920 @@
+{
+  "addNoiseEffect": {
+    "text": "Add noise",
+    "name": "Add noise"
+  },
+  "blurEffect": {
+    "text": "Blur",
+    "name": "Blur"
+  },
+  "bokehEffect": {
+    "text": "Bokeh",
+    "name": "Bokeh"
+  },
+  "brightnessAndContrastAdjustment": {
+    "text": "Brightness and contrast",
+    "name": "Brightness and contrast"
+  },
+  "bulgeEffect": {
+    "text": "Bulge",
+    "name": "Bulge"
+  },
+  "cloneStampTool": {
+    "text": "Clone stamp",
+    "name": "Clone stamp",
+    "helpText": "Ctrl-click to choose a source, then drag to clone pixels."
+  },
+  "cloudsEffect": {
+    "text": "Clouds",
+    "name": "Clouds"
+  },
+  "colorPickerTool": {
+    "text": "Color picker",
+    "name": "Color picker",
+    "helpText": "Click to pick a color from the image."
+  },
+  "colorsForm": {
+    "text": "Colors",
+    "name": "Colors",
+    "": {
+      "text": "",
+      "name": ""
+    },
+    "moreLessButton": {
+      "text": {
+        "less": "Less",
+        "more": "More"
+      }
+    },
+    "rgbHeader": {
+      "text": "RGB"
+    },
+    "hsvHeader": {
+      "text": "HSV"
+    },
+    "alphaHeader": {
+      "text": "Opacity"
+    },
+    "red": {
+      "text": "Red"
+    },
+    "green": {
+      "text": "Green"
+    },
+    "blue": {
+      "text": "Blue"
+    },
+    "hue": {
+      "text": "Hue"
+    },
+    "saturation": {
+      "text": "Saturation"
+    },
+    "value": {
+      "text": "Value"
+    },
+    "alpha": {
+      "text": "Alpha"
+    },
+    "hexLabel": {
+      "text": "Hex"
+    },
+    "hex": {
+      "text": "Hex"
+    }
+  },
+  "crystalizeEffect": {
+    "text": "Crystalize",
+    "name": "Crystalize"
+  },
+  "curvesEffect": {
+    "text": "Curves",
+    "name": "Curves"
+  },
+  "dentsEffect": {
+    "text": "Dents",
+    "name": "Dents"
+  },
+  "desaturateEffect": {
+    "text": "Desaturate",
+    "name": "Desaturate"
+  },
+  "dropShadowEffect": {
+    "text": "Drop shadow",
+    "name": "Drop shadow"
+  },
+  "edgeDetectEffect": {
+    "text": "Edge detect",
+    "name": "Edge detect"
+  },
+  "ellipseSelectTool": {
+    "text": "Ellipse select",
+    "name": "Ellipse select",
+    "helpText": "Drag to select an elliptical region."
+  },
+  "embossEffect": {
+    "text": "Emboss",
+    "name": "Emboss"
+  },
+  "eraserTool": {
+    "text": "Eraser",
+    "name": "Eraser",
+    "helpText": "Drag to erase pixels."
+  },
+  "errorForm": {
+    "text": "Error",
+    "name": "Error"
+  },
+  "exposureEffect": {
+    "text": "Exposure",
+    "name": "Exposure"
+  },
+  "fragmentEffect": {
+    "text": "Fragment",
+    "name": "Fragment"
+  },
+  "frostedGlassEffect": {
+    "text": "Frosted glass",
+    "name": "Frosted glass"
+  },
+  "glowEffect": {
+    "text": "Glow",
+    "name": "Glow"
+  },
+  "gradientTool": {
+    "text": "Gradient",
+    "name": "Gradient",
+    "helpText": "Drag to set the gradient endpoints."
+  },
+  "highlightsAndShadowsEffect": {
+    "text": "Highlights and shadows",
+    "name": "Highlights and shadows"
+  },
+  "historyForm": {
+    "text": "History",
+    "name": "History"
+  },
+  "hueAndSaturationAdjustment": {
+    "text": "Hue and saturation",
+    "name": "Hue and saturation"
+  },
+  "inkSketchEffect": {
+    "text": "Ink sketch",
+    "name": "Ink sketch"
+  },
+  "invertAlphaEffect": {
+    "text": "Invert alpha",
+    "name": "Invert alpha"
+  },
+  "invertColorsEffect": {
+    "text": "Invert colors",
+    "name": "Invert colors"
+  },
+  "juliaFractalEffect": {
+    "text": "Julia fractal",
+    "name": "Julia fractal"
+  },
+  "lassoSelectTool": {
+    "text": "Lasso select",
+    "name": "Lasso select",
+    "helpText": "Trace a region to select it."
+  },
+  "layer": {
+    "backgroundLayer": {
+      "defaultName": "Background"
+    }
+  },
+  "layerForm": {
+    "text": "Layers",
+    "name": "Layer"
+  },
+  "levelsEffect": {
+    "text": "Levels",
+    "name": "Levels"
+  },
+  "lineTool": {
+    "text": "Line",
+    "name": "Line",
+    "helpText": "Drag to draw a line; edit its control points to bend it."
+  },
+  "magicWandTool": {
+    "text": "Magic wand",
+    "name": "Magic wand",
+    "helpText": "Click to select matching colors."
+  },
+  "mainToolBarForm": {
+    "text": "Tools",
+    "name": "Main tool bar"
+  },
+  "mandelbrotFractalEffect": {
+    "text": "Mandelbrot fractal",
+    "name": "Mandelbrot fractal"
+  },
+  "measurementUnit": {
+    "": {
+      "text": "",
+      "name": ""
+    },
+    "centimeter": {
+      "text": "Centimeter",
+      "name": "Centimeter",
+      "abbreviation": "cm"
+    },
+    "inch": {
+      "text": "Inch",
+      "name": "Inch",
+      "abbreviation": "in"
+    },
+    "pixel": {
+      "text": "Pixel",
+      "name": "Pixel",
+      "abbreviation": "px"
+    }
+  },
+  "medianBlurEffect": {
+    "text": "Median blur",
+    "name": "Median blur"
+  },
+  "medianEffect": {
+    "text": "Median",
+    "name": "Median"
+  },
+  "menu": {
+    "": {
+      "text": "",
+      "name": ""
+    },
+    "edit": {
+      "text": "Edit",
+      "name": "Edit",
+      "": {
+        "text": "",
+        "name": ""
+      },
+      "copy": {
+        "text": "Copy",
+        "name": "Copy"
+      },
+      "copyMerged": {
+        "text": "Copy merged",
+        "name": "Copy merged"
+      },
+      "copySelection": {
+        "text": "Copy selection",
+        "name": "Copy selection"
+      },
+      "cut": {
+        "text": "Cut",
+        "name": "Cut"
+      },
+      "paste": {
+        "text": "Paste",
+        "name": "Paste"
+      },
+      "pasteInToNewImage": {
+        "text": "Paste in to new image",
+        "name": "Paste in to new image"
+      },
+      "pasteInToNewLayer": {
+        "text": "Paste in to new layer",
+        "name": "Paste in to new layer"
+      },
+      "pasteSelection": {
+        "text": "Paste selection",
+        "name": "Paste selection"
+      },
+      "redo": {
+        "text": "Redo",
+        "name": "Redo"
+      },
+      "undo": {
+        "text": "Undo",
+        "name": "Undo"
+      },
+      "eraseSelection": {
+        "text": "Erase selection"
+      },
+      "fillSelection": {
+        "text": "Fill selection"
+      },
+      "invertSelection": {
+        "text": "Invert selection"
+      },
+      "selectAll": {
+        "text": "Select all"
+      },
+      "deselect": {
+        "text": "Deselect"
+      },
+      "fillSelectionSecondary": {
+        "text": "Fill with secondary color"
+      }
+    },
+    "effects": {
+      "text": "Effects",
+      "name": "Effects",
+      "": {
+        "text": "",
+        "name": ""
+      },
+      "repeat": {
+        "text": "Repeat",
+        "name": "Repeat"
+      }
+    },
+    "file": {
+      "text": "File",
+      "name": "File",
+      "": {
+        "text": "",
+        "name": ""
+      },
+      "acquire": {
+        "text": "Acquire",
+        "name": "Acquire"
+      },
+      "close": {
+        "text": "Close",
+        "name": "Close"
+      },
+      "exit": {
+        "text": "Exit",
+        "name": "Exit"
+      },
+      "open": {
+        "text": "Open…",
+        "name": "Open"
+      },
+      "openRecent": {
+        "text": "Recent files",
+        "name": "Open recent"
+      },
+      "print": {
+        "text": "Print…",
+        "name": "Print"
+      },
+      "save": {
+        "text": "Save",
+        "name": "Save"
+      },
+      "saveAll": {
+        "text": "Save all",
+        "name": "Save all"
+      },
+      "saveAs": {
+        "text": "Save as…",
+        "name": "Save as"
+      },
+      "new": {
+        "text": "New…"
+      }
+    },
+    "help": {
+      "text": "Help",
+      "name": "Help",
+      "about": {
+        "text": "About",
+        "name": "About"
+      },
+      "donate": {
+        "text": "Donate",
+        "name": "Donate"
+      },
+      "forum": {
+        "text": "Forum",
+        "name": "Forum"
+      },
+      "helpTopics": {
+        "text": "Help topics",
+        "name": "Help topics"
+      },
+      "pdnSearch": {
+        "text": "Pdn search",
+        "name": "Pdn search"
+      },
+      "pdnWebsite": {
+        "text": "Pdn website",
+        "name": "Pdn website"
+      },
+      "plugins": {
+        "text": "Plugins",
+        "name": "Plugins"
+      },
+      "sendFeedback": {
+        "text": "Send feedback",
+        "name": "Send feedback"
+      },
+      "tutorials": {
+        "text": "Tutorials",
+        "name": "Tutorials"
+      }
+    },
+    "image": {
+      "text": "Image",
+      "name": "Image",
+      "": {
+        "text": "",
+        "name": ""
+      },
+      "canvasSize": {
+        "text": "Canvas size",
+        "name": "Canvas size"
+      },
+      "colorProfile": {
+        "text": "Color profile",
+        "name": "Color profile"
+      },
+      "crop": {
+        "text": "Crop",
+        "name": "Crop"
+      },
+      "flatten": {
+        "text": "Flatten",
+        "name": "Flatten"
+      },
+      "resize": {
+        "text": "Resize",
+        "name": "Resize"
+      },
+      "rotate90CW": {
+        "text": "Rotate 90° clockwise"
+      },
+      "rotate180": {
+        "text": "Rotate 180°"
+      },
+      "flipHorizontal": {
+        "text": "Flip horizontally"
+      },
+      "flipVertical": {
+        "text": "Flip vertically"
+      },
+      "rotate90CCW": {
+        "text": "Rotate 90° counterclockwise"
+      }
+    },
+    "layers": {
+      "text": "Layers",
+      "name": "Layers",
+      "": {
+        "text": "",
+        "name": ""
+      },
+      "adjustments": {
+        "text": "Adjustments",
+        "name": "Adjustments"
+      },
+      "flipHorizontal": {
+        "text": "Flip horizontal",
+        "name": "Flip horizontal"
+      },
+      "flipVertical": {
+        "text": "Flip vertical",
+        "name": "Flip vertical"
+      },
+      "goToBottomLayer": {
+        "text": "Go to bottom layer",
+        "name": "Go to bottom layer"
+      },
+      "goToLayerAbove": {
+        "text": "Go to layer above",
+        "name": "Go to layer above"
+      },
+      "goToLayerBelow": {
+        "text": "Go to layer below",
+        "name": "Go to layer below"
+      },
+      "goToTopLayer": {
+        "text": "Go to top layer",
+        "name": "Go to top layer"
+      },
+      "importFromFile": {
+        "text": "Import from file",
+        "name": "Import from file"
+      },
+      "layer": {
+        "properties": {
+          "text": "Properties",
+          "name": "Properties"
+        }
+      },
+      "rotate180": {
+        "text": "Rotate180",
+        "name": "Rotate180"
+      },
+      "rotateZoom": {
+        "text": "Rotate zoom",
+        "name": "Rotate zoom"
+      },
+      "layerProperties": {
+        "text": "Layer properties…"
+      },
+      "addNewLayer": {
+        "text": "Add layer"
+      },
+      "toggleLayerVisibility": {
+        "text": "Toggle visibility"
+      },
+      "deleteLayer": {
+        "text": "Delete layer"
+      },
+      "moveLayerUp": {
+        "text": "Move layer up"
+      },
+      "duplicateLayer": {
+        "text": "Duplicate layer"
+      },
+      "moveLayerDown": {
+        "text": "Move layer down"
+      },
+      "moveLayerToTop": {
+        "text": "Move layer to top"
+      },
+      "mergeLayerDown": {
+        "text": "Merge down"
+      },
+      "moveLayerToBottom": {
+        "text": "Move layer to bottom"
+      }
+    },
+    "settings": {
+      "text": "Settings",
+      "name": "Settings"
+    },
+    "view": {
+      "text": "View",
+      "name": "View",
+      "actualSize": {
+        "text": "Actual size",
+        "name": "Actual size"
+      },
+      "grid": {
+        "text": "Grid",
+        "name": "Grid"
+      },
+      "rulers": {
+        "text": "Rulers",
+        "name": "Rulers"
+      },
+      "zoomIn": {
+        "text": "Zoom in",
+        "name": "Zoom in"
+      },
+      "zoomOut": {
+        "text": "Zoom out",
+        "name": "Zoom out"
+      },
+      "zoomToSelection": {
+        "text": "Zoom to selection",
+        "name": "Zoom to selection"
+      },
+      "zoomToWindow": {
+        "text": "Fit image",
+        "name": "Zoom to window"
+      }
+    },
+    "window": {
+      "colors": {
+        "text": "Colors",
+        "name": "Colors"
+      },
+      "history": {
+        "text": "History",
+        "name": "History"
+      },
+      "layers": {
+        "text": "Layers",
+        "name": "Layers"
+      },
+      "tools": {
+        "text": "Tools",
+        "name": "Tools"
+      },
+      "text": "Window"
+    },
+    "tab": {
+      "copyPath": {
+        "text": "Copy path"
+      },
+      "openContainingFolder": {
+        "text": "Open containing folder"
+      }
+    },
+    "adjustments": {
+      "text": "Adjustments"
+    }
+  },
+  "morphologyEffect": {
+    "text": "Morphology",
+    "name": "Morphology"
+  },
+  "motionBlurEffect": {
+    "text": "Motion blur",
+    "name": "Motion blur"
+  },
+  "moveSelectionTool": {
+    "text": "Move selection",
+    "name": "Move selection",
+    "historyMemento": {
+      "dropSelection": {
+        "text": "Drop selection",
+        "name": "Drop selection"
+      }
+    },
+    "helpText": "Drag to move the selection boundary."
+  },
+  "moveTool": {
+    "text": "Move",
+    "name": "Move",
+    "historyMemento": {
+      "dropPixels": {
+        "text": "Drop pixels",
+        "name": "Drop pixels"
+      }
+    },
+    "helpText": "Drag to move selected pixels or use the handles to transform them."
+  },
+  "oilPaintingEffect": {
+    "text": "Oil painting",
+    "name": "Oil painting"
+  },
+  "outlineEffect": {
+    "text": "Outline",
+    "name": "Outline"
+  },
+  "paintBrushTool": {
+    "text": "Paint brush",
+    "name": "Paint brush",
+    "helpText": "Paint with the primary color; right-drag to use the secondary color."
+  },
+  "paintBucketTool": {
+    "text": "Paint bucket",
+    "name": "Paint bucket",
+    "helpText": "Click to fill a matching area; hold Shift to fill matching colors throughout the image."
+  },
+  "panTool": {
+    "text": "Pan",
+    "name": "Pan",
+    "helpText": "Drag to pan the view."
+  },
+  "pencilSketchEffect": {
+    "text": "Pencil sketch",
+    "name": "Pencil sketch"
+  },
+  "pencilTool": {
+    "text": "Pencil",
+    "name": "Pencil",
+    "helpText": "Draw crisp pixels on the image."
+  },
+  "pixelateEffect": {
+    "text": "Pixelate",
+    "name": "Pixelate"
+  },
+  "posterizeAdjustment": {
+    "text": "Posterize",
+    "name": "Posterize"
+  },
+  "quantizeEffect": {
+    "text": "Quantize",
+    "name": "Quantize"
+  },
+  "radialBlurEffect": {
+    "text": "Radial blur",
+    "name": "Radial blur"
+  },
+  "recolorTool": {
+    "text": "Recolor",
+    "name": "Recolor",
+    "helpText": "Drag to replace a sampled color."
+  },
+  "rectangleSelectTool": {
+    "text": "Rectangle select",
+    "name": "Rectangle select",
+    "helpText": "Drag to select a rectangular region."
+  },
+  "redEyeRemoveEffect": {
+    "text": "Red eye remove",
+    "name": "Red eye remove"
+  },
+  "reduceNoiseEffect": {
+    "text": "Reduce noise",
+    "name": "Reduce noise"
+  },
+  "reliefEffect": {
+    "text": "Relief",
+    "name": "Relief"
+  },
+  "rotateZoomEffect": {
+    "text": "Rotate zoom",
+    "name": "Rotate zoom"
+  },
+  "sepiaEffect": {
+    "text": "Sepia",
+    "name": "Sepia"
+  },
+  "shapesTool": {
+    "text": "Shapes",
+    "name": "Shapes",
+    "helpText": "Drag to draw a shape and adjust its handles."
+  },
+  "sharpenEffect": {
+    "text": "Sharpen",
+    "name": "Sharpen"
+  },
+  "sketchBlurEffect": {
+    "text": "Sketch blur",
+    "name": "Sketch blur"
+  },
+  "softenPortraitEffect": {
+    "text": "Soften portrait",
+    "name": "Soften portrait"
+  },
+  "squareBlurEffect": {
+    "text": "Square blur",
+    "name": "Square blur"
+  },
+  "straightenEffect": {
+    "text": "Straighten",
+    "name": "Straighten"
+  },
+  "surfaceBlurEffect": {
+    "text": "Surface blur",
+    "name": "Surface blur"
+  },
+  "temperatureAndTintEffect": {
+    "text": "Temperature and tint",
+    "name": "Temperature and tint"
+  },
+  "textTool": {
+    "text": "Text",
+    "name": "Text",
+    "helpText": "Click to place text, then type."
+  },
+  "tileEffect": {
+    "text": "Tile",
+    "name": "Tile"
+  },
+  "toolForm": {
+    "text": "Tool",
+    "name": "Tool"
+  },
+  "toolStripChooser": {
+    "chooseToolButton": {
+      "text": "Tool",
+      "name": "Choose tool button"
+    }
+  },
+  "turbulenceEffect": {
+    "text": "Turbulence",
+    "name": "Turbulence"
+  },
+  "twistEffect": {
+    "text": "Twist",
+    "name": "Twist"
+  },
+  "unfocusEffect": {
+    "text": "Unfocus",
+    "name": "Unfocus"
+  },
+  "untitled": {
+    "friendlyName": "Untitled"
+  },
+  "vignetteEffect": {
+    "text": "Vignette",
+    "name": "Vignette"
+  },
+  "zoomBlurEffect": {
+    "text": "Zoom blur",
+    "name": "Zoom blur"
+  },
+  "zoomTool": {
+    "text": "Zoom",
+    "name": "Zoom",
+    "helpText": "Click to zoom in; right-click to zoom out."
+  },
+  "newImageAction": {
+    "name": "New image"
+  },
+  "selectAllAction": {
+    "name": "Select all"
+  },
+  "swapLayerFunction": {
+    "name": "Swap layer function"
+  },
+  "duplicateLayer": {
+    "historyMementoName": "Duplicate layer"
+  },
+  "mergeLayerDown": {
+    "historyMementoName": "Merge layer down"
+  },
+  "deselectAction": {
+    "name": "Deselect"
+  },
+  "deleteLayer": {
+    "historyMementoName": "Delete layer"
+  },
+  "addNewBlankLayer": {
+    "historyMementoName": "Add layer",
+    "layerName": {
+      "format": "Layer {0}"
+    }
+  },
+  "moveLayerUp": {
+    "historyMementoName": "Move layer up"
+  },
+  "moveLayerDown": {
+    "historyMementoName": "Move layer down"
+  },
+  "moveLayerToBottom": {
+    "historyMementoName": "Move layer to bottom"
+  },
+  "moveLayerToTop": {
+    "historyMementoName": "Move layer to top"
+  },
+  "mainForm": {
+    "title": {
+      "format": "{0} — {1}"
+    }
+  },
+  "toolsControl": {
+    "toolToolTip": {
+      "format": "{0} ({1})"
+    }
+  },
+  "effects": {
+    "repeatMenuItem": {
+      "format": "Repeat {0}"
+    },
+    "blurring": {
+      "submenu": {
+        "name": "Blurring"
+      }
+    },
+    "stylize": {
+      "submenu": {
+        "name": "Stylize"
+      }
+    },
+    "photo": {
+      "submenu": {
+        "name": "Photo"
+      }
+    },
+    "distort": {
+      "submenu": {
+        "name": "Distort"
+      }
+    },
+    "noise": {
+      "submenu": {
+        "name": "Noise"
+      }
+    },
+    "render": {
+      "submenu": {
+        "name": "Render"
+      }
+    },
+    "artistic": {
+      "submenu": {
+        "name": "Artistic"
+      }
+    },
+    "color": {
+      "submenu": {
+        "name": "Color"
+      }
+    },
+    "object": {
+      "submenu": {
+        "name": "Object"
+      }
+    }
+  },
+  "layersForm": {
+    "text": "Layers"
+  },
+  "pixel": {
+    "abbreviation": "px"
+  },
+  "inch": {
+    "abbreviation": "in"
+  },
+  "centimeter": {
+    "abbreviation": "cm"
+  },
+  "menuViewZoomIn": {
+    "text": "Zoom in"
+  },
+  "colorAdd": {
+    "text": "Add color"
+  },
+  "autoLevel": {
+    "name": "Auto levels"
+  },
+  "menuViewZoomOut": {
+    "text": "Zoom out"
+  },
+  "polarInversion": {
+    "name": "Polar inversion"
+  }
+}

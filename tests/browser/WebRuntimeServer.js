@@ -61,6 +61,7 @@ class WebRuntimeServer {
             }
             let file = path.resolve(this.root, relative || "index.html");
             let allowed = relative === "" || relative === "index.html"
+                || relative === "desktop-resources/asset-manifest.json"
                 || /^(?:js|css|lib|assets|build\/web)\//.test(relative);
             if (!allowed || !file.startsWith(this.root + path.sep)) {
                 response.writeHead(403).end();

@@ -1,5 +1,8 @@
 # Runtime coverage handoff
 
+The completed checkpoint below predates the open-artwork migration. See
+ARTWORK-MIGRATION.md for that active task; measure fresh after its source changes.
+
 ## Completed checkpoint (2026-10-16)
 
 **The requested coverage target is complete.** The user asked to resume from the

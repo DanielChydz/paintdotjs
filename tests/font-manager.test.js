@@ -225,11 +225,11 @@ test("font imports sanitize families, collect failures and reset selected custom
     assert.equal(await manager.removeFont("missing"), false);
     state.selected = first.family;
     assert.equal(await manager.removeFont(first.id), true);
-    assert.equal(state.selected, "Segoe UI");
+    assert.equal(state.selected, "sans-serif");
     assert.equal(manager.faces.has(first.id), false);
     state.selected = unnamed.family;
     assert.equal(await manager.removeAllFonts(), 2);
-    assert.equal(state.selected, "Segoe UI");
+    assert.equal(state.selected, "sans-serif");
     assert.equal(fonts.size, 0);
     assert.equal(await manager.removeAllFonts(), 0);
     let progress = [];

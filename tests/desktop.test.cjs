@@ -15,6 +15,8 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "desktop bundled open icons, font, licenses and independent branding", file: "checkOpenAssetsDesktop.js"},
+    {name: "browser bundled open icons, font, licenses and independent branding", file: "checkOpenAssets.js", browser: true},
     {name: "desktop workspace lifecycle, close confirmation and contextual routing", file: "checkWorkspaceLifecycle.js"},
     {name: "desktop UI lifecycle, optional icons and modal guards", file: "checkUILifecycle.js"},
     {name: "desktop codecs, layer-name safety, document cleanup and worker cancellation", file: ""},
@@ -312,6 +314,11 @@ if (process.versions.electron) {
                         window.removeEventListener("unhandledrejection", onRejection);
                     }
                 }).toString() + ")(" + checkScenario.toString() + ")");
+                if (process.env.PAINTDOTJS_TEST_CAPTURE_DIR && /^checkOpenAssets/.test(scenario.file)) {
+                    let capture = await contents.capturePage();
+                    let filename = path.join(process.env.PAINTDOTJS_TEST_CAPTURE_DIR, scenario.browser ? "web.png" : "app.png");
+                    require("node:fs").writeFileSync(filename, capture.toPNG());
+                }
                 if (collector !== undefined) {
                     await collector.finish();
                 }

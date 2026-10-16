@@ -361,7 +361,7 @@ body.window-resizing * {
 
 .project-info-banner-artwork span {
     color: var(--color-menu-item-text);
-    font-family: "Segoe UI Light", "Segoe UI", Arial, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
     font-size: 47px;
     font-weight: 300;
     letter-spacing: -2px;
@@ -2820,7 +2820,7 @@ html.effect-rendering * {
    as layer thumbnails, color swatches, histograms, or editor canvases. */
 
 .window {
-    font-family: "Segoe UI", sans-serif;
+    font-family: "Inter", sans-serif;
     font-size: 14px;
     font-weight: 400;
 }
@@ -2975,7 +2975,7 @@ html.effect-rendering * {
 
 /* Dialogs use the same typography and action-icon scale as the app chrome. */
 .app-dialog {
-    font-family: "Segoe UI", sans-serif;
+    font-family: "Inter", sans-serif;
     font-size: 14px;
     font-weight: 400;
 }

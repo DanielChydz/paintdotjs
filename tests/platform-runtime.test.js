@@ -675,142 +675,23 @@ test("browser IndexedDB adapter upgrades the store, reuses connections and rejec
             await assert.rejects(failed, error);
 });
 
-test("desktop asset manager finds valid installs, stages downloads and cleans up setup failures", async t => {
-    let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintdotjs-asset-manager-test-"));
+test("desktop assets are bundled and verified without using old caches or the network", async t => {
+    let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintjs-bundled-assets-"));
     t.after(() => fs.rmSync(directory, {recursive: true, force: true}));
     let root = path.resolve(__dirname, "..");
-    let resources = path.join(directory, "resources");
-    let userData = path.join(directory, "user");
-    fs.mkdirSync(path.join(resources, "desktop"), {recursive: true});
-    fs.copyFileSync(path.join(root, "desktop-resources/asset-manifest.json"), path.join(resources, "desktop/asset-manifest.json"));
-    let packageJson = require("../package.json");
-    let installFixture = output => {
-        fs.mkdirSync(path.join(output, "lang"), {recursive: true});
-        fs.mkdirSync(path.join(output, "icons"), {recursive: true});
-        fs.copyFileSync(path.join(root, "assets/icon.png"), path.join(output, "icon.png"));
-        fs.copyFileSync(path.join(root, "assets/icon.ico"), path.join(output, "icon.ico"));
-        fs.writeFileSync(path.join(output, "lang/en.json"), "{}");
-        fs.writeFileSync(path.join(output, "icons/menu_file_open_icon.png"), "fixture");
-        fs.writeFileSync(path.join(output, ".paintdotjs-assets.json"),
-            JSON.stringify({paintDotNetVersion: packageJson.paintdotjs.paintDotNetVersion}));
-    };
-    let state = {packaged: true, appPath: root, env: {}, windows: [], scripts: [], progress: [], mode: "success"};
-    let BrowserWindow = function (settings) {
-        assert.equal(settings.webPreferences.sandbox, true);
-        let window = new EventEmitter();
-        Object.assign(window, {
-            loadURL: url => {
-                assert.match(url, /^data:text\/html/);
-                window.emit("ready-to-show");
-            },
-            show: () => window.shown = true,
-            isDestroyed: () => !!window.destroyed,
-            close: () => window.destroyed = true,
-            setProgressBar: value => state.progress.push(value),
-            webContents: {executeJavaScript: async script => {
-                state.scripts.push(script);
-                if (state.scriptFailure) {
-                    throw new Error("setup window closed");
-                }
-            }}
-        });
-        state.windows.push(window);
-        return window;
-    };
-    let {api, context} = loadPlatform("desktop/asset-manager.js", {
-        process: {resourcesPath: resources, env: state.env}
-    }, {
-        electron: {BrowserWindow, app: {
-            get isPackaged() {
-                return state.packaged;
-            },
-            getPath: () => userData,
-            getAppPath: () => state.appPath
-        }},
-        "../../../package.json": packageJson,
-        "../../../scripts/asset_archive": {
-            downloadArchive: async options => {
-                state.windows.at(-1).emit("ready-to-show");
-                assert.equal(options.url, api.downloadUrl);
-                assert.equal(options.expectedSha256, packageJson.paintdotjs.paintDotNetSha256);
-                options.onProgress({downloaded: 1024, total: 2048});
-                options.onProgress({downloaded: 1024, total: 0});
-                options.onProgress({downloaded: 4096, total: 2048});
-                if (state.mode === "download-failure") {
-                    throw new Error("download failed");
-                }
-                fs.writeFileSync(options.destination, "local archive fixture");
-            },
-            extractArchive: async (_archive, output) => {
-                if (state.mode === "extract-failure") {
-                    throw new Error("extract failed");
-                }
-                fs.mkdirSync(output);
-            }
-        },
-        "../../../scripts/install_desktop_assets": {installAssets: options => {
-            assert.equal(options.manifestPath, path.join(resources, "desktop/asset-manifest.json"));
-            if (state.mode === "install-failure") {
-                throw new Error("install failed");
-            }
-            installFixture(options.output);
-        }}
-    });
-    let external = path.join(directory, "external");
-    state.env.PAINTDOTJS_ASSETS_DIR = external;
-    assert.equal(api.findInstalledAssets(), null);
-    installFixture(external);
-    assert.equal(api.findInstalledAssets(), external);
-    fs.writeFileSync(path.join(external, ".paintdotjs-assets.json"), JSON.stringify({paintDotNetVersion: "invalid"}));
-    assert.equal(api.findInstalledAssets(), null);
-    installFixture(external);
-    fs.writeFileSync(path.join(external, "icon.png"), "wrong png hash");
-    assert.equal(api.findInstalledAssets(), null);
-    installFixture(external);
-    fs.writeFileSync(path.join(external, "icon.ico"), "wrong ico hash");
-    assert.equal(api.findInstalledAssets(), null);
-    installFixture(external);
-    fs.unlinkSync(path.join(external, "lang/en.json"));
-    assert.equal(api.findInstalledAssets(), null);
-    installFixture(external);
-    fs.unlinkSync(path.join(external, "icons/menu_file_open_icon.png"));
-    assert.equal(api.findInstalledAssets(), null);
-    delete state.env.PAINTDOTJS_ASSETS_DIR;
-    state.packaged = false;
+    let app = {isPackaged: false, getAppPath: () => root};
+    let {api} = loadPlatform("desktop/asset-manager.js", {
+        process: {resourcesPath: directory, env: {PAINTDOTJS_ASSETS_DIR: "/old/proprietary/assets"}}
+    }, {electron: {app}, "../../../scripts/resource/AssetCatalog": require("../scripts/resource/AssetCatalog"),
+        "../../../desktop-resources/asset-manifest.json": require("../desktop-resources/asset-manifest.json")});
     assert.equal(await api.ensureDesktopAssets(), path.join(root, "assets"));
-    state.appPath = directory;
-    await assert.rejects(api.ensureDesktopAssets(), /Run npm run check-assets/);
-    state.appPath = root;
-    state.packaged = true;
-    let destination = path.join(userData, "assets");
-    assert.equal(await api.ensureDesktopAssets(), destination);
-    assert.equal(api.findInstalledAssets(), destination);
-    assert.equal(state.windows[0].destroyed, true);
-    assert(state.scripts.some(script => script.includes("Installation complete")));
-    assert(state.progress.every(value => value >= 0 && value <= 1));
-    assert.equal(fs.readdirSync(userData).filter(name => name.startsWith(".asset-install-")).length, 0);
-    installFixture(path.join(resources, "assets"));
-    assert.equal(api.findInstalledAssets(), path.join(resources, "assets"));
-    fs.unlinkSync(path.join(resources, "assets/.paintdotjs-assets.json"));
-    for (let mode of ["download-failure", "extract-failure", "install-failure"]) {
-        state.mode = mode;
-        fs.writeFileSync(path.join(destination, ".paintdotjs-assets.json"), "{}");
-        await assert.rejects(api.ensureDesktopAssets(), new RegExp(mode.split("-")[0] + " failed"));
-        assert.equal(state.windows.at(-1).destroyed, true);
-        assert.equal(fs.readdirSync(userData).filter(name => name.startsWith(".asset-install-")).length, 0);
-        assert.equal(fs.readFileSync(path.join(destination, "lang/en.json"), "utf8"), "{}");
-    }
-    let updateSetupWindow = vm.runInContext("updateSetupWindow", context);
-    let count = state.scripts.length;
-    updateSetupWindow(null, 40, "unused");
-    updateSetupWindow(state.windows.at(-1), 40, "unused");
-    assert.equal(state.scripts.length, count);
-    let visible = new BrowserWindow({webPreferences: {sandbox: true}});
-    visible.emit("ready-to-show");
-    state.scriptFailure = true;
-    updateSetupWindow(visible, NaN, "quote ' and \"");
-    await new Promise(resolve => setImmediate(resolve));
-    assert(state.scripts.at(-1).includes(JSON.stringify("quote ' and \"")));
+    app.isPackaged = true;
+    assert.equal(api.findInstalledAssets(), null);
+    await assert.rejects(api.ensureDesktopAssets(), /Bundled open assets are missing or corrupt/);
+    fs.cpSync(path.join(root, "assets"), path.join(directory, "assets"), {recursive: true});
+    assert.equal(await api.ensureDesktopAssets(), path.join(directory, "assets"));
+    fs.writeFileSync(path.join(directory, "assets/icon.png"), "bad");
+    assert.equal(api.findInstalledAssets(), null);
 });
 
 function rendererBridgeFixture() {
