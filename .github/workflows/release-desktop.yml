@@ -61,6 +61,15 @@ jobs:
           sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
       - name: Require full runtime coverage
         run: npm run test:coverage:check
+      - name: Preserve coverage diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-diagnostics
+          path: |
+            coverage/coverage-final.json
+            coverage/coverage-summary.json
+          if-no-files-found: ignore
       - run: npm run desktop:build
       - run: npx electron-builder --linux AppImage deb rpm --x64 --publish never
       - uses: actions/upload-artifact@v4
