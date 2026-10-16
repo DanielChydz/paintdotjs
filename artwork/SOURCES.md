@@ -4,6 +4,7 @@ Desktop application icon: user-selected image, downloaded unchanged from
 https://github.com/user-attachments/assets/6ad3bc51-1684-4d19-aa44-7a2881907f3c
 on 2026-10-16. The original PNG is retained as `artwork/desktop-icon.png` and
 copied unchanged to `assets/desktop-icon.png` and `desktop-resources/icon.png`.
+SHA-256: 33b3932e1f570394514f564937530c89fe0c3a6fd68964d682f8cecbc4011504.
 This is a supplied image, not artwork authored by this project. The web mark and
 document mark described below remain separate assets.
 

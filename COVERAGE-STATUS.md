@@ -8,13 +8,16 @@ coverage exclusions or ignore directives.
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,980 | 40,980 | 100% | 0 |
-| Branches | 9,947 | 9,947 | 100% | 0 |
+| Lines/statements | 40,983 | 40,983 | 100% | 0 |
+| Branches | 9,946 | 9,946 | 100% | 0 |
 | Functions | 2,515 | 2,515 | 100% | 0 |
 
 Source/test lint, headers, version, bundled-asset and whitespace checks pass, as does
 `npx c8 report --check-coverage --lines 100 --branches 100`.
-Current logs: `/tmp/paintdotjs-open-coverage.log`, `/tmp/paintdotjs-open-strict.log`.
+Current logs: `/tmp/paintdotjs-desktop-brand-coverage.log`,
+`/tmp/paintdotjs-desktop-brand-strict.log`.
+The latest regression checks desktop version/title labels while retaining the
+browser's Web label; the bundle preserves metadata supplied by desktop preload.
 The asset task and licensing/provenance checks are documented in ARTWORK-MIGRATION.md.
 Source verification includes packaged manifest lookup and offline PWA startup
 regressions. Pages and Linux DEB were rebuilt from commit 451183d and audited;

@@ -1,5 +1,39 @@
 # Open asset migration (completed, 2026-10-16)
 
+## Desktop title and requested icon follow-up (2026-10-16)
+
+User request: remove the incorrect Web suffix from installed desktop titles and
+use the supplied PNG as the desktop application icon. Implemented in 1c7ba09;
+8ed893d preserves binary PNG sources in Git without newline conversion.
+The shared bundle now preserves desktop preload metadata (including null for
+the plain DEB), while browser builds still select Web. The supplied original is
+artwork/desktop-icon.png; provenance/hash are in artwork/SOURCES.md. The generator
+copies it to assets/desktop-icon.png and desktop-resources/icon.png. Custom desktop
+titlebar and native/package icons use it; the web keeps its existing project mark.
+
+All 210 tests pass; 255 runtime source files, 100% of 40,983 lines/statements,
+9,946 branches and 2,515 functions. Source/test lint, header/version/asset checks
+and strict coverage pass. Logs: /tmp/paintdotjs-desktop-brand-coverage.log and
+/tmp/paintdotjs-desktop-brand-strict.log.
+
+Rebuilt Linux amd64 DEB passed an actual offline launch/reload under Xvfb.
+Both document.title and custom titlebar read "Untitled — paint.js 2.1.16";
+the titlebar image is assets/desktop-icon.png and its hash matches the supplied
+PNG. Extracted DEB verifies all 402 asset hashes; native resource icon, header icon
+and /usr/share/icons/hicolor/256x256/apps/paintdotjs.png match the original bytes.
+The desktop entry selects Icon=paintdotjs. No installation or publishing performed.
+Logs: /tmp/paintdotjs-desktop-brand-deb.log,
+/tmp/paintdotjs-desktop-brand-package-check.log.
+
+Current DEB: dist/paintdotjs-2.1.16-linux-amd64.deb
+SHA-256: 9650cab8a01a7ac0bfe647e9c29a1375e030fa5bdee027c79ddcf7f6daea5786
+Current catalogue SHA-256:
+1f3419e54565d002a5dea99070da841f7c15a309c66821bf34ca7b5def172b43
+Pages output below belongs to the previous migration checkpoint; not rebuilt for
+this desktop-only follow-up.
+
+## Original migration checkpoint
+
 Completed migration commits: 1e28a16, 7b08665, 487fe3b and 451183d. Follow-up fixes
 cover packaged manifest lookup, unquoted generic system-ui fonts, byte-stable
 Windows checkouts and offline PWA startup. Regression tests cover these contracts.
