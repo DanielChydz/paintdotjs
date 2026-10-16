@@ -1,0 +1,4 @@
+# Asset catalog hashes are byte-exact on every platform, including Windows.
+assets/** -text
+artwork/** text eol=lf
+desktop-resources/asset-manifest.json text eol=lf

@@ -14,8 +14,12 @@
 
 const {app} = require("electron");
 const path = require("node:path");
+const fs = require("node:fs");
 const AssetCatalog = require("../../../scripts/resource/AssetCatalog");
-const manifest = require("../../../desktop-resources/asset-manifest.json");
+const manifestPath = app.isPackaged
+    ? path.join(process.resourcesPath, "desktop", "asset-manifest.json")
+    : path.join(app.getAppPath(), "desktop-resources", "asset-manifest.json");
+const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 
 function findInstalledAssets() {
     // Bundled, verified resources only. Do not reuse an old downloaded cache or

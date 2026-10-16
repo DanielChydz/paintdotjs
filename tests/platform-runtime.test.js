@@ -690,6 +690,14 @@ test("desktop assets are bundled and verified without using old caches or the ne
     await assert.rejects(api.ensureDesktopAssets(), /Bundled open assets are missing or corrupt/);
     fs.cpSync(path.join(root, "assets"), path.join(directory, "assets"), {recursive: true});
     assert.equal(await api.ensureDesktopAssets(), path.join(directory, "assets"));
+    fs.mkdirSync(path.join(directory, "desktop"));
+    fs.copyFileSync(path.join(root, "desktop-resources/asset-manifest.json"), path.join(directory, "desktop/asset-manifest.json"));
+    let packagedApp = {isPackaged: true, getAppPath: () => path.join(directory, "app.asar")};
+    let packaged = loadPlatform("desktop/asset-manager.js", {process: {resourcesPath: directory}}, {
+        electron: {app: packagedApp}, "../../../scripts/resource/AssetCatalog": require("../scripts/resource/AssetCatalog")
+    }).api;
+    assert.equal(await packaged.ensureDesktopAssets(), path.join(directory, "assets"),
+        "Packaged metadata lives beside app.asar, not inside its source tree");
     fs.writeFileSync(path.join(directory, "assets/icon.png"), "bad");
     assert.equal(api.findInstalledAssets(), null);
 });

@@ -1,4 +1,10 @@
-# Open asset migration (in progress, 2026-10-16)
+# Open asset migration (saved pause at user request, 2026-10-16)
+
+Stop requested by the user; resume from this checkpoint. Completed migration
+commits: 1e28a16 and 7b08665. The saved follow-up fixes packaged manifest lookup,
+preserves unquoted generic system-ui fonts, and pins catalogued asset bytes across
+Windows checkouts with .gitattributes. Regression tests cover the packaged ASAR
+layout and generic font output.
 
 User request: replace Paint.NET artwork/fonts and all acquisition of proprietary
 resources, based on https://github.com/LabyStudio/paintdotjs/issues/5. Keep committing
@@ -24,8 +30,8 @@ A manual in-memory compatibility check read pre-migration graphs via git show HE
 Script: /tmp/paintdotjs-open-assets/verify-legacy.mjs (pin the pre-migration
 commit 3ae2261 before rerunning after a migration commit). Old bytes were not written to the repo.
 
-Verified source checkpoint: 210 tests passed; 100% of 40,972 runtime lines,
-9,942 branches and 2,515 functions across all 255 runtime files. Strict coverage
+Verified source checkpoint: 210 tests passed; 100% of 40,976 runtime lines,
+9,944 branches and 2,515 functions across all 255 runtime files. Strict coverage
 check, source/test lint, headers, version and asset/whitespace checks passed.
 Logs: /tmp/paintdotjs-open-coverage.log, /tmp/paintdotjs-open-strict.log.
 
@@ -38,8 +44,19 @@ Artwork regeneration was run twice and catalogued outputs compared byte-for-byte
 identical. ImageMagick timestamps are stripped. Old .tmp/paintdotnet archive removed.
 
 Remaining before completion:
-- Rebuild and audit Pages and DEB/package output, include licenses and all assets,
-  verify the actual packaged application reloads offline with the new assets.
+- Existing Pages/DEB/unpacked builds predate the latest source fixes. The actual
+  packaged binary failed startup because the manifest was required inside ASAR,
+  while electron-builder places it in resources/desktop. Source now reads the
+  packaged manifest from process.resourcesPath, with a regression test. The fix
+  has NOT yet been verified in a rebuilt package. Do not distribute existing DEB
+  or unpacked output.
+- Rebuild sequentially with Node 24: npm run pwa, then npm run dist:deb. Audit
+  Pages and DEB contents, licenses and asset hashes. Run the actual packaged
+  offline smoke script: node /tmp/paintdotjs-open-assets/check-package.cjs.
+  Logs: /tmp/paintdotjs-open-package-check.log and
+  /tmp/paintdotjs-open-package-runtime.log. This script starts the unpacked binary
+  under Xvfb, reloads offline through CDP, checks fonts/images/licenses/hashes and
+  cleans up its temporary profile. Its post-startup checks are not yet proven.
 - Update final coverage/distribution notes and commit the remaining verification.
 
 Regeneration (offline, Node 24; graphics regeneration also needs Pillow/convert):

@@ -346,7 +346,7 @@ class TextTool extends DrawingTool {
 
     getFontString() {
         const family = this.getSetting("fontFamily", "Inter");
-        const generic = ["serif", "sans-serif", "monospace", "cursive", "fantasy"];
+        const generic = ["serif", "sans-serif", "system-ui", "monospace", "cursive", "fantasy"];
         const cssFamily = generic.includes(family) ? family : `'${family}'`;
         return `${this.getSetting("italic", false) ? "italic " : ""}`
             + `${this.getSetting("bold", false) ? "bold " : ""}`

@@ -41,6 +41,8 @@ test("text sizing supports legacy model resolution and recovers absent or invali
         assert.equal(tool.getTextTop(), 0);
     }
     assert.equal(textFixture({resolution: 144}, {fontUnit: "pixels", fontSize: 19}).tool.getFontSize(), 19);
+    assert.equal(textFixture({}, {fontFamily: "system-ui"}).tool.getFontString(), "16px system-ui, sans-serif",
+        "The native system UI family must remain a CSS generic keyword rather than a quoted font name");
 });
 
 test("legacy width-only text metrics retain aligned multiline layout bounds", () => {

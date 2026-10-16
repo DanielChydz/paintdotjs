@@ -8,14 +8,17 @@ coverage exclusions or ignore directives.
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 40,972 | 40,972 | 100% | 0 |
-| Branches | 9,942 | 9,942 | 100% | 0 |
+| Lines/statements | 40,976 | 40,976 | 100% | 0 |
+| Branches | 9,944 | 9,944 | 100% | 0 |
 | Functions | 2,515 | 2,515 | 100% | 0 |
 
 Source/test lint, headers, version, bundled-asset and whitespace checks pass, as does
 `npx c8 report --check-coverage --lines 100 --branches 100`.
 Current logs: `/tmp/paintdotjs-open-coverage.log`, `/tmp/paintdotjs-open-strict.log`.
 The asset task and licensing/provenance checks are documented in ARTWORK-MIGRATION.md.
+Work is paused at the user's request. Source verification includes the packaged
+manifest path fix; rebuilding and testing the actual package remain unfinished.
+Existing DEB/unpacked output predates that fix and fails startup; do not distribute.
 
 ## Historical checkpoint before artwork migration
 
