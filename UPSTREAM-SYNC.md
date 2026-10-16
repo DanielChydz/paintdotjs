@@ -2,7 +2,7 @@
 
 Source: https://github.com/LabyStudio/paintdotjs, master b4e6fc5.
 47 upstream commits are merged as history, preserving the fork's 78 local commits.
-Work branch: sync/upstream-20261016.
+Work branch: sync/upstream-20261016; completed on local master.
 Point of return: backup/pre-upstream-sync-20261016 (597448c).
 
 ## Compatibility decisions
@@ -44,6 +44,28 @@ The revised generator leaves upstream artwork untouched; all 403 catalogue hashe
 remain byte-identical after regeneration. Desktop/browser visual checks pass;
 README screenshots show the adopted upstream pack.
 
-A pre-switch Pages/DEB rebuild passed offline checks. Final verification of the
-upstream icon pack is pending. Per user instruction, finish on local master only;
-the user will push. No installation or remote push has been performed.
+Final source checkpoint c4c5d37 was rebuilt sequentially with npm run pwa and
+npm run dist:deb. Production PWA passed an actual service-worker-controlled
+reload after stopping the HTTP server, with Node disabled and no page console
+errors. The packaged application passed offline reload, image/font decoding,
+license checks and document creation. Its window and custom titlebar read
+"Untitled — paint.js 2.4.3" and use the supplied desktop icon.
+
+Extracted DEB and Pages match all 403 catalogue hashes; the native system icon
+matches the supplied PNG, ASAR contains the current fixed source/attribution,
+and all assets/licenses are precached (421 PWA files total). Old Lucide and Segoe
+files are absent. Audit log: /tmp/paintdotjs-upstream-distribution-audit.log.
+Other logs: /tmp/paintdotjs-upstream-pages.log, /tmp/paintdotjs-upstream-deb.log,
+/tmp/paintdotjs-upstream-pwa-check.log, /tmp/paintdotjs-upstream-package-check.log,
+/tmp/paintdotjs-upstream-icons-visual.log.
+
+Artifact: dist/paintdotjs-2.4.3-linux-amd64.deb
+SHA-256: a548dbe28088b8f4a2c16e7f48a2665721a346bfb42b7010c25d3604022bad06
+Catalogue SHA-256:
+f32f97f4e2ac94d35ab2685cfe1a331f02afd1d6bd7f9f7ef55426b878289594
+Other platform packages were not built in this Linux verification.
+
+Local master contains upstream/master b4e6fc5 (zero upstream commits missing),
+and preserves the pre-integration master as an ancestor. No history was rebased
+or removed. Per user instruction, all final changes are local; the user will
+perform the push. No installation or remote push has been performed.
