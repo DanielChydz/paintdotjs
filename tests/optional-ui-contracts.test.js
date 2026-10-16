@@ -23,8 +23,8 @@ function optionalUIFixture(defaultTool) {
     let state = {activated: [], listeners: [], selected: null, translations: {}};
     let actions = new Map();
     let globals = {
-        app: {on: (...args) => state.listeners.push(args), setActiveToolFromType: type => state.activated.push(type)},
-        i18n: key => state.translations[key] ?? key,
+        app: {getActiveDocumentWorkspace: () => ({getSelection: () => ({isEmpty: () => true})}), getActiveTool: () => ({}), on: (...args) => state.listeners.push(args), setActiveToolFromType: type => state.activated.push(type)},
+        i18n: (key, values) => key === "statusBar.context.help.text.format" ? values.join(": ") : state.translations[key] ?? key,
         window: {localStorage: {getItem: () => null}},
         ToolAction: function () {},
         ActionRegistry: {get: id => actions.get(id) || null, registerCallback: (id, callback) => actions.set(id, callback)},

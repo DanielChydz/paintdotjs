@@ -15,6 +15,7 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "upstream plugins, custom XAML shapes and ZIP icon packs integrate with the fork", file: "checkUpstreamFeatures.js"},
     {name: "desktop bundled open icons, font, licenses and independent branding", file: "checkOpenAssetsDesktop.js"},
     {name: "browser bundled open icons, font, licenses and independent branding", file: "checkOpenAssets.js", browser: true},
     {name: "desktop workspace lifecycle, close confirmation and contextual routing", file: "checkWorkspaceLifecycle.js"},
@@ -302,6 +303,7 @@ if (process.versions.electron) {
                     window.addEventListener("error", onError);
                     window.addEventListener("unhandledrejection", onRejection);
                     try {
+                        await window.paintDotJsReady;
                         await run();
                         await new Promise(resolve => setTimeout(resolve, 0));
                         if (errors.length > 0) {

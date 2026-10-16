@@ -36,3 +36,8 @@ Sources, pinned revisions and asset provenance are recorded in `artwork/SOURCES.
 Legacy resource identifiers are retained for code compatibility; the corresponding
 images are new artwork, not Paint.NET assets. No endorsement by the icon or font
 projects is implied.
+
+paint.js includes third-party fonts whose bundled selection may change between releases. Each font
+family is stored in its own directory under [`assets/font/`](assets/font/) together with its
+applicable `LICENSE.txt`. Those colocated license files are the authoritative copyright and license
+notices for the fonts distributed with a particular release.

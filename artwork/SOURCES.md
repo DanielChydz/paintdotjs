@@ -1,5 +1,11 @@
 # Asset sources
 
+Upstream integration: additional bundled font families and their colocated licenses
+were imported from LabyStudio/paintdotjs commit b4e6fc5 (2.4.3). See
+`assets/font/README.md` and each family's `LICENSE.txt`. The new settings-assets
+icon comes from that upstream commit's original MIT-licensed artwork. Existing
+Lucide resources and the supplied desktop icon are preserved.
+
 Desktop application icon: user-selected image, downloaded unchanged from
 https://github.com/user-attachments/assets/6ad3bc51-1684-4d19-aa44-7a2881907f3c
 on 2026-10-16. The original PNG is retained as `artwork/desktop-icon.png` and

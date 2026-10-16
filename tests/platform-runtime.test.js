@@ -504,6 +504,7 @@ test("desktop main restores monitor bounds, persists window state and filters pr
     app.emit("open-file", {preventDefault() {}}, image);
     await state.start();
     let window = state.windows[0];
+    assert.equal(window.settings.icon, path.join(directory, "desktop-resources", "icon.png"));
     assert.match(window.url, /skipWelcome=1/);
     window.emit("ready-to-show");
     assert.equal(window.shown, true);

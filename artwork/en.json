@@ -955,5 +955,14 @@
   },
   "polarInversion": {
     "name": "Polar inversion"
+  },
+  "statusBar": {
+    "context": {
+      "help": {
+        "text": {
+          "format": "{0}: {1}"
+        }
+      }
+    }
   }
 }

@@ -42,6 +42,17 @@ class ToolMenu extends StripPanel {
                 }
             }
         });
+        window.addEventListener("paintdotjs:shapes-changed", () => {
+            const activeTool = this.app.getActiveTool();
+            if (activeTool?.getType() === ToolType.SHAPES) {
+                const selectedShape = ToolType.SHAPES.getSetting("shape");
+                if (selectedShape.startsWith("custom.") && !ShapeCatalog.has(selectedShape)) {
+                    ToolType.SHAPES.setSetting("shape", "rectangle");
+                }
+                ToolOptionDropdown.active?.close();
+                this.renderOptions(activeTool);
+            }
+        });
         this.app.on("app:active_tool_updated", tool => this.renderOptions(tool));
     }
 
@@ -83,7 +94,7 @@ class ToolMenu extends StripPanel {
         );
         const slider = (label, key, min, max, step = 1) => ({kind: "slider", label, key, min, max, step});
         const iconChoice = (label, key, values, width = 35, showText = false) => (
-            {kind: "iconChoice", label, key, values, width, showText}
+            {kind: "iconChoice", label, key, values, width, showText, split: true}
         );
         const shapeChoice = (values, groups) => ({
             kind: "shapeChoice", label: "", key: "shape", values, groups, width: 126
@@ -373,7 +384,7 @@ class ToolMenu extends StripPanel {
                         {label: "Symbols", values: [
                             "lightningBolt", "checkMark", "multiply", "gear", "heart"
                         ]},
-                        ShapeCatalog.CUSTOM_GROUP
+                        ShapeCatalog.getCustomGroup()
                     ]),
                     iconChoice("", "drawType", [
                         ["outline", "Draw Shape Outline", "enum_shape_draw_type_outline_dark.png"],

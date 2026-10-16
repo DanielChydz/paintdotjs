@@ -533,6 +533,8 @@ class PreviewShapeTool extends DrawingTool {
         }
         context.beginPath();
         let catalogPath = null;
+        let catalogFillPath = null;
+        let catalogFillRule = "nonzero";
         const drawType = this.getSetting("drawType", this.getSetting("fillMode", "outline"));
         let rectangleInterior = null;
         let rectangleOutline = null;
@@ -586,6 +588,8 @@ class PreviewShapeTool extends DrawingTool {
                     outlineRect.width, outlineRect.height);
             } else if (typeof ShapeCatalog !== "undefined" && ShapeCatalog.has(shape)) {
                 catalogPath = ShapeCatalog.createPath(shape, rect);
+                catalogFillPath = ShapeCatalog.createPath(shape, rect, "fill");
+                catalogFillRule = ShapeCatalog.getFillRule(shape);
             } else if (shape === "ellipse") {
                 context.ellipse(rect.x + rect.width / 2, rect.y + rect.height / 2,
                     Math.max(0.5, rect.width / 2), Math.max(0.5, rect.height / 2), 0, 0, Math.PI * 2);
@@ -719,8 +723,8 @@ class PreviewShapeTool extends DrawingTool {
                 } else if (catalogPath === null) {
                     context.fill();
                 }
-                else {
-                    context.fill(catalogPath, "evenodd");
+                else if (catalogFillPath !== null) {
+                    context.fill(catalogFillPath, catalogFillRule);
                 }
             }
             if (!aliasedRectangle && ["outline", "both", "fillOutline"].includes(drawType)) {

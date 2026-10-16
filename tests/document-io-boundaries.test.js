@@ -57,6 +57,9 @@ function documentFixture(options = {}) {
     };
     let context = vm.createContext({
         window, document, HTMLImageElement, Image, ImageData, TypeError, console, Blob, Uint8Array, TextDecoder,
+        PluginFileTypes: {saveFormats: () => [], openExtensions: () => [], forFile: () => null, definitions: new Map()},
+        ShapeManager: {isShapeFile: () => false}, PluginManager: {isPluginFile: () => false},
+        AssetPackManager: {isZipFile: () => false},
         isApp: !!options.isApp, Date: {now: () => state.now},
         navigator: {clipboard: {read: async () => {
             if (state.clipboardError) {

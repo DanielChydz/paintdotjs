@@ -314,7 +314,7 @@ class DocumentIO {
                                 "image/tiff": [".tif", ".tiff"],
                                 "application/octet-stream": [
                                     ".pdn", ".jxl", ".heic", ".heif", ".dds",
-                                    ".tga", ".jxr", ".wdp", ".wmp"
+                                    ".tga", ".jxr", ".wdp", ".wmp", ...PluginFileTypes.openExtensions()
                                 ]
                             }
                         }]
@@ -349,7 +349,7 @@ class DocumentIO {
         const input = document.createElement("input");
         input.type = "file";
         input.accept = "image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif,image/heic,image/tiff," +
-            ".jxl,.heif,.dds,.tif,.tiff,.tga,.jxr,.wdp,.wmp,.pdn,application/json";
+            ".jxl,.heif,.dds,.tif,.tiff,.tga,.jxr,.wdp,.wmp,.pdn,application/json," + PluginFileTypes.openExtensions().join(",");
         input.multiple = true;
         input.onchange = () => this.openFiles(Array.from(input.files || []));
         input.click();
@@ -363,7 +363,7 @@ class DocumentIO {
         const input = document.createElement("input");
         input.type = "file";
         input.accept = "image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif,image/heic,image/tiff," +
-            ".jxl,.heif,.dds,.tif,.tiff,.tga,.jxr,.wdp,.wmp,.pdn,application/json";
+            ".jxl,.heif,.dds,.tif,.tiff,.tga,.jxr,.wdp,.wmp,.pdn,application/json," + PluginFileTypes.openExtensions().join(",");
         input.multiple = true;
         input.onchange = async () => {
             for (const file of Array.from(input.files || [])) {
@@ -381,6 +381,35 @@ class DocumentIO {
         files = [...files];
         if (files.length === 0) {
             return;
+        }
+        const shapeFiles = files.filter(file => ShapeManager.isShapeFile(file));
+        if (shapeFiles.length > 0) {
+            SettingsDialog.open("shapes");
+            await SettingsDialog.instance.importShapes(shapeFiles);
+            files = files.filter(file => !ShapeManager.isShapeFile(file));
+            if (files.length === 0) {
+                return;
+            }
+        }
+        let pluginFiles = files.filter(file => PluginManager.isPluginFile(file));
+        if (pluginFiles.length > 0) {
+            SettingsDialog.open("plugins");
+            await SettingsDialog.instance.importPluginFiles(pluginFiles);
+            files = files.filter(file => !PluginManager.isPluginFile(file));
+            if (files.length === 0) {
+                return;
+            }
+        }
+        let assetPackFiles = files.filter(file => AssetPackManager.isZipFile(file));
+        if (assetPackFiles.length > 0) {
+            SettingsDialog.open("assets");
+            for (let file of assetPackFiles) {
+                await SettingsDialog.instance.importAssetPack(file);
+            }
+            files = files.filter(file => !AssetPackManager.isZipFile(file));
+            if (files.length === 0) {
+                return;
+            }
         }
         const fontFiles = files.filter(file => FontManager.isFontFile(file));
         if (fontFiles.length > 0) {
@@ -515,6 +544,15 @@ class DocumentIO {
     }
 
     static async openImage(file) {
+        let fileType = PluginFileTypes.forFile(file);
+        if (fileType) {
+            let data = PluginFileTypes.toWorkspaceData(await PluginFileTypes.decode(file, fileType));
+            let workspace = await this.createWorkspaceFromPdnData(data, file.name,
+                this.getLocalFilePath(file), this.openedFileHandles.get(file) || null);
+            workspace.setFileInfo(file.name, this.openedFileHandles.get(file) || null,
+                this.getLocalFilePath(file), typeof fileType.encode === "function" ? fileType.id : null);
+            return workspace;
+        }
         const image = await this.loadImage(file);
         const workspace = this.app.createBlankDocumentInNewWorkspace(image.width, image.height);
         const layer = workspace.getActiveLayer();
@@ -536,8 +574,11 @@ class DocumentIO {
     }
 
     static async addFileAsLayer(file) {
-        if (file.name.toLowerCase().endsWith(".pdn")) {
-            const data = await this.readPdn(file);
+        let pluginType = PluginFileTypes.forFile(file);
+        if (file.name.toLowerCase().endsWith(".pdn") || pluginType) {
+            const data = pluginType
+                ? PluginFileTypes.toWorkspaceData(await PluginFileTypes.decode(file, pluginType))
+                : await this.readPdn(file);
             let workspace = this.app.getActiveDocumentWorkspace();
             if (workspace === null) {
                 await this.createWorkspaceFromPdnData(data, file.name, this.getLocalFilePath(file));
@@ -589,25 +630,26 @@ class DocumentIO {
             return false;
         }
         this.finishActiveTool();
+        if (workspace.fileFormat?.startsWith("plugin.") && !PluginFileTypes.definitions.has(workspace.fileFormat)) {
+            saveAs = true;
+        }
         const layered = workspace.getDocument().getLayers().getLayerCount() > 1;
         let format = workspace.fileFormat === null
             ? SaveImageDialog.fromFileName(workspace.fileName, layered ? "pdn" : "png")
             : SaveImageDialog.find(workspace.fileFormat);
-        if (layered && format.id !== "pdn" && !saveAs) {
+        if (layered && !format.supportsLayers && !saveAs) {
             format = SaveImageDialog.find("pdn");
         }
 
         let options = {...(workspace.saveOptions || {})};
         let configuredBlob = null;
-        if (saveAs || format.id === "jpeg") {
+        if (saveAs || format.id === "jpeg" || format.controls?.length) {
             workspace.updateComposition();
             const selection = await SaveImageDialog.open({
                 canvas: workspace.getCompositionSurface().getCanvas(),
                 initialFormat: format.id,
                 initialOptions: options,
-                encode: (formatId, encodeOptions) => formatId === "pdn"
-                    ? this.serializePdn(workspace)
-                    : ImageEncoder.encode(workspace.getCompositionSurface().getCanvas(), formatId, encodeOptions)
+                encode: (formatId, encodeOptions) => this.encodeWorkspace(workspace, formatId, encodeOptions)
             });
             if (selection === null) {
                 return false;
@@ -657,7 +699,7 @@ class DocumentIO {
         }
 
         let flattenAfterSave = false;
-        if (layered && format.id !== "pdn") {
+        if (layered && !format.supportsLayers) {
             const choice = await TaskDialog.show({
                 title: "Flatten Image",
                 icon: "assets/icons/menu_image_flatten_icon.png",
@@ -681,14 +723,7 @@ class DocumentIO {
             flattenAfterSave = true;
         }
 
-        let blob;
-        if (format.id === "pdn") {
-            blob = configuredBlob || await this.serializePdn(workspace);
-        } else {
-            workspace.updateComposition();
-            blob = configuredBlob || await ImageEncoder.encode(
-                workspace.getCompositionSurface().getCanvas(), format.id, options);
-        }
+        let blob = configuredBlob || await this.encodeWorkspace(workspace, format.id, options);
         if (handle !== null) {
             const writable = await handle.createWritable();
             await writable.write(blob);
@@ -718,6 +753,21 @@ class DocumentIO {
         }
         workspace.setDirty(false);
         return true;
+    }
+
+    static async encodeWorkspace(workspace, formatId, options = {}) {
+        if (formatId === "pdn") {
+            return this.serializePdn(workspace);
+        }
+        if (formatId.startsWith("plugin.")) {
+            let type = PluginFileTypes.definitions.get(formatId);
+            if (!type || typeof type.encode !== "function") {
+                throw new Error("The file-type plugin is disabled or no longer installed.");
+            }
+            return PluginFileTypes.encode(formatId, PluginFileTypes.snapshot(workspace, type.supportsLayers), options);
+        }
+        workspace.updateComposition();
+        return ImageEncoder.encode(workspace.getCompositionSurface().getCanvas(), formatId, options);
     }
 
     static async saveAll(includeClean = false) {
@@ -1188,7 +1238,8 @@ class DocumentIO {
         const activeLayer = workspace.getActiveLayer();
         // Keep the pixels from before the paste separate from the floating
         // bitmap. MoveTool uses this underlay while the paste is still being
-        // positioned, so transparent areas can never erase existing artwork.
+        // positioned, then replaces the destination with every source pixel,
+        // including transparent ones.
         const pasteUnderlay = activeLayer.getSurface().clone();
         if (!expand) {
             history = new BitmapHistoryMemento(
@@ -1198,7 +1249,14 @@ class DocumentIO {
                 workspace.getActiveLayerIndex()
             );
         }
-        activeLayer.getSurface().context.drawImage(image, pastePosition.x, pastePosition.y);
+        const activeLayerContext = activeLayer.getSurface().context;
+        activeLayerContext.save();
+        activeLayerContext.beginPath();
+        activeLayerContext.rect(pastePosition.x, pastePosition.y, image.width, image.height);
+        activeLayerContext.clip();
+        activeLayerContext.globalCompositeOperation = "copy";
+        activeLayerContext.drawImage(image, pastePosition.x, pastePosition.y);
+        activeLayerContext.restore();
         workspace.getHistory().pushNewMemento(history);
         activeLayer.invalidate();
         const selection = workspace.getSelection();

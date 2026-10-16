@@ -1,6 +1,6 @@
 {
   "name": "paintdotjs",
-  "version": "2.1.16",
+  "version": "2.4.3",
   "description": "An open source general-purpose raster graphics editor program.",
   "main": "js/platform/desktop/main.js",
   "desktopName": "paintdotjs.desktop",
@@ -76,7 +76,8 @@
     "electron-updater": "^6.8.9",
     "jpegxr": "^0.3.0",
     "ms-nrbf-js": "^0.1.0",
-    "yauzl": "^3.4.0"
+    "yauzl": "^3.4.0",
+    "fflate": "^0.8.3"
   },
   "build": {
     "appId": "net.paintjs.desktop",
@@ -259,8 +260,8 @@
       "category": "public.app-category.graphics-design",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "entitlements": "desktop-resources/entitlements.mac.plist",
-      "entitlementsInherit": "desktop-resources/entitlements.mac.plist",
+      "entitlements": "packaging/entitlements.mac.plist",
+      "entitlementsInherit": "packaging/entitlements.mac.plist",
       "notarize": true,
       "target": [
         "dmg",
@@ -298,6 +299,9 @@
       "syncDesktopName": true,
       "synopsis": "An open source raster graphics editor",
       "description": "An open source general-purpose raster graphics editor with support for multiple documents, layers, and common image formats."
+    },
+    "win": {
+      "icon": "desktop-resources/icon.png"
     }
   }
 }

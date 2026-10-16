@@ -35,6 +35,7 @@ mark = svg('''<rect x="4" y="4" width="120" height="120" rx="30" fill="#142b3b"/
 <rect x="88" y="86" width="12" height="12" rx="3" fill="#b69aff"/>
 <rect x="72" y="100" width="12" height="12" rx="3" fill="#ffce6b"/>''', 128, 128)
 (ART / 'logo.svg').write_text(mark + '\n')
+(ASSETS / 'icon.svg').write_text(mark + '\n')
 raster(mark, ASSETS / 'icon.png', (512, 512))
 Image.open(ASSETS / 'icon.png').save(ASSETS / 'icon.ico', sizes=[(16, 16), (32, 32), (48, 48), (256, 256)])
 # User-selected desktop icon is kept byte-for-byte; the web keeps its own mark.

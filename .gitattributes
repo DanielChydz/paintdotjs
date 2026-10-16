@@ -3,3 +3,5 @@ assets/** -text
 artwork/** text eol=lf
 artwork/**/*.png -text
 desktop-resources/asset-manifest.json text eol=lf
+# Keep upstream font license texts byte-exact, including their original spacing.
+assets/font/**/LICENSE.txt whitespace=-blank-at-eol

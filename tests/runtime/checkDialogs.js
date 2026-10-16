@@ -291,7 +291,7 @@ module.exports = async function checkDialogs() {
     phase("settings");
     SettingsDialog.open();
     let settings = SettingsDialog.instance;
-    for (let [section] of settings.sections) {
+    for (let {id: section} of SettingsEntryRegistry.entries) {
         settings.selectSection(section);
         check(settings.activeSection === section && settings.page.textContent.trim().length > 0,
             "Settings section was empty: " + section);

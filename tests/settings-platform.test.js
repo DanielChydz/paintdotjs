@@ -35,15 +35,16 @@ test("Windows system settings links are disabled outside the Windows desktop", (
             globals.process = {platform};
         }
         let context = vm.createContext(globals);
-        let filename = path.resolve(__dirname, "../js/src/interface/window/dialog/SettingsDialog.js");
+        require("./support/loadSettingsEntries")(context);
+    let filename = path.resolve(__dirname, "../js/src/interface/window/dialog/SettingsDialog.js");
         vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
         let settings = vm.runInContext("new SettingsDialog()", context);
         for (let method of ["addHeading", "addCheckbox", "addNote", "addSectionHeading"]) {
             settings[method] = () => {};
         }
         settings.addButton = (label, callback, options) => buttons.push({label, callback, ...options});
-        settings.renderPen();
-        settings.renderColorManagement();
+        settings.getEntry("pen").render();
+        settings.getEntry("colorManagement").render();
         assert.equal(buttons.length, 2);
         for (let button of buttons) {
             assert.equal(button.disabled, platform !== "win32", `${platform}: ${button.label}`);
@@ -73,6 +74,8 @@ function updateFixture(options = {}) {
         }}
     };
     let context = vm.createContext({
+        FontManager: {getTextToolChoices: () => [], initialize: async () => {}},
+        AssetPackManager: {getPacks: () => [], getActivePackId: () => "default", prepareLanguage() {}},
         isApp: !!options.isApp, window, URL, Date: {now: () => 123456789},
         console: {error: (...args) => state.errors.push(args)},
         document: {baseURI: scope + "index.html"},
@@ -101,6 +104,7 @@ function updateFixture(options = {}) {
             }
         }
     });
+    require("./support/loadSettingsEntries")(context);
     let filename = path.resolve(__dirname, "../js/src/interface/window/dialog/SettingsDialog.js");
     vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
     let settings = vm.runInContext("new SettingsDialog()", context);
@@ -110,7 +114,7 @@ function updateFixture(options = {}) {
 
 test("web update cancellation keeps unsaved work, registrations and caches intact", async () => {
     let {settings, state, button} = updateFixture({dirty: true, choice: "cancel"});
-    await settings.checkForUpdates(button);
+    await settings.getEntry("updates").checkForUpdates(button);
     assert.equal(state.dialog.cancelValue, "cancel");
     assert.ok(state.dialog.message.includes("Save your changes"));
     assert.equal(state.reloaded, undefined);
@@ -126,7 +130,7 @@ test("web update clears only this app's registrations and caches before a cache-
         let {settings, state, scope, button} = fixture;
         state.scopes = [scope, "https://paint.example.test/other/", scope + "nested/"];
         state.cacheNames = ["paintdotjs-shell-v1", "other-app", "PAINTDOTJS-assets-v2"];
-        await settings.checkForUpdates(button);
+        await settings.getEntry("updates").checkForUpdates(button);
         assert.deepEqual(state.unregistered, [scope]);
         assert.deepEqual(state.deleted, ["paintdotjs-shell-v1", "PAINTDOTJS-assets-v2"]);
         let target = new URL(state.reloaded);
@@ -141,7 +145,7 @@ test("web update clears only this app's registrations and caches before a cache-
     delete fixture.context.navigator.serviceWorker;
     delete fixture.window.caches;
     delete fixture.window.app;
-    await fixture.settings.checkForUpdates(fixture.button);
+    await fixture.settings.getEntry("updates").checkForUpdates(fixture.button);
     assert.ok(fixture.state.reloaded);
 });
 
@@ -159,7 +163,7 @@ test("failed web or desktop update restores controls and reports a recoverable f
                 throw error;
             };
         }
-        await fixture.settings.checkForUpdates(fixture.button);
+        await fixture.settings.getEntry("updates").checkForUpdates(fixture.button);
         assert.equal(fixture.button.disabled, false);
         assert.equal(fixture.button.textContent, "Check now");
         assert.equal(fixture.state.reloaded, undefined);
@@ -176,7 +180,7 @@ test("web update settings describe the web cache workflow and expose disabled ch
     settings.addCheckbox = (key, label, options) => controls.push({key, label, ...options});
     settings.addButton = (label, callback) => ({label, callback});
     settings.addNote = text => notes.push(text);
-    settings.renderUpdates();
+    settings.getEntry("updates").render();
     assert.equal(controls.length, 2);
     assert.ok(controls.every(control => control.disabled));
     assert.ok(controls[0].note.includes("installed web app"));
@@ -200,13 +204,13 @@ test("graphics availability tries supported context versions and tolerates alloc
                 return available[type];
             }};
         };
-        assert.equal(settings.isWebGlAvailable(), expected);
+        assert.equal(settings.getEntry("graphics").isWebGlAvailable(), expected);
         assert.deepEqual(requested, calls);
     }
     context.document.createElement = () => {
         throw new Error("Canvas allocation failed");
     };
-    assert.equal(settings.isWebGlAvailable(), false);
+    assert.equal(settings.getEntry("graphics").isWebGlAvailable(), false);
 });
 
 test("version metadata tolerates absent globals and formats only nonempty distribution labels", () => {
@@ -249,7 +253,7 @@ test("language changes enable reload only for a pending preference and route the
     };
     settings.addNote = text => note = {textContent: text};
     settings.addButton = (label, callback, options) => reload = {label, callback, ...options};
-    settings.renderUi();
+    settings.getEntry("ui").render();
     assert.equal(reload.disabled, true);
     assert.equal(reload.label, "Reload now");
     language.value = "pl";

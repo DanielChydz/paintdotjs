@@ -131,6 +131,9 @@ class TextTool extends DrawingTool {
 
     onMouseMove(x, y) {
         if (!this.tracking) {
+            const overMoveHandle = this.pending && this.originNub !== null
+                && this.originNub.isPointTouching(new Point(x, y), false);
+            this.app.setCursorImg(overMoveHandle ? "hand_open_cursor" : "text_tool_cursor");
             return false;
         }
         this.textOrigin = new Point(
@@ -284,6 +287,19 @@ class TextTool extends DrawingTool {
     }
 
     onEditorKeyDown(event) {
+        const normalizedKey = String(event.key).toLowerCase();
+        const eraseAction = typeof ActionRegistry === "undefined"
+            ? null : ActionRegistry.get("menu.edit.eraseSelection");
+        if (eraseAction !== null && eraseAction.matchesShortcutEvent(event)) {
+            event.preventDefault();
+            event.stopPropagation();
+            // Finish the live text transaction before clearing the selection.
+            // Otherwise a later text preview refresh could restore pixels from
+            // its pre-text scratch surface over the erased area.
+            this.commitPending();
+            eraseAction.runPerformAction();
+            return;
+        }
         const undoAction = typeof ActionRegistry === "undefined"
             ? null : ActionRegistry.get("menu.edit.undo");
         if ((event.ctrlKey || event.metaKey)
@@ -309,13 +325,25 @@ class TextTool extends DrawingTool {
             return;
         }
 
-        const normalizedKey = String(event.key).toLowerCase();
-        const commandModifier = event.ctrlKey || event.metaKey || event.altKey;
         const altGraph = typeof event.getModifierState === "function"
             && event.getModifierState("AltGraph");
-        const nativeTextShortcut = !event.altKey && !event.shiftKey
+        const nativeTextShortcut = !altGraph && !event.altKey
             && (event.ctrlKey || event.metaKey)
-            && ["a", "c", "x", "v"].includes(normalizedKey);
+            && [
+                "c", "v", "x",
+                "arrowleft", "arrowright", "arrowup", "arrowdown",
+                "backspace", "delete", "end", "home", "insert"
+            ].includes(normalizedKey);
+        if (nativeTextShortcut) {
+            // Copy, cut, paste, word navigation, and word deletion belong to
+            // the hidden text editor. Ctrl+A intentionally remains an
+            // application shortcut so it selects the complete canvas, as it
+            // does in Paint.NET while the Text tool is active.
+            event.stopPropagation();
+            return;
+        }
+
+        const commandModifier = event.ctrlKey || event.metaKey || event.altKey;
         const functionKey = /^f(?:[1-9]|1[0-2])$/.test(normalizedKey);
         if (!altGraph && !nativeTextShortcut && (commandModifier || functionKey)
             && typeof ActionRegistry !== "undefined" && ActionRegistry.dispatch(event)) {
@@ -583,7 +611,13 @@ class TextTool extends DrawingTool {
         }
 
         const text = this.editor.value;
-        const position = this.editor.selectionStart;
+        const selectionStart = this.editor.selectionStart;
+        const selectionEnd = this.editor.selectionEnd;
+        if (selectionStart !== null && selectionEnd !== null && selectionStart !== selectionEnd) {
+            this.caretElement.hidden = true;
+            return;
+        }
+        const position = selectionStart === null ? text.length : selectionStart;
         const beforeCaret = text.substring(0, position);
         const lineIndex = (beforeCaret.match(/\n/g) || []).length;
         const lineStart = beforeCaret.lastIndexOf("\n") + 1;
@@ -710,9 +744,26 @@ class TextTool extends DrawingTool {
             this.originNub.setShape(MoveNubShape.COMPASS);
             this.getSurfaceBox().addRenderer(this.originNub);
         }
+        const zoom = Math.max(0.0001, this.getDocumentWorkspace().getZoom());
+        const offset = 10 / zoom;
         const location = this.previewBounds === null
-            ? this.textOrigin
-            : new Point(this.previewBounds.getRight() + 8, this.previewBounds.getBottom() + 8);
+            ? this.textOrigin.clone()
+            : new Point(
+                this.previewBounds.getRight() + offset,
+                this.previewBounds.getBottom() + offset
+            );
+        const layerBounds = this.getActiveLayer().getBounds();
+        const inset = MoveNubRenderer.compassRadius / zoom;
+        const minimumX = layerBounds.getLeft() + inset;
+        const maximumX = layerBounds.getRight() - inset;
+        const minimumY = layerBounds.getTop() + inset;
+        const maximumY = layerBounds.getBottom() - inset;
+        location.x = minimumX <= maximumX
+            ? Utility.clamp(location.x, minimumX, maximumX)
+            : (layerBounds.getLeft() + layerBounds.getRight()) / 2;
+        location.y = minimumY <= maximumY
+            ? Utility.clamp(location.y, minimumY, maximumY)
+            : (layerBounds.getTop() + layerBounds.getBottom()) / 2;
         this.originNub.setLocation(location);
         this.originNub.setVisible(!this.tracking);
     }

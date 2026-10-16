@@ -70,7 +70,7 @@ module.exports = async function checkSettingsControls() {
         change(selects[0]);
         check(document.documentElement.dataset.colorSchemePreference === scheme, "Color scheme did not reach the document");
     }
-    let language = selects[1];
+    let language = selects.find(select => [...select.options].some(option => option.value === "auto"));
     language.value = [...language.options].find(option => option.value !== Language.preference).value;
     change(language);
     check(AppSettingsStore.get("ui.language") === language.value && !button("Reload now").disabled
@@ -196,9 +196,9 @@ module.exports = async function checkSettingsControls() {
         "Font import did not settle progress state");
     await waitFor(() => settings.fontList.querySelector(".settings-font-row") !== null);
     check(settings.fontList.querySelector("strong").textContent === "SettingsFont", "Font settings did not show imported metadata");
-    check(settings.formatFileSize(10) === "10 B" && settings.formatFileSize(1536) === "1.5 KB"
-        && settings.formatFileSize(1572864) === "1.5 MB", "Font-size display used incorrect units");
-    let clearing = settings.clearAllFonts();
+    check(settings.getEntry("fonts").formatFileSize(10) === "10 B" && settings.getEntry("fonts").formatFileSize(1536) === "1.5 KB"
+        && settings.getEntry("fonts").formatFileSize(1572864) === "1.5 MB", "Font-size display used incorrect units");
+    let clearing = settings.getEntry("fonts").clearAllFonts();
     choose("Cancel");
     await clearing;
     check(FontManager.getFonts().length === 1, "Cancelled clear deleted fonts");
@@ -242,11 +242,11 @@ module.exports = async function checkSettingsControls() {
     check(!dropZone.classList.contains("drag-over"), "Font drag exit retained its feedback");
     dropZone.dispatchEvent(new DragEvent("drop", {dataTransfer: transfer, bubbles: true, cancelable: true}));
     await waitFor(() => !settings.fontImporting && FontManager.getFonts().length === 1);
-    clearing = settings.clearAllFonts();
+    clearing = settings.getEntry("fonts").clearAllFonts();
     choose("Clear All Fonts");
     await clearing;
     check(FontManager.getFonts().length === 0 && settings.status.textContent.includes("Removed 1"), "Confirmed font clear did not delete metadata");
-    await settings.clearAllFonts();
+    await settings.getEntry("fonts").clearAllFonts();
 
     phase("font import failures, batched preview rows and storage error recovery");
     let oldAlert = window.alert;
@@ -278,7 +278,7 @@ module.exports = async function checkSettingsControls() {
         FontManager.faces.delete(lazyFont.id);
         console.warn = (...args) => fontWarnings.push(args);
         settings.page.scrollTop = 0;
-        settings.renderFontRows();
+        settings.getEntry("fonts").renderFontRows();
         await waitFor(() => fontWarnings.some(args => args[0].includes(lazyFont.name)));
         check(settings.fontList.querySelector(".settings-font-preview").style.fontFamily === ""
             && FontManager.getFonts().length === 21, "Failed font preview removed metadata or installed an unavailable font");
@@ -287,14 +287,14 @@ module.exports = async function checkSettingsControls() {
         await waitFor(() => settings.status.textContent.includes("Could not remove"));
         check(!remove.disabled && FontManager.getFonts().length === 21
             && alerts.at(-1).includes("temporarily unavailable"), "Failed removal deleted metadata or left its button disabled");
-        let clearing = settings.clearAllFonts();
+        let clearing = settings.getEntry("fonts").clearAllFonts();
         choose("Clear All Fonts");
         await clearing;
         check(FontManager.getFonts().length === 21 && !settings.fontClearButton.disabled
             && settings.status.textContent === "Could not clear the custom fonts.",
         "Failed clear removed fonts or prevented retry");
         FontManager.openDatabase = openFontDatabase;
-        clearing = settings.clearAllFonts();
+        clearing = settings.getEntry("fonts").clearAllFonts();
         choose("Clear All Fonts");
         await clearing;
         check(FontManager.getFonts().length === 0, "Retry after a storage failure did not clear fonts");
@@ -318,7 +318,7 @@ module.exports = async function checkSettingsControls() {
             [{supported: true}, "latest"]
         ]) {
             window.desktopUpdater = {check: async () => outcome};
-            await settings.checkForUpdates(updateButton);
+            await settings.getEntry("updates").checkForUpdates(updateButton);
             check(settings.status.textContent.includes(expected) && !updateButton.disabled && updateButton.textContent === "Check now",
                 "Update outcome did not restore controls or communicate status: " + expected);
         }

@@ -100,7 +100,7 @@ module.exports = async function checkPainting() {
         "star3", "star4", "star5", "star6", "blockArrow", "notchedArrow", "pentagonArrow",
         "chevronArrow", "checkMark", "multiply", "heart", "lightningBolt", "gear",
         "rectangularCallout", "roundedCallout", "ellipticalCallout", "cloudCallout",
-        ...ShapeCatalog.CUSTOM_GROUP.values
+        ...ShapeCatalog.getCustomGroup().values
     ];
     for (let [index, shape] of shapes.entries()) {
         let tool = start(ToolType.SHAPES, {

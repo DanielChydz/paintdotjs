@@ -25,7 +25,7 @@ package() {
   install -Dm755 "$project/aur/paintdotjs" "$pkgdir/usr/bin/paintdotjs"
   install -Dm644 "$project/aur/paintdotjs.desktop" "$pkgdir/usr/share/applications/paintdotjs.desktop"
   install -Dm644 "$project/aur/x-paintdotnet.xml" "$pkgdir/usr/share/mime/packages/x-paintdotnet.xml"
-  install -Dm644 "$project/desktop-resources/icon.png" "$pkgdir/usr/share/icons/hicolor/512x512/apps/paintdotjs.png"
+  install -Dm644 "$project/desktop-resources/icon.png" "$pkgdir/usr/share/icons/hicolor/256x256/apps/paintdotjs.png"
   install -Dm644 "$project/desktop-resources/file-icon.png" "$pkgdir/usr/share/icons/hicolor/512x512/mimetypes/application-x-paintdotnet.png"
   install -Dm644 "$project/NOTICE.md" "$pkgdir/usr/share/licenses/$pkgname/NOTICE.md"
   cp -a "$project/assets/licenses" "$pkgdir/usr/share/licenses/$pkgname/assets"

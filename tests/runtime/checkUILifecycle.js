@@ -278,12 +278,12 @@ module.exports = async function checkUILifecycle() {
     }
     phase("unmounted settings and tool panels keep optional controls inert");
     let detachedSettings = new SettingsDialog();
-    detachedSettings.renderShortcutRows();
-    detachedSettings.updateFontImportProgress(null);
+    detachedSettings.getEntry("keyboard").renderShortcutRows();
+    detachedSettings.getEntry("fonts").updateFontImportProgress(null);
     check(detachedSettings.shortcutList === null && detachedSettings.fontImportPanel === null,
         "Unmounted settings refresh allocated optional controls");
     let navigation = detachedSettings.createNavigation();
-    check(navigation.children.length >= 10 && [...navigation.children].every(button => !button.disabled && button.textContent.trim()),
+    check(navigation.querySelectorAll("button").length >= 13 && [...navigation.querySelectorAll("button")].every(button => !button.disabled && button.textContent.trim()),
         "Implemented settings sections were disabled or lacked navigation labels");
     detachedSettings.page = document.createElement("div");
     let disabledAction = detachedSettings.addButton("Unavailable action", () => {}, {disabled: true});

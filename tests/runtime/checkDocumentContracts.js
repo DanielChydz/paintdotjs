@@ -220,7 +220,7 @@ module.exports = async function checkDocumentContracts() {
     phase("registered selection commands execute actual functions and preserve exact fill/erase pixels");
     let repeat = new RepeatEffectAction();
     let effectsMenu = PanelRegistry.get("mainMenu").get("menu.effects");
-    check(effectsMenu.repeatEntry.getIconPath() === "effect_icon.png", "Unavailable Repeat did not use its generic effect icon");
+    check(effectsMenu.repeatEntry.getIconSrc() === "assets/icons/effect_icon.png", "Unavailable Repeat did not use its generic effect icon");
     check(!repeat.isActionExecutable(workspace) && repeat.performAction(workspace) === null,
         "Repeat without a remembered effect changed the document");
     new SelectAllAction().runPerformAction();
@@ -246,7 +246,7 @@ module.exports = async function checkDocumentContracts() {
     let redEye = new BitmapEffectAction(BitmapEffectEngine.EFFECTS.redEyeRemoveEffect);
     check(await redEye.performAction(workspace, {tolerance: 100, saturation: 90}) instanceof HistoryMemento
         && repeat.isActionExecutable(workspace), "A completed effect did not enable Repeat");
-    check(effectsMenu.repeatEntry.getIconPath() === "red_eye_remove_effect.png", "Repeat icon did not identify its remembered effect");
+    check(effectsMenu.repeatEntry.getIconSrc() === "assets/icons/red_eye_remove_effect.png", "Repeat icon did not identify its remembered effect");
     effectsMenu.open();
     check(effectsMenu.entries[0] === effectsMenu.repeatEntry
         && effectsMenu.dropMenuElement.querySelector('img[src$="red_eye_remove_effect.png"]') !== null,

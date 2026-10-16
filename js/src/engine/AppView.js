@@ -91,6 +91,7 @@ class AppView {
                 this.handleError(e);
             }
         });
+        window.addEventListener("paintdotjs:asset-pack-changed", () => this.reloadCursorImage());
 
         // Cancel website zoom
         window.addEventListener('wheel', event => {
@@ -490,17 +491,27 @@ class AppView {
             return;
         }
 
-        const source = "assets/cursors/" + name + ".png";
+        const source = AssetPackManager.resolve("assets/cursors/" + name + ".png");
         const fallbackHotspot = /^hand_/.test(name) ? [15, 15] : [16, 16];
         const loading = this.cleanCursorImage(source)
             .catch(() => ({url: source, hotspot: fallbackHotspot}));
         this.cursorImages.set(name, loading);
         loading.then(cursor => {
-            this.cursorImages.set(name, cursor);
+            if (this.cursorImages.get(name) === loading) {
+                this.cursorImages.set(name, cursor);
+            }
             if (request === this.cursorRequest) {
                 this.editor.style.cursor = this.cursorCss(cursor.url, cursor.hotspot);
             }
         });
+    }
+
+    reloadCursorImage() {
+        ++this.cursorRequest;
+        this.cursorImages.clear();
+        if (this.cursorState.type === "image") {
+            this.setCursorImg(this.cursorState.value);
+        }
     }
 
     cursorCss(url, hotspot) {
@@ -950,7 +961,7 @@ class AppView {
         context.fillRect(0, 0, cssWidth, cssHeight);
         context.strokeStyle = "#a8a8a8";
         context.fillStyle = "#e5e5e5";
-        context.font = "10px Inter, sans-serif";
+        context.font = `10px ${AppSettingsStore.getUiFontStack()}`;
 
         const available = vertical ? cssHeight : cssWidth;
         const start = documentStart;

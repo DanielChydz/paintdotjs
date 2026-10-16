@@ -1,5 +1,11 @@
 # paint.js code style
 
+## Release flow
+
+- Make release changes on `develop`.
+- Merge `develop` into `master`; do not cherry-pick release or hotfix commits directly onto `master`.
+- After the merge is pushed, switch back to `develop` and bump it to the next development version.
+
 ## Control flow
 
 - Always use braces for `if`, `else`, loops, and every other control-flow body, including one-line bodies.
@@ -33,4 +39,4 @@ Follow the existing builders in `ColorSliderItem`, `ColorCircleItem`, and `Color
 - Put feature-specific classes in a nested feature package instead of a broad, flat directory. For example, use `engine/document/tool/tool/move/MoveToolContext.js`, not `engine/document/tool/tool/MoveToolContext.js`.
 - Put all dialog classes together in the shared `interface/window/dialog` package. For example, use `interface/window/dialog/AboutDialog.js`, not a separate package for each dialog.
 - Put non-dialog support classes in the narrowest relevant package outside `dialog`, such as `interface/window/effect/CurveEditor.js` or `interface/window/settings/AppSettingsStore.js`.
-- Keep executable scripts at the root of `scripts`, but put reusable script classes in a nested package such as `scripts/resource/ResourceReader.js`.
+- Keep executable scripts at the root of `scripts`, but put reusable script classes in a nested package under `scripts`.

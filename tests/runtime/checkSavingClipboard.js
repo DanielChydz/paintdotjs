@@ -304,7 +304,7 @@ module.exports = async function checkSavingClipboard() {
         await loaded;
         try {
             let realm = iframe.contentWindow;
-            Object.assign(realm, {isApp: false, ImageEncoder});
+            Object.assign(realm, {isApp: false, ImageEncoder, PluginFileTypes});
             if (saved !== undefined) {
                 realm.AppSettingsStore = {get: () => saved};
             }

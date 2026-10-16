@@ -484,7 +484,8 @@ test("catalog paths report unavailable native geometry capabilities without buil
         let filename = path.resolve(__dirname, "../js/src/engine/document/tool/shape/ShapeCatalog.js");
         vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
         let catalog = vm.runInContext("ShapeCatalog", context);
-        let shape = Object.keys(catalog.PATHS)[0];
+        let shape = "custom.test";
+        catalog.register({id: shape, fileName: "test.xaml", path: "M0 0L10 10", viewBox: {x: 0, y: 0, width: 10, height: 10}});
         assert.equal(catalog.createPath(shape, {x: 1, y: 2, width: 3, height: 4}), null);
         assert.equal(catalog.createPath("unknown-shape", {x: 1, y: 2, width: 3, height: 4}), null);
     }

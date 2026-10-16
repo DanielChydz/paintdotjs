@@ -1,6 +1,24 @@
 # Runtime coverage handoff
 
-## Verified after open-artwork migration (2026-10-16)
+## Current checkpoint after upstream 2.4.3 integration (2026-10-16)
+
+All 211 tests pass, including real plugin-package, XAML-shape and ZIP icon-pack
+integration. All 280 runtime source files remain in coverage; no exclusions or
+ignore directives were added for the new upstream modules.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 43,735 | 45,831 | 95.42% | 2,096 |
+| Branches | 10,363 | 10,581 | 97.93% | 218 |
+| Functions | 2,677 | 2,815 | 95.09% | 138 |
+
+The previous 100% result below applies to the pre-integration source snapshot.
+The newly integrated upstream features expand the measured code; the strict 100%
+gate is not currently satisfied. This gap is recorded rather than excluding code.
+Lint, test lint, headers, version and bundled-asset checks pass.
+Log: `/tmp/paintdotjs-upstream-coverage.log`. See UPSTREAM-SYNC.md for merge decisions.
+
+## Historical verified snapshot after open-artwork migration (2026-10-16)
 
 The requested 100% target is maintained after replacing proprietary resources.
 All 210 tests pass. All 255 runtime JavaScript files remain included, with no new
