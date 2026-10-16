@@ -301,7 +301,7 @@ function updaterFixture(packaged, managed) {
         electron: {
             app: {isPackaged: packaged, getVersion: () => "2.1.16"},
             net: {fetch: async (url, options) => {
-                assert.equal(url, "https://api.github.com/repos/LabyStudio/paintdotjs/releases/latest");
+                assert.equal(url, "https://api.github.com/repos/DanielChydz/paintdotjs/releases/latest");
                 assert.equal(options.headers.Accept, "application/vnd.github+json");
                 return state.response;
             }}
@@ -376,7 +376,7 @@ test("managed updater compares release versions, reports malformed responses and
         assert.equal(result.managed, true);
         assert.equal(result.supported, false);
         assert.equal(fixture.messages.at(-1)[1].state, available ? "managed-available" : "managed-current");
-        assert.equal(result.url, "https://github.com/LabyStudio/paintdotjs/releases/tag/v" + encodeURIComponent(version.replace(/^v/, "")));
+        assert.equal(result.url, "https://github.com/DanielChydz/paintdotjs/releases/tag/v" + encodeURIComponent(version.replace(/^v/, "")));
     }
     for (let tag of [undefined, "", "not-a-version", "2", "<script>"]) {
         fixture.state.response = {ok: true, json: async () => ({tag_name: tag})};
@@ -890,7 +890,7 @@ test("desktop renderer close and downloaded-update choices preserve unsaved work
 
 test("desktop renderer managed-update dismissal, manual checks and deferred application readiness", async () => {
     let {state, window, api, ipcRenderer, context} = rendererBridgeFixture();
-    let update = {version: "2.2.0", url: "https://github.com/LabyStudio/paintdotjs/releases/tag/v2.2.0"};
+    let update = {version: "2.2.0", url: "https://github.com/DanielChydz/paintdotjs/releases/tag/v2.2.0"};
     state.choice = "download";
     await api.showManagedUpdate(update);
     assert.deepEqual(state.external, [update.url]);

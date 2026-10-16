@@ -15,7 +15,7 @@
 const {app, net} = require('electron');
 const {autoUpdater} = require('electron-updater');
 
-const releaseApiUrl = 'https://api.github.com/repos/LabyStudio/paintdotjs/releases/latest';
+const releaseApiUrl = 'https://api.github.com/repos/DanielChydz/paintdotjs/releases/latest';
 
 let window = null;
 let initialized = false;
@@ -60,7 +60,7 @@ async function checkManagedUpdate() {
         throw new Error('GitHub returned an invalid release version');
     }
     const updateAvailable = isNewerVersion(version, app.getVersion());
-    const url = `https://github.com/LabyStudio/paintdotjs/releases/tag/v${encodeURIComponent(version)}`;
+    const url = `https://github.com/DanielChydz/paintdotjs/releases/tag/v${encodeURIComponent(version)}`;
     send(updateAvailable ? 'managed-available' : 'managed-current', {version, url});
     return {supported: false, managed: true, updateAvailable, version, url};
 }

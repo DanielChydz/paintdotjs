@@ -1,14 +1,14 @@
 {
   "name": "paintdotjs",
-  "version": "2.4.3",
+  "version": "2.5.0",
   "description": "An open source general-purpose raster graphics editor program.",
   "main": "js/platform/desktop/main.js",
   "desktopName": "paintdotjs.desktop",
   "license": "MIT",
-  "homepage": "https://paintjs.net/",
+  "homepage": "https://github.com/DanielChydz/paintdotjs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LabyStudio/paintdotjs.git"
+    "url": "https://github.com/DanielChydz/paintdotjs.git"
   },
   "paintdotjs": {
     "assetSet": "paintjs-open-v1"
@@ -17,7 +17,7 @@
     "lint": "eslint js src scripts webpack.config.js",
     "test": "node --test tests/*.test.js tests/*.test.cjs",
     "test:coverage": "node scripts/test_coverage.js",
-    "test:coverage:check": "npm run test:coverage && c8 report --check-coverage --lines 100 --branches 100",
+    "test:coverage:check": "npm run test:coverage && c8 report --check-coverage --lines 100 --branches 100 --functions 100 --statements 100",
     "test:effects": "node --test tests/effects.test.js",
     "test:desktop": "node --test tests/desktop.test.cjs",
     "check-assets": "node ./scripts/check_assets.js",
@@ -36,6 +36,7 @@
     "dist": "npm run desktop:build && electron-builder",
     "dist:linux": "npm run desktop:build && electron-builder --linux AppImage",
     "dist:deb": "npm run desktop:build && electron-builder --linux deb --publish never",
+    "dist:rpm": "npm run desktop:build && electron-builder --linux rpm --publish never",
     "dist:mac": "npm run desktop:build && electron-builder --mac dmg zip --universal",
     "install:local": "node ./scripts/install_local.js",
     "assets:manifest": "node scripts/generate_asset_manifest.js",
@@ -121,7 +122,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "LabyStudio",
+        "owner": "DanielChydz",
         "repo": "paintdotjs",
         "releaseType": "release"
       }
@@ -289,6 +290,10 @@
         "libcups2t64"
       ],
       "recommends": []
+    },
+    "rpm": {
+      "maintainer": "Daniel <dan.devmail@proton.me>",
+      "packageCategory": "Applications/Graphics"
     },
     "linux": {
       "icon": "desktop-resources/icon.png",

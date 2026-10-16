@@ -21,39 +21,20 @@ I have been developing [paint.js](https://github.com/LabyStudio/paintdotjs) sinc
 
 ## Installation
 
-### Web
+This fork publishes Linux x86_64 builds on
+[GitHub Releases](https://github.com/DanielChydz/paintdotjs/releases/latest).
+Download the format for your system:
 
-Use paint.js directly at [paintjs.net](https://paintjs.net/). No installation is required.
-
-### Arch Linux
-
-Install [`paintdotjs-bin`](https://aur.archlinux.org/packages/paintdotjs-bin) from the AUR with an
-AUR helper, for example:
-
-```bash
-yay -S paintdotjs-bin
-```
+- **AppImage:** make the downloaded file executable and run it.
+- **Ubuntu 24.04 or newer:** install the `.deb` with `sudo apt install ./paintdotjs-*.deb`.
+- **Fedora and other RPM distributions:** install the `.rpm` with your package manager,
+  for example `sudo dnf install ./paintdotjs-*.rpm` on Fedora.
+- **Flatpak:** install the bundle with `flatpak install --user ./paintdotjs-*.flatpak`.
+  The required Freedesktop runtime comes from Flathub.
 
 Interface artwork and fonts are bundled locally; no Paint.NET download is used.
-
-### Flatpak
-
-Download the latest `.flatpak` bundle from
-[GitHub Releases](https://github.com/LabyStudio/paintdotjs/releases/latest), then install it with:
-
-```bash
-flatpak install --user ./paintdotjs-*-linux-x86_64.flatpak
-```
-
-The bundle uses the Freedesktop runtime from Flathub, but paint.js itself is installed directly from
-the downloaded file.
-
-### macOS
-
-Download the latest universal `.dmg` from [GitHub Releases](https://github.com/LabyStudio/paintdotjs/releases/latest),
-open it, and drag paint.js into the Applications folder.
-
-The macOS app includes the same open artwork and fonts as the web and Linux builds.
+This fork does not publish macOS builds or an AUR package, and automatic GitHub
+Pages deployment is disabled. Application updates use this fork's GitHub releases.
 
 ## Differences from Paint.NET
 
@@ -190,12 +171,24 @@ sudo apt install ./dist/paintdotjs-*-linux-amd64.deb
 
 APT installs the required system libraries, including Ubuntu's `t64` packages.
 `npm run dist:linux` continues to build only the AppImage.
+To build an RPM locally, install the `rpm` tooling and run `npm run dist:rpm`.
+
 Windows Pen & Ink and display-settings links are disabled outside the Windows
 desktop app; they do not offer unsupported `ms-settings:` actions on Ubuntu.
 
 Desktop packages keep the emitted codec chunks and WASM, but omit the duplicate
 npm codec copies and development-only project files. Release webpack bundles
 do not include eval-based source maps; `npm run web-watch` retains them for debugging.
+
+### GitHub releases
+
+Prepare version changes on `develop`, including `package-lock.json`, then merge
+into `master`. A version change in `package.json` triggers the release workflow;
+it can also be started manually from Actions for an unreleased version.
+The Linux job requires 100% coverage for lines, branches, functions and statements,
+then builds AppImage, DEB and RPM packages. The release also includes a Flatpak
+bundle. Publishing uses the workflow's `GITHUB_TOKEN` with `contents: write`;
+Apple signing credentials and AUR credentials are not needed.
 
 ### Effect performance checks
 
