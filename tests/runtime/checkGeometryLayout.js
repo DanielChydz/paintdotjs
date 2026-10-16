@@ -355,7 +355,14 @@ module.exports = async function checkGeometryLayout() {
         list.scrollToBottom();
         list.setScrollSpeed(2);
         list.element.dispatchEvent(new WheelEvent("wheel", {deltaY: -5, cancelable: true}));
-        list.element.dispatchEvent(new WheelEvent("wheel", {deltaX: 5, cancelable: true}));
+        await new Promise(resolve => setTimeout(resolve, 110));
+        list.setScrollPosition(0);
+        let horizontalWheel = new WheelEvent("wheel", {deltaX: 5, cancelable: true});
+        list.element.dispatchEvent(horizontalWheel);
+        check(horizontalWheel.defaultPrevented, "A horizontal wheel with no vertical delta was not handled");
+        let throttledWheel = new WheelEvent("wheel", {deltaX: 5, cancelable: true});
+        list.element.dispatchEvent(throttledWheel);
+        check(!throttledWheel.defaultPrevented, "A throttled wheel event suppressed browser handling");
         await new Promise(resolve => setTimeout(resolve, 110));
         list.setScrollPosition(0);
         let rejectedWheel = new WheelEvent("wheel", {deltaY: -1000, cancelable: true});

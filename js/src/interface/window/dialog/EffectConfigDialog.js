@@ -392,7 +392,8 @@ class EffectConfigDialog {
     static isPointerOverSliderThumb(range, event, thumbWidth) {
         const bounds = range.getBoundingClientRect();
         const min = Number(range.min) || 0;
-        const max = Number(range.max) || 100;
+        const parsedMax = Number(range.max || 100);
+        const max = Number.isFinite(parsedMax) ? parsedMax : 100;
         const value = Number(range.value);
         const ratio = max === min ? 0 : (value - min) / (max - min);
         const center = bounds.left + thumbWidth / 2

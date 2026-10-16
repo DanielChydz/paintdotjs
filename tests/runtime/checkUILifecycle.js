@@ -130,6 +130,12 @@ module.exports = async function checkUILifecycle() {
     check(submenu.submenuElement !== null && !submenu.submenuElement.classList.contains("submenu-opens-left"),
         "A submenu with sufficient room failed to open to its right");
     submenu.close();
+    submenu.getElement().style.left = (window.innerWidth - 30) + "px";
+    submenu.open();
+    check(submenu.submenuElement.classList.contains("submenu-opens-left")
+        && submenu.submenuElement.getBoundingClientRect().right <= submenu.getElement().getBoundingClientRect().left + 2,
+        "A submenu near the right viewport edge did not open to the left");
+    submenu.close();
     document.dispatchEvent(new Event("focusin"));
     check(document.querySelector(".window-focused") === null, "Non-element focus retained a stale floating-window focus marker");
 
@@ -279,11 +285,29 @@ module.exports = async function checkUILifecycle() {
     let navigation = detachedSettings.createNavigation();
     check(navigation.children.length >= 10 && [...navigation.children].every(button => !button.disabled && button.textContent.trim()),
         "Implemented settings sections were disabled or lacked navigation labels");
+    detachedSettings.page = document.createElement("div");
+    let disabledAction = detachedSettings.addButton("Unavailable action", () => {}, {disabled: true});
+    check(disabledAction.disabled && disabledAction.title === "Not implemented yet",
+        "Disabled settings action omitted its default explanation");
+    let swatch = new SwatchItem();
+    check(swatch.buildElement().querySelector(".arrow-down") !== null,
+        "A standalone palette selector omitted its downward arrow");
+    let inlineIcon = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"/>');
+    let inlineDropdown = new ToolOptionDropdown({values: [["inline", "Inline", inlineIcon]], value: "inline"});
+    check(inlineDropdown.getIconSource(["inline", "Inline", inlineIcon]) === inlineIcon,
+        "An embedded dropdown icon gained a filesystem prefix");
     let detachedToolbar = new ToolMenu();
     detachedToolbar.renderOptions(null);
     let unknownType = new ToolType("unknown-custom-tool", "pencil_tool_icon", () => null, null, false);
     check(detachedToolbar.optionsElement === null && detachedToolbar.getOptionDefinitions(unknownType).length === 0,
         "Unknown tool options or an unmounted toolbar produced controls");
+    let defaultWidth = detachedToolbar.createSelectControl(ToolType.PAINT_BRUSH,
+        {key: "antialias", values: [[true, "Yes"], [false, "No"]]});
+    check(defaultWidth.style.width === "130px", "A dropdown without an explicit width lost its default");
+    let commits = 0;
+    detachedToolbar.app = {getActiveTool: () => ({pending: false, tracking: true, commitPending: () => ++commits})};
+    detachedToolbar.createActionControl({icon: "check_icon.png", label: "Finish"}).click();
+    check(commits === 1, "Finish ignored a tracking tool with no pending shape");
     let selector = PanelRegistry.get("toolMenu").get("toolStripChooser.chooseToolButton");
     let unavailable = new DropEntry("unavailable-tool").withIconPathKey("pencil_tool_icon");
     selector.add(unavailable);

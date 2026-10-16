@@ -62,6 +62,10 @@ module.exports = async function checkToolbarWindows() {
         check(ToolType.PAINT_BRUSH.getSetting("width") === 24 && widthInput.value === "24",
             "Invalid size accepted with Enter corrupted the previous tool width");
     }
+    key(widthInput, "ArrowUp");
+    check(ToolType.PAINT_BRUSH.getSetting("width") === 25, "Valid size stepping did not increase the entered value");
+    key(widthInput, "ArrowDown");
+    check(ToolType.PAINT_BRUSH.getSetting("width") === 24, "Valid size stepping did not restore the entered value");
     let arrow = widthGroup.querySelector(".tool-size-arrow");
     arrow.click();
     check(toolbar.sizeMenu !== null && toolbar.sizeMenu.children[0].textContent === "24",

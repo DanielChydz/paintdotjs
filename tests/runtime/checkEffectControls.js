@@ -103,6 +103,16 @@ module.exports = async function checkEffectControls() {
     check(result.amount === 60 && result.enabled === false && result.mode === "b", "Generic controls lost submitted values");
     check(result.curve.length === 2, "Generic curve right-click did not remove its interior point");
 
+    phase("generic curve endpoint edits retain domain ordering");
+    pending = open(definition);
+    await ready();
+    curve = form().querySelector(".effect-curve-editor");
+    await drag(curve, [0.01, 0.99], [0.15, 0.7]);
+    await drag(curve, [0.99, 0.01], [0.85, 0.25]);
+    result = await submit(pending);
+    check(result.curve[0][0] > 0 && result.curve[1][0] < 255
+        && result.curve[0][0] < result.curve[1][0], "Generic curve endpoint edits lost their ordering");
+
     phase("specialized RGB curves, channel isolation and endpoint constraints");
     pending = open(BitmapEffectEngine.DEFINITIONS.curvesEffect);
     await ready();
@@ -260,9 +270,44 @@ module.exports = async function checkEffectControls() {
     check(result.outputLow > 0 && result.outputHigh < 255 && result.gamma !== 1 && Number.isFinite(result.gamma),
         "Output/gamma level handles did not update their values");
 
+    phase("source-free pan preview and slider bounds contracts");
+    let panChanges = [];
+    let panVisual = EffectConfigDialog.createPanVisual(null, {panX: 0, panY: 0}, values => panChanges.push(values));
+    panVisual.redraw();
+    let standalonePan = panVisual.element;
+    standalonePan.style.cssText = "position:fixed;left:10px;top:10px;width:100px;height:76px;z-index:999999";
+    document.body.appendChild(standalonePan);
+    await drag(standalonePan, [.5, .5], [.95, .9]);
+    check(panChanges.length > 0 && panChanges.at(-1).panX > .9 && panChanges.at(-1).panY > .9,
+        "Source-free pan did not use its default image extent");
+    standalonePan.remove();
+    let standaloneRange = document.createElement("input");
+    standaloneRange.type = "range";
+    standaloneRange.style.cssText = "position:fixed;left:10px;top:10px;width:200px";
+    document.body.appendChild(standaloneRange);
+    let rangeBounds = standaloneRange.getBoundingClientRect();
+    check(EffectConfigDialog.isPointerOverSliderThumb(standaloneRange, {clientX: rangeBounds.left + rangeBounds.width / 2}, 14),
+        "Default range bounds did not locate the middle thumb");
+    standaloneRange.max = "invalid";
+    check(EffectConfigDialog.isPointerOverSliderThumb(standaloneRange, {clientX: rangeBounds.left + rangeBounds.width / 2}, 14),
+        "An invalid range maximum did not recover the native default");
+    standaloneRange.min = "10";
+    standaloneRange.max = "10";
+    check(EffectConfigDialog.isPointerOverSliderThumb(standaloneRange, {clientX: rangeBounds.left + 7}, 14),
+        "A collapsed range did not locate the thumb at its start");
+    standaloneRange.min = "-10";
+    standaloneRange.max = "0";
+    standaloneRange.value = "0";
+    check(EffectConfigDialog.isPointerOverSliderThumb(standaloneRange, {clientX: rangeBounds.right - 7}, 14),
+        "A zero maximum was incorrectly replaced by the default maximum");
+    standaloneRange.remove();
+
     phase("rotation sphere, shift snapping, pan capture and exponential zoom");
+    let originalScheme = document.documentElement.dataset.colorScheme;
+    document.documentElement.dataset.colorScheme = "light";
     pending = open(BitmapEffectEngine.ROTATE_ZOOM);
     await ready();
+    document.documentElement.dataset.colorScheme = originalScheme;
     let sphere = form().querySelector(".rotate-roll-visual");
     check(sphere !== null, "Rotation sphere was not created");
     let ignoredSphere = JSON.stringify(previews.at(-1));
@@ -274,6 +319,12 @@ module.exports = async function checkEffectControls() {
     await ready();
     check(previews.at(-1).rollAmount > 0, "Sphere drag did not apply roll");
     await drag(sphere, [0.5, 0.5], [0.7, 0.55], ["shift"]);
+    sphere.dispatchEvent(new MouseEvent("dblclick", {bubbles: true}));
+    await ready();
+    await drag(sphere, [0.5, 0.5], [0.55, 0.75], ["shift"]);
+    await ready();
+    check(Math.abs(Math.abs(previews.at(-1).rollDirection) - 90) < 1e-9,
+        "Shift roll with a dominant vertical axis did not lock to that axis");
     await drag(sphere, [0.97, 0.5], [0.7, 0.05], ["shift"]);
     await ready();
     check(Math.abs(previews.at(-1).angle % 15) < 1e-9, "Shift rotation did not snap to 15 degrees");

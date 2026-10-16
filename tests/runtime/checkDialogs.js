@@ -307,6 +307,11 @@ module.exports = async function checkDialogs() {
     SettingsDialog.open("canvas");
     settings.dialog.dispatchEvent(new KeyboardEvent("keydown", {key: "Escape", bubbles: true}));
     check(settings.backdrop === null, "Escape did not close settings");
+    let emptyTask = TaskDialog.show({title: "No available actions", message: "Close this dialog"});
+    let emptyTaskElement = document.querySelector(".task-dialog");
+    check(emptyTaskElement.querySelectorAll(".task-dialog-choice").length === 0, "An actionless task dialog invented a choice");
+    emptyTaskElement.querySelector(".app-dialog-close").click();
+    check(await emptyTask === null, "Closing an actionless task dialog did not cancel");
     phase("task dialog Escape and title close retain their cancellation values");
     for (let method of ["escape", "close"]) {
         let pending = TaskDialog.show({title: "Cancelable task", message: "Cancel this task",

@@ -33,6 +33,9 @@ module.exports = async function checkDocumentChrome() {
     let strip = PanelRegistry.get("documentStrip");
     strip.showDocumentList();
     check(!strip.documentListOpen, "Empty document strip opened a list");
+    strip.scrollByDocument(1);
+    await frame();
+    check(strip.documentsListItem.getElement().scrollLeft === 0, "Scrolling an empty strip created a phantom offset");
     let workspaces = [];
     for (let index = 0; index < 14; ++index) {
         workspaces.push(app.createBlankDocumentInNewWorkspace(index % 2 === 0 ? 16 : 8, index % 2 === 0 ? 8 : 16));
