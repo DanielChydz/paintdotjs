@@ -141,6 +141,7 @@ Inter uses SIL OFL 1.1, and the project supplies its own logo, cursors and Engli
 labels. See [artwork/SOURCES.md](artwork/SOURCES.md) and [NOTICE.md](NOTICE.md).
 Neither builds nor first launch download Paint.NET artwork, fonts or translations.
 `npm run check-assets` only verifies the bundled files and their hashes.
+Only the independently authored English interface dictionary currently ships.
 
 ### Build an Ubuntu package
 
