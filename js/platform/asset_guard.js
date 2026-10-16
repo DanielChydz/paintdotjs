@@ -14,16 +14,20 @@
 
 (function checkRequiredAssets() {
     const assetUrl = new URL('assets/lang/en.json', document.baseURI);
-    let assetsReady = false;
+    // Production bundles already contain the default dictionary. A synchronous
+    // XHR can bypass the service-worker cache during an offline reload.
+    let assetsReady = Boolean(window.Language?.fallbackData);
 
-    try {
-        const request = new XMLHttpRequest();
-        request.open('GET', assetUrl.href, false);
-        request.send();
-        assetsReady = (request.status >= 200 && request.status < 300)
-            || (request.status === 0 && request.responseText.length > 0);
-    } catch (_) {
-        assetsReady = false;
+    if (!assetsReady) {
+        try {
+            const request = new XMLHttpRequest();
+            request.open('GET', assetUrl.href, false);
+            request.send();
+            assetsReady = (request.status >= 200 && request.status < 300)
+                || (request.status === 0 && request.responseText.length > 0);
+        } catch (_) {
+            assetsReady = false;
+        }
     }
 
     window.paintDotJsAssetsReady = assetsReady;

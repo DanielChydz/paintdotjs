@@ -39,12 +39,17 @@ module.exports = async function checkGeometryLayout() {
         {status: 200, text: "", ready: true}, {status: 299, text: "", ready: true},
         {status: 0, text: "file content", ready: true}, {status: 0, text: "", ready: false},
         {status: 404, text: "", ready: false}, {status: 500, text: "", ready: false, late: true},
-        {status: 0, text: "", ready: false, failure: true}
+        {status: 0, text: "", ready: false, failure: true},
+        {status: 0, text: "", ready: false, language: {}},
+        {status: 0, text: "", ready: true, language: {fallbackData: {}}, failure: true}
     ]) {
         let iframe = document.createElement("iframe");
         let loaded = new Promise(resolve => iframe.onload = resolve);
         iframe.srcdoc = `<div id="content"></div><div id="windowOverlay"></div><script>
+            window.Language = ${JSON.stringify(fixture.language)};
+            window.assetRequests = 0;
             window.XMLHttpRequest = function () {
+                ++window.assetRequests;
                 this.status = ${fixture.status}; this.responseText = ${JSON.stringify(fixture.text)};
                 this.open = function () {};
                 this.send = function () {${fixture.failure ? "throw new Error('offline');" : ""}};
@@ -65,6 +70,8 @@ module.exports = async function checkGeometryLayout() {
         let frameWindow = iframe.contentWindow;
         let page = iframe.contentDocument;
         check(frameWindow.paintDotJsAssetsReady === fixture.ready, "Asset guard accepted the wrong HTTP/file state");
+        check(frameWindow.assetRequests === (fixture.language?.fallbackData ? 0 : 1),
+            "Bundled language assets triggered a network request during startup");
         check((page.querySelector(".missing-assets-page") === null) === fixture.ready, "Asset guard displayed the wrong setup state");
         if (!fixture.ready) {
             check(page.getElementById("content") === null && page.getElementById("windowOverlay") === null,
