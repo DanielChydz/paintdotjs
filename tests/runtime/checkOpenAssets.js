@@ -37,8 +37,8 @@ module.exports = async function checkOpenAssets() {
     check(faces.length > 0 && faces.every(face => face.status === "loaded"), "Bundled Inter did not load");
     let license = await (await fetch("assets/licenses/Inter-OFL.txt")).text();
     check(license.includes("SIL OPEN FONT LICENSE"), "Bundled font license is missing");
-    license = await (await fetch("assets/licenses/Lucide-LICENSE.txt")).text();
-    check(license.includes("ISC License"), "Bundled icon license is missing");
+    license = await (await fetch("assets/licenses/paintjs-icons-LICENSE.txt")).text();
+    check(license.includes("MIT License"), "Bundled icon license is missing");
     let missingLabels = [];
     for (let action of ActionRegistry.getActionList()) {
         let label = action.getDisplayName();

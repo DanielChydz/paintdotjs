@@ -12,6 +12,7 @@
  * Licensed under LICENSE.md. See NOTICE.md for full attribution.
  */
 
+const crypto = require("node:crypto");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -25,12 +26,21 @@ test("bundled assets carry open provenance, checked licenses and no proprietary 
     let root = path.resolve(__dirname, "..");
     let manifest = require("../desktop-resources/asset-manifest.json");
     assert.equal(AssetCatalog.verify(path.join(root, "assets"), manifest), path.join(root, "assets"));
-    for (let relative of ["font/Inter.ttf", "licenses/Inter-OFL.txt", "licenses/Lucide-LICENSE.txt", "icon.png", "icon.ico"]) {
+    for (let relative of ["font/Inter.ttf", "licenses/Inter-OFL.txt", "licenses/paintjs-icons-LICENSE.txt", "icon.png", "icon.ico"]) {
         assert.equal(typeof manifest.files[relative], "string");
     }
     assert.equal(fs.existsSync(path.join(root, "assets/font/segoe_ui.ttf")), false);
+    let provenance = require("../artwork/upstream-icons.json");
+    for (let [relative, hash] of Object.entries(provenance.files)) {
+        assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.join(root, "assets", relative))).digest("hex"), hash,
+            "Upstream artwork changed: " + relative);
+    }
+    for (let [alias, target] of Object.entries(provenance.aliases)) {
+        assert.deepEqual(fs.readFileSync(path.join(root, "assets", alias)), fs.readFileSync(path.join(root, "assets", target)));
+    }
+    assert.equal(fs.existsSync(path.join(root, "artwork/lucide")), false);
     assert.match(fs.readFileSync(path.join(root, "assets/licenses/Inter-OFL.txt"), "utf8"), /SIL OPEN FONT LICENSE/);
-    assert.match(fs.readFileSync(path.join(root, "assets/licenses/Lucide-LICENSE.txt"), "utf8"), /ISC License/);
+    assert.match(fs.readFileSync(path.join(root, "assets/licenses/paintjs-icons-LICENSE.txt"), "utf8"), /MIT License/);
 });
 
 test("offline asset installation rejects legacy and damaged assets before copying", t => {

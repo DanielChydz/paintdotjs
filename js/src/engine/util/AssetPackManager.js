@@ -24,7 +24,7 @@ class AssetPackManager {
         name: "paint.js Default",
         author: "paint.js contributors",
         version: "1.0.0",
-        description: "Lucide interface icons, original project artwork and independently authored English text.",
+        description: "Upstream paint.js interface artwork and independently authored English text.",
         builtIn: true,
         iconCount: 276,
         localeCount: 1

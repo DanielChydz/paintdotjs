@@ -112,7 +112,7 @@ Animated and multi-page files are imported and exported as a single static image
 
 ## Icon Packs
 
-This fork uses Lucide icons for its default icon pack because
+This fork uses the new upstream paint.js icon pack because
 [we cannot redistribute the original Paint.NET icons](https://github.com/LabyStudio/paintdotjs/issues/5).
 You can install and activate custom icon packs from **Settings → Icon Packs** to
 replace the default icons or add translations.
@@ -163,9 +163,8 @@ required functionality.
 npm run app
 ```
 
-The application ships its interface assets locally. Lucide icons use the ISC license,
-Inter uses SIL OFL 1.1, and the project supplies its own logo, cursors and English
-labels. See [artwork/SOURCES.md](artwork/SOURCES.md) and [NOTICE.md](NOTICE.md).
+The application ships the upstream paint.js interface icons and cursors locally.
+Inter uses SIL OFL 1.1, and the fork supplies its own web logo and English labels. See [artwork/SOURCES.md](artwork/SOURCES.md) and [NOTICE.md](NOTICE.md).
 The desktop window and package use the separately supplied desktop icon recorded there.
 Neither builds nor first launch download Paint.NET artwork, fonts or translations.
 `npm run check-assets` only verifies the bundled files and their hashes.

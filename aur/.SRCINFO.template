@@ -5,7 +5,6 @@ pkgbase = paintdotjs-bin
 	url = https://paintjs.net/
 	arch = x86_64
 	license = MIT
-	license = ISC
 	license = OFL-1.1
 	depends = fuse2
 	depends = gtk3

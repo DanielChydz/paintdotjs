@@ -2,9 +2,8 @@
 
 Upstream integration: additional bundled font families and their colocated licenses
 were imported from LabyStudio/paintdotjs commit b4e6fc5 (2.4.3). See
-`assets/font/README.md` and each family's `LICENSE.txt`. The new settings-assets
-icon comes from that upstream commit's original MIT-licensed artwork. Existing
-Lucide resources and the supplied desktop icon are preserved.
+`assets/font/README.md` and each family's `LICENSE.txt`. The supplied desktop icon
+and independently generated PDN templates are preserved.
 
 Desktop application icon: user-selected image, downloaded unchanged from
 https://github.com/user-attachments/assets/6ad3bc51-1684-4d19-aa44-7a2881907f3c
@@ -14,16 +13,21 @@ SHA-256: 33b3932e1f570394514f564937530c89fe0c3a6fd68964d682f8cecbc4011504.
 This is a supplied image, not artwork authored by this project. The web mark and
 document mark described below remain separate assets.
 
-UI icons: Lucide Static 0.468.0, https://github.com/lucide-icons/lucide/tree/0.468.0/icons
-ISC license, including the upstream Feather attribution (assets/licenses/Lucide-LICENSE.txt).
-Original SVG files are kept in artwork/lucide. The mapping records the selected icon
-for every legacy application resource ID; IDs do not denote ownership or provenance.
+UI icons, images and cursors: the new default pack from upstream paint.js,
+https://github.com/LabyStudio/paintdotjs/tree/b4e6fc5dc2271170d396c195443022ed8d9ba66b/assets
+The upstream README identifies these as its AI-generated replacement artwork,
+not Paint.NET resource extractions. All 279 files are copied unchanged from that
+commit. Upstream LICENSE.md is retained verbatim in
+`assets/licenses/paintjs-icons-LICENSE.txt`. `artwork/upstream-icons.json` pins the
+commit and SHA-256 of every file. The generic effect fallback is a byte-identical
+alias of upstream glow_effect.png; its mapping is recorded there as well.
+The previous Lucide vendor sources and generated UI pack have been removed.
 
 UI font: Inter variable, unmodified, SIL Open Font License 1.1.
 https://github.com/google/fonts/tree/0b58fb370093f9a9f4ff785d94405710b79de67c/ofl/inter
 License: assets/licenses/Inter-OFL.txt. SHA-256: 29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031
 
-The application mark, document mark, cursor composition, sample document, repository banner, enum previews and English
+The application mark, document mark, sample document, repository banner and English
 interface dictionary are authored for this project and distributed under its MIT
 license. None is traced from or extracted from Paint.NET artwork or resources.
 Generated PNGs and ICOs are checked in: builds and application startup need no asset

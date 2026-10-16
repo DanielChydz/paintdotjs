@@ -23,12 +23,6 @@ def raster(source, output, size):
                     '-resize', f'{size[0]}x{size[1]}!', '-strip', 'PNG32:' + str(output)],
                    input=source.encode(), check=True, capture_output=True)
 
-
-def lucide(name, color='#3285a0'):
-    source = (ART / 'lucide' / (name + '.svg')).read_text()
-    return source.replace('currentColor', color)
-
-
 # Original pixel-ribbon P mark; no photo, brush, or Paint.NET artwork.
 mark = svg('''<rect x="4" y="4" width="120" height="120" rx="30" fill="#142b3b"/>
 <path d="M32 96V32h36a24 24 0 0 1 0 48H48v16zm16-32h20a8 8 0 0 0 0-16H48z" fill="#48d8c1"/>
@@ -49,84 +43,11 @@ file_mark = svg('''<path d="M20 4h58l30 30v90H20z" fill="#f5fafc" stroke="#48647
 (ROOT / 'desktop-resources/file-icon.svg').write_text(file_mark + '\n')
 raster(file_mark, ROOT / 'desktop-resources/file-icon.png', (512, 512))
 
-mapping = json.loads((ART / 'icons.json').read_text())
-for relative, name in mapping.items():
-    if name == 'brand':
-        source = mark
-    elif name == 'blank':
-        source = svg('')
-    else:
-        source = lucide(name, '#c6dce9' if '_dark' in relative else '#3285a0')
-    # Small previews describe the actual drawing style rather than reusing a
-    # generic symbol for options whose visual distinction matters.
-    if 'enum_dash_style_' in relative:
-        style = pathlib.Path(relative).stem.removeprefix('enum_dash_style_')
-        pattern = {'solid': 'none', 'dash': '6 3', 'dot': '1 3', 'dash_dot': '6 3 1 3', 'dash_dot_dot': '6 3 1 3 1 3'}[style]
-        source = svg(f'<path d="M2 12h20" fill="none" stroke="#3285a0" stroke-width="2" stroke-linecap="round" stroke-dasharray="{pattern}"/>')
-    if 'enum_line_curve_cap_' in relative:
-        start = '_start' in relative
-        cap_x = 4 if start else 20
-        direction = 1 if start else -1
-        body = '<path d="M4 12h16" stroke="#3285a0" stroke-width="2"/>'
-        if 'arrow' in relative:
-            fill = '#3285a0' if 'filled' in relative else 'none'
-            body += f'<path d="M{cap_x + direction * 6} 7L{cap_x} 12l{direction * 6} 5z" fill="{fill}" stroke="#3285a0" stroke-width="2"/>'
-        elif 'rounded' in relative:
-            body += f'<circle cx="{cap_x}" cy="12" r="2.5" fill="#3285a0"/>'
-        else:
-            body += f'<path d="M{cap_x} 8v8" stroke="#3285a0" stroke-width="2"/>'
-        source = svg(body)
-    size = 24 if '_24' in relative else 16
-    if 'banner_logo' in relative:
-        size = 128
-    raster(source, ASSETS / relative, (size, size))
-
-# Original cursor layout. Lucide tool glyphs accompany a precise high-contrast
-# crosshair. The extra row/column uses the application's own hotspot protocol.
-for relative in json.loads((ART / 'cursors.json').read_text()):
-    name = pathlib.Path(relative).stem
-    glyph = 'crosshair'
-    for prefix, icon in [('clone_stamp', 'stamp'), ('color_picker', 'pipette'),
-                         ('ellipse', 'circle-dashed'), ('rectangle', 'square-dashed'),
-                         ('lasso', 'lasso-select'), ('magic_wand', 'wand-sparkles'),
-                         ('paint_brush', 'paintbrush'), ('paint_bucket', 'paint-bucket'),
-                         ('eraser', 'eraser'), ('pencil', 'pencil'), ('gradient', 'blend'),
-                         ('recolor', 'replace'), ('shapes', 'shapes'), ('text', 'type'),
-                         ('zoom', 'search'), ('hand', 'hand')]:
-        if name.startswith(prefix):
-            glyph = icon
-            break
-    if name == 'hand_closed_cursor':
-        glyph = 'grab'
-    # All cursor glyphs have an explicit source in the mapping's vendor set.
-    source_file = ART / 'lucide' / (glyph + '.svg')
-    if not source_file.exists():
-        raise ValueError('Missing cursor glyph source: ' + glyph)
-    body = re.search(r'<svg[^>]*>(.*)</svg>', lucide(glyph, '#203b4d'), re.S)[1]
-    hand = name.startswith('hand_')
-    hotspot = 16 if hand else 8
-    scale = .95 if hand else .7
-    offset = 4 if hand else 13
-    body = f'<g transform="translate({offset} {offset}) scale({scale})" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">{body}</g>' + f'<g transform="translate({offset} {offset}) scale({scale})" fill="none" stroke="#203b4d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{body}</g>'
-    if not hand:
-        body = '<path d="M8 1v14M1 8h14" stroke="white" stroke-width="4"/><path d="M8 1v14M1 8h14" stroke="#172b3c" stroke-width="1.5"/>' + body
-    badge = '+' if '_plus_' in name else '−' if '_minus_' in name else '×' if '_invalid_' in name else None
-    if badge:
-        # Explicit paths avoid system-font dependent cursor rendering.
-        path = 'M22 7h8M26 3v8' if badge == '+' else 'M22 7h8' if badge == '−' else 'M22 3l8 8M30 3l-8 8'
-        body += f'<circle cx="26" cy="7" r="6" fill="white"/><path d="{path}" stroke="#172b3c" stroke-width="1.5"/>'
-    cursor_source = svg(body, 32, 32)
-    source_path = ART / relative.replace('.png', '.svg')
-    source_path.parent.mkdir(parents=True, exist_ok=True)
-    source_path.write_text(cursor_source + '\n')
-    raster(cursor_source, ASSETS / relative, (32, 32))
-    image = Image.open(ASSETS / relative).convert('RGBA')
-    with_metadata = Image.new('RGBA', (33, 33))
-    with_metadata.paste(image, (0, 0))
-    with_metadata.putpixel((32, hotspot), (255, 0, 0, 255))
-    with_metadata.putpixel((hotspot, 32), (255, 0, 0, 255))
-    with_metadata.save(ASSETS / relative)
-print('Generated original branding, cursors and licensed Lucide UI assets.')
+# The upstream icon pack is vendored byte-for-byte, not regenerated here.
+provenance = json.loads((ART / 'upstream-icons.json').read_text())
+for alias, target in provenance['aliases'].items():
+    (ASSETS / alias).write_bytes((ASSETS / target).read_bytes())
+print('Generated original branding and copied upstream icon aliases.')
 
 (ASSETS / "lang/en.json").write_bytes((ART / "en.json").read_bytes())
 

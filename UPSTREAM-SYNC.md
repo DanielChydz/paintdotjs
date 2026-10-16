@@ -9,7 +9,10 @@ Point of return: backup/pre-upstream-sync-20261016 (597448c).
 
 - Imported upstream plugins/catalog/custom dialogs, custom XAML shapes, icon packs,
   configurable UI fonts and the separated Settings entry classes; version 2.4.3.
-- Retained the fork's Lucide assets, Inter default, independently authored English,
+- Adopted the new upstream interface icons/cursors at the user's request, removing
+  the replaced Lucide pack and its vendor sources. All 279 upstream files are
+  byte-identical and hash-pinned in artwork/upstream-icons.json; one generic
+  effect icon aliases an upstream image. Retained Inter default, authored English,
   generated PDN schemas, desktop icon and desktop title metadata. Upstream's extra
   redistributable font families retain their colocated license texts unchanged.
 - Retained SHA-256 verification of bundled assets and refusal to reuse legacy
@@ -31,12 +34,16 @@ Point of return: backup/pre-upstream-sync-20261016 (597448c).
 
 ## Verification
 
-211 tests pass; all 280 runtime files included. Lines 95.42% (43,735/45,831),
-branches 97.93% (10,363/10,581), functions 95.09% (2,677/2,815).
+211 tests pass; all 280 runtime files included. Lines 95.43% (43,737/45,831),
+branches 97.94% (10,363/10,580), functions 95.09% (2,677/2,815).
 Upstream added code, so the former 100% gate is no longer met. No runtime files
 were excluded and no coverage-ignore annotations added.
 Lint, test lint, headers, version information and local asset checks pass.
-Coverage log: /tmp/paintdotjs-upstream-coverage.log.
+Coverage log: /tmp/paintdotjs-upstream-icons-coverage.log.
+The revised generator leaves upstream artwork untouched; all 403 catalogue hashes
+remain byte-identical after regeneration. Desktop/browser visual checks pass;
+README screenshots show the adopted upstream pack.
 
-Final Pages/DEB rebuild and offline package verification are pending at this source
-checkpoint. No remote push or installation has been performed.
+A pre-switch Pages/DEB rebuild passed offline checks. Final verification of the
+upstream icon pack is pending. Per user instruction, finish on local master only;
+the user will push. No installation or remote push has been performed.

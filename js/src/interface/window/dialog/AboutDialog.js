@@ -166,7 +166,7 @@ class AboutDialog {
                 // Asset credits
                 credits.appendChild(document.createElement("br"));
                 let assetCredits = document.createElement("span");
-                assetCredits.textContent = "Interface icons: Lucide (ISC). Typeface: Inter (SIL OFL 1.1). Original project logo and cursor compositions.";
+                assetCredits.textContent = "Interface artwork: LabyStudio paint.js default pack. Typeface: Inter (SIL OFL 1.1). Original project logo.";
                 credits.appendChild(assetCredits);
             }
 

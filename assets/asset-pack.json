@@ -2,7 +2,7 @@
     "formatVersion": 1,
     "id": "paintjs-default",
     "name": "paint.js Default",
-    "author": "paint.js contributors",
+    "author": "LabyStudio and paint.js contributors",
     "version": "1.0.0",
-    "description": "Lucide icons, original project artwork and independently authored English text."
+    "description": "Upstream paint.js interface artwork with independently authored English text."
 }

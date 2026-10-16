@@ -24,12 +24,13 @@ The application does not distribute or download Paint.NET logo artwork, toolbar
 icons, cursors, fonts or translation resource files. The original source-code
 attribution above does not grant permission to use Paint.NET artwork.
 
-- Lucide Static 0.468.0: Copyright Lucide Contributors; portions Copyright Cole
-  Bemis / Feather. ISC license with upstream attribution retained in
-  `assets/licenses/Lucide-LICENSE.txt`.
+- Upstream paint.js default interface icons and cursors: Copyright LabyStudio,
+  vendored unchanged from commit b4e6fc5. Upstream license and attribution retained
+  in `assets/licenses/paintjs-icons-LICENSE.txt`; provenance and hashes are in
+  `artwork/upstream-icons.json`.
 - Inter variable font: Copyright 2020 The Inter Project Authors. SIL Open Font
   License 1.1, included in `assets/licenses/Inter-OFL.txt`.
-- Original paint.js pixel-ribbon mark, document mark, sample artwork, cursor composition and
+- Original paint.js pixel-ribbon mark, document mark, sample artwork and
   English labels: Copyright 2026 paint.js contributors, MIT license.
 
 Sources, pinned revisions and asset provenance are recorded in `artwork/SOURCES.md`.
