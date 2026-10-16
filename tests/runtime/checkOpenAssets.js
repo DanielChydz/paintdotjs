@@ -20,6 +20,12 @@ module.exports = async function checkOpenAssets() {
     };
     let catalog = await (await fetch("desktop-resources/asset-manifest.json")).json();
     check(catalog.assetSet === "paintjs-open-v1", "Unexpected asset provenance");
+    if (isApp) {
+        check(!PdjInfo.version().includes("(Web)"), "Desktop bundle overwrote its distribution label");
+        check(!document.title.includes("(Web)"), "Desktop window title has a Web suffix");
+    } else {
+        check(PdjInfo.distribution() === "Web", "Browser bundle lost its distribution label");
+    }
     let images = Object.keys(catalog.files).filter(name => /\.(png|ico)$/.test(name));
     await Promise.all(images.map(async relative => {
         let image = new Image();

@@ -773,7 +773,8 @@ function rendererBridgeFixture() {
             webUtils: {getPathForFile: file => file.path}
         },
         "custom-electron-titlebar": {
-            CustomTitlebar: function () {
+            CustomTitlebar: function (options) {
+                assert.equal(options.icon, "assets/desktop-icon.png");
                 return {updateTitle: title => state.title = title, updateBackground: color => state.background = color};
             },
             TitlebarColor: {fromHex: value => value}

@@ -1,5 +1,12 @@
 # Asset sources
 
+Desktop application icon: user-selected image, downloaded unchanged from
+https://github.com/user-attachments/assets/6ad3bc51-1684-4d19-aa44-7a2881907f3c
+on 2026-10-16. The original PNG is retained as `artwork/desktop-icon.png` and
+copied unchanged to `assets/desktop-icon.png` and `desktop-resources/icon.png`.
+This is a supplied image, not artwork authored by this project. The web mark and
+document mark described below remain separate assets.
+
 UI icons: Lucide Static 0.468.0, https://github.com/lucide-icons/lucide/tree/0.468.0/icons
 ISC license, including the upstream Feather attribution (assets/licenses/Lucide-LICENSE.txt).
 Original SVG files are kept in artwork/lucide. The mapping records the selected icon

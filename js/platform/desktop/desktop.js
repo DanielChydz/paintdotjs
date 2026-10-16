@@ -190,6 +190,7 @@ ipcRenderer.on('desktop:update-state', (_event, update) => {
 });
 
 const desktopTitlebar = new CustomTitlebar({
+    icon: 'assets/desktop-icon.png',
     backgroundColor: TitlebarColor.fromHex('#0D0D0D'),
     menuPosition: 'bottom'
 });

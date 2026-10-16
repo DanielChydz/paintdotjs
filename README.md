@@ -34,7 +34,7 @@ AUR helper, for example:
 yay -S paintdotjs-bin
 ```
 
-All interface artwork and fonts are bundled locally under open licenses; no Paint.NET download is used.
+Interface artwork and fonts are bundled locally; no Paint.NET download is used.
 
 ### Flatpak
 
@@ -139,6 +139,7 @@ npm run app
 The application ships its interface assets locally. Lucide icons use the ISC license,
 Inter uses SIL OFL 1.1, and the project supplies its own logo, cursors and English
 labels. See [artwork/SOURCES.md](artwork/SOURCES.md) and [NOTICE.md](NOTICE.md).
+The desktop window and package use the separately supplied desktop icon recorded there.
 Neither builds nor first launch download Paint.NET artwork, fonts or translations.
 `npm run check-assets` only verifies the bundled files and their hashes.
 Only the independently authored English interface dictionary currently ships.

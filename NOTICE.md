@@ -17,6 +17,9 @@ attribution notices.
 
 ## Bundled interface assets
 
+The desktop application icon is the user-supplied image recorded in
+`artwork/SOURCES.md`; it is separate from the project's original web mark.
+
 The application does not distribute or download Paint.NET logo artwork, toolbar
 icons, cursors, fonts or translation resource files. The original source-code
 attribution above does not grant permission to use Paint.NET artwork.

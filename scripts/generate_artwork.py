@@ -37,7 +37,10 @@ mark = svg('''<rect x="4" y="4" width="120" height="120" rx="30" fill="#142b3b"/
 (ART / 'logo.svg').write_text(mark + '\n')
 raster(mark, ASSETS / 'icon.png', (512, 512))
 Image.open(ASSETS / 'icon.png').save(ASSETS / 'icon.ico', sizes=[(16, 16), (32, 32), (48, 48), (256, 256)])
-(ROOT / 'desktop-resources/icon.png').write_bytes((ASSETS / 'icon.png').read_bytes())
+# User-selected desktop icon is kept byte-for-byte; the web keeps its own mark.
+desktop_icon = (ART / 'desktop-icon.png').read_bytes()
+(ASSETS / 'desktop-icon.png').write_bytes(desktop_icon)
+(ROOT / 'desktop-resources/icon.png').write_bytes(desktop_icon)
 file_mark = svg('''<path d="M20 4h58l30 30v90H20z" fill="#f5fafc" stroke="#486474" stroke-width="4"/>
 <path d="M78 4v30h30" fill="none" stroke="#486474" stroke-width="4"/>
 <g transform="translate(28 42) scale(.55)">''' + re.search(r'<svg[^>]*>(.*)</svg>', mark, re.S)[1] + '</g>', 128, 128)
