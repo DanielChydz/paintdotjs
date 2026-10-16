@@ -1,26 +1,24 @@
 # Runtime coverage handoff
 
-## Saved pause checkpoint (2026-10-15)
+## Resumed checkpoint (2026-10-16)
 
-The user explicitly asked to **save the state and stop** because tokens are running
-out. Work is paused; resume only when requested. On resumption, continue toward
-100% line and branch coverage and commit verified batches regularly. For concrete
-unimplemented stubs/TODOs, choose implementation without asking again.
+The user asked to resume. Continue toward 100% line and branch coverage and commit
+verified batches regularly. Implement concrete TODOs/stubs instead of deleting them.
 
 The target is **100% line and branch coverage of all first-party runtime
 sources**, meaningful regressions, fixes for demonstrated bugs, and verified
 commits. **The target is not complete.** Branch coverage still fails
-the strict 100% gate. All lines and functions are covered in the latest measurement; 86 branch alternatives remain.
+the strict 100% gate. All lines and functions are covered in the latest measurement; 69 branch alternatives remain.
 
 Latest complete, successful `npm run test:coverage`:
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
 | Lines/statements | 41,276 | 41,276 | 100% | 0 |
-| Branches | 9,904 | 9,990 | 99.13% | 86 |
+| Branches | 9,937 | 10,006 | 99.31% | 69 |
 | Functions | 2,532 | 2,532 | 100% | 0 |
 
-- **204 tests passed; zero failures.**
+- **209 tests passed; zero failures.**
 - All **254 runtime source files** remain included.
 - No coverage exclusions or ignore directives were added.
 - Full source/test lint, source headers, version checks and `git diff --check`
@@ -33,6 +31,17 @@ Reports: `coverage/coverage-summary.json`, `coverage/coverage-final.json`,
 `coverage/index.html`. Latest full-run log: `/tmp/paintdotjs-coverage-current.log`.
 Strict-gate log: `/tmp/paintdotjs-strict-coverage-current.log`.
 Generated reports and bundles are not committed sources.
+
+## Verified batch (2026-10-16)
+
+- Added legacy DPI/color fallback, unchanged size-dialog cancellation, inferred PNG
+  and unknown filename/format contracts. Decoder rejection without an Error still
+  yields the documented unsupported-format error.
+- Native Canvas verifies default clipped source-over and standalone viewport
+  custom/default border pixels. Partial stencil tracing verifies bounds, area and
+  consumption of the input stencil without caching full-image coverage.
+- All lint/header/version/whitespace checks and 209 tests passed. Latest full
+  coverage: 100% lines/functions, 99.31% branches (69 alternatives remaining).
 
 ## Latest saved batch (2026-10-15)
 
@@ -483,15 +492,14 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 
 | Source | Uncovered lines | Uncovered branches |
 |---|---:|---:|
-| [DocumentIO.js](./js/src/io/DocumentIO.js) | 0 | 17 |
 | [EffectConfigDialog.js](./js/src/interface/window/dialog/EffectConfigDialog.js) | 0 | 14 |
 | [PreviewShapeTool.js](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | 0 | 9 |
-| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 0 | 6 |
+| [DocumentIO.js](./js/src/io/DocumentIO.js) | 0 | 7 |
 | [SettingsDialog.js](./js/src/interface/window/dialog/SettingsDialog.js) | 0 | 5 |
+| [SaveImageDialog.js](./js/src/interface/window/dialog/SaveImageDialog.js) | 0 | 4 |
 | [ToolMenu.js](./js/src/interface/panel/header/tool/ToolMenu.js) | 0 | 4 |
 | [DrawingTool.js](./js/src/engine/document/tool/tool/DrawingTool.js) | 0 | 4 |
 | [SelectionTool.js](./js/src/engine/document/tool/tool/SelectionTool.js) | 0 | 3 |
-| [SurfaceBoxBaseRenderer.js](./js/src/engine/document/render/renderer/SurfaceBoxBaseRenderer.js) | 0 | 3 |
 | [ToolOptionDropdown.js](./js/src/interface/panel/header/tool/ToolOptionDropdown.js) | 0 | 2 |
 | [RectangleSelectTool.js](./js/src/engine/document/tool/tool/RectangleSelectTool.js) | 0 | 2 |
 | [PaintBucketTool.js](./js/src/engine/document/tool/tool/PaintBucketTool.js) | 0 | 2 |
@@ -503,6 +511,7 @@ report. Remaining gaps include alternate modes, guards, fallbacks and races.
 | [DocumentStrip.js](./js/src/interface/panel/header/documents/DocumentStrip.js) | 0 | 1 |
 | [SubmenuDropEntry.js](./js/src/interface/item/menu/action/drop/SubmenuDropEntry.js) | 0 | 1 |
 | [ScrollList.js](./js/src/interface/item/layout/ScrollList.js) | 0 | 1 |
+| [MoveToolBase.js](./js/src/engine/document/tool/tool/move/MoveToolBase.js) | 0 | 1 |
 
 Known audit points:
 

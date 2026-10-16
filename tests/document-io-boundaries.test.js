@@ -868,3 +868,57 @@ test("drop operations own their file list while font importing waits for storage
     await fixture.io.handleDroppedFiles([]);
     assert.equal(fixture.state.dialog, null, "An empty drop should not open a choice dialog");
 });
+
+
+test("document defaults accept legacy DPI and recover unavailable colors", () => {
+    let {io, context} = documentFixture();
+    for (let [model, expected] of [[{resolution: 144}, 144], [{}, 96],
+        [{getResolution: () => null, resolution: 72}, 72], [{resolution: 0}, 96],
+        [{getResolution: () => -10}, .01]]) {
+        assert.equal(io.getDocumentResolution(model), expected);
+    }
+    for (let colors of [null, {}, {mainColor: {}, secondaryColor: {}},
+        {mainColor: {toHex: () => ""}, secondaryColor: {toHex: () => ""}}]) {
+        context.FormRegistry = {get: () => colors};
+        assert.equal(io.getCanvasFillStyle("primary"), "#ff0000ff");
+        assert.equal(io.getCanvasFillStyle("secondary"), "#ffffffff");
+    }
+});
+
+test("size dialogs avoid replacing identical documents", async () => {
+    let fixture = documentFixture();
+    let model = {getWidth: () => 8, getHeight: () => 6, getResolution: () => 144,
+        getLayers: () => ({getLayerCount: () => 2})};
+    fixture.state.workspace = {getDocument: () => model};
+    fixture.context.ImageSizeDialog = {open: async (mode, values) => {
+        assert.ok(["resize", "canvas"].includes(mode));
+        assert.deepEqual([values.width, values.height, values.resolution, values.layerCount], [8, 6, 144, 2]);
+        return {width: 8, height: 6, resolution: 144};
+    }};
+    assert.equal(await fixture.io.resizeImage(), false);
+    assert.equal(await fixture.io.changeCanvasSize(), false);
+    assert.equal(fixture.state.workspace.getDocument(), model);
+});
+
+test("saving infers PNG for a single-layer document with no format or extension", async () => {
+    let fixture = savingFixture({fileFormat: null, fileName: "Untitled", friendlyName: "Untitled"});
+    assert.equal(await fixture.io.saveActive(), true);
+    assert.equal(fixture.state.encoded[0].format, "png");
+    assert.equal(fixture.state.fileInfo[3], "png");
+});
+
+test("save format lookup handles missing names and unknown identifiers", () => {
+    let {SaveImageDialog} = savingFixture();
+    for (let name of [undefined, null, "", "unrecognized.xyz"]) {
+        assert.equal(SaveImageDialog.fromFileName(name).id, "png");
+        assert.equal(SaveImageDialog.fromFileName(name, "pdn").id, "pdn");
+    }
+    assert.equal(SaveImageDialog.find("obsolete-format").id, "png");
+    assert.equal(SaveImageDialog.fromFileName("PHOTO.JPE").id, "jpeg");
+});
+
+test("decoder rejection without an Error still produces a useful format error", async () => {
+    let {io, context} = documentFixture();
+    context.createImageBitmap = async () => { throw null; };
+    await assert.rejects(io.loadImage(new Blob(["invalid"])), /Unsupported image format/);
+});

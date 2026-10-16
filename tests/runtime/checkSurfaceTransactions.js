@@ -61,6 +61,45 @@ module.exports = async function checkSurfaceTransactions() {
     target.copyRegionFromExact(source, new Rectangle(20, 20, 2, 2));
     let clone = source.clone();
     equal(channels(clone.getColorAt(2, 3)), channels(color), "Surface clone lost nonuniform pixels");
+    phase("default surface compositing and standalone viewport border colors");
+    target.clear(Color.fromRGBA(0, 0, 255, 255));
+    source.render(new RenderArgs(target), new Rectangle(2, 3, 1, 1));
+    equal(channels(target.getColorAt(2, 3)), channels(color), "Default source-over did not copy opaque source pixels");
+    equal(channels(target.getColorAt(0, 0)), [0, 0, 255, 255], "Default surface render escaped its clipping rectangle");
+    let borderSource = Surface.create(4, 4);
+    let borderTarget = Surface.create(10, 10);
+    borderSource.clear(Color.fromRGBA(0, 255, 0, 255));
+    let renderer = new SurfaceBoxBaseRenderer({getSurface: () => borderSource,
+        getApp: () => ({getActiveDocumentWorkspace: () => null})});
+    let previous = new Map(["canvas.customBorder", "canvas.borderColor", "canvas.dropShadow"]
+        .map(key => [key, AppSettingsStore.get(key)]));
+    let rootStyle = document.documentElement.style;
+    let previousOutline = rootStyle.getPropertyValue("--canvas-outline-color");
+    try {
+        AppSettingsStore.set("canvas.dropShadow", false);
+        for (let [custom, css, expected] of [[true, "#abcdef", [18, 52, 86, 255]],
+            [false, " ", [80, 80, 80, 255]]]) {
+            AppSettingsStore.set("canvas.customBorder", custom);
+            AppSettingsStore.set("canvas.borderColor", "#123456");
+            rootStyle.setProperty("--canvas-outline-color", css);
+            renderer.render(borderTarget, new Rectangle(2.5, 2.5, 4, 4));
+            equal(channels(borderTarget.getColorAt(2, 4)), expected, "Standalone canvas border used the wrong color");
+            equal(channels(borderTarget.getColorAt(4, 4)), [0, 255, 0, 255], "Standalone renderer changed image pixels");
+            check(borderTarget.getColorAt(0, 0).alpha === 0, "Standalone renderer painted outside the viewport");
+        }
+    } finally {
+        for (let [key, value] of previous) {
+            AppSettingsStore.set(key, value);
+        }
+        if (previousOutline === "") {
+            rootStyle.removeProperty("--canvas-outline-color");
+        } else {
+            rootStyle.setProperty("--canvas-outline-color", previousOutline);
+        }
+        borderSource.dispose();
+        borderTarget.dispose();
+        renderer.dispose();
+    }
     let sourceCanvas = source.getCanvas();
     source.dispose();
     source.dispose();

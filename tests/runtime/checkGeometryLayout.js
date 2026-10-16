@@ -139,6 +139,12 @@ module.exports = async function checkGeometryLayout() {
     }
     rejects(() => stencil.setUnchecked({}, true), /instance of Rectangle/);
     rejects(() => stencil.invertScanline({}), /instance of Scanline/);
+    let partial = GraphicsPath.pathFromStencil(stencil, new Rectangle(1, 1, 2, 2));
+    check(partial.pixelStencil === null, "Partial stencil must not cache full-image pixel coverage");
+    check(area(partial) === 4 && partial.getBounds().toString() === new Rectangle(1, 1, 2, 2).toString(), "Partial stencil escaped its tracing bounds");
+    partial.dispose();
+    check(stencil.isEmpty(), "Tracing must consume the selected stencil island");
+    stencil.setUnchecked(new Rectangle(1, 1, 2, 2), true);
     let path = GraphicsPath.pathFromStencil(stencil, new Rectangle(0, 0, 4, 4));
     check(area(path) === 4, "Stencil contour has incorrect area");
     let clone = path.clone();
