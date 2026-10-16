@@ -8,8 +8,8 @@ exclusions or ignore directives were added.
 
 | Metric | Covered | Total | Percentage | Remaining |
 |---|---:|---:|---:|---:|
-| Lines/statements | 45,820 | 45,820 | 100% | 0 |
-| Branches | 11,692 | 11,692 | 100% | 0 |
+| Lines/statements | 45,825 | 45,825 | 100% | 0 |
+| Branches | 11,694 | 11,694 | 100% | 0 |
 | Functions | 2,822 | 2,822 | 100% | 0 |
 
 New tests cover plugin validation, pixels, workers, configuration, codecs and
@@ -23,10 +23,15 @@ state intact. Shape number lists reject embedded garbage, and XML boolean/fill
 values accept surrounding whitespace. Unreachable DOM fallbacks and redundant
 angle normalization were removed without excluding their files from coverage.
 
+A deterministic workspace-lifecycle regression reproduces a queued thumbnail
+refresh after document disposal but before the layer-list animation frame runs.
+`LayerItem.renderThumbnail()` skips the disposed surface. The regression fails
+with the original null-canvas exception before the fix and passes afterward.
+
 Source/test lint, source headers, bundled assets, version information and whitespace
 checks pass. The strict coverage report also passes with all four metrics set to
-100%. Logs: `/tmp/paintdotjs-final-coverage.log`, `/tmp/paintdotjs-final-strict.log`.
-No release package was rebuilt; native GPU hardware was not exercised.
+100%. Log: `/tmp/paintdotjs-layer-thumbnail-coverage.log`.
+No release package was rebuilt for this fix; native GPU hardware was not exercised.
 
 ## Historical checkpoint after upstream 2.4.3 integration (2026-10-16)
 

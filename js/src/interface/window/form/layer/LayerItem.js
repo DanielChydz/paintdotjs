@@ -96,7 +96,12 @@ class LayerItem extends MenuItem {
             return;
         }
 
-        let layerCanvas = this.layer.getSurface().canvas;
+        // Document disposal can precede the deferred layer-list rebuild.
+        let surface = this.layer.getSurface();
+        if (surface === null) {
+            return;
+        }
+        let layerCanvas = surface.canvas;
 
         // A layer may become transparent when pixels are moved or erased.
         // Clear the previous frame so transparent pixels replace old preview data.
