@@ -42,3 +42,17 @@ paint.js includes third-party fonts whose bundled selection may change between r
 family is stored in its own directory under [`assets/font/`](assets/font/) together with its
 applicable `LICENSE.txt`. Those colocated license files are the authoritative copyright and license
 notices for the fonts distributed with a particular release.
+
+## Bundled image codecs
+
+- libheif 1.23.6, Copyright Dirk Farin and contributors: LGPL-3.0, complete
+  license in `assets/licenses/libheif-COPYING.txt`.
+- Kvazaar 2.3.2, Copyright the Kvazaar authors: BSD-3-Clause, license in
+  `assets/licenses/kvazaar-LICENSE.txt`.
+- Microsoft JPEG XR Porting Kit (jxrlib), Glencoe revision
+  `19cc1fa19ca6607449d210aea946b3187f808f2c`: Copyright Microsoft Corporation,
+  permissive license in `assets/licenses/jxrlib-LICENSE.txt`.
+
+These codecs are separate WebAssembly modules. Exact corresponding source
+archives, checksums, upstream documentation and rebuild/replacement instructions
+are provided in `scripts/codecs/sources.json` and `docs/image-encoders.md`.

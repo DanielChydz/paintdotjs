@@ -80,14 +80,14 @@ still some additions and limitations worth noting.
 | JPEG (`.jpg`, `.jpeg`, `.jpe`) | Yes | Yes | Yes | Yes | — |
 | JPEG XL (`.jxl`) | Yes | Yes | Yes | Yes | — |
 | AVIF | Yes | Yes | Yes | Yes | — |
-| HEIC/HEIF | With the Windows codec | With the Windows codec | Yes | No | The bundled paint.js codec can decode these files but cannot encode them. |
+| HEIC/HEIF | With the Windows codec | With the Windows codec | Yes | Yes | Bundled libheif/Kvazaar saves 8-bit HEVC 4:2:0 images with alpha. RGB conversion and chroma subsampling can change colors even at quality 100. |
 | WebP | Yes | Yes | Yes | Yes | — |
 | DDS | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. RGBA/BGRA 32-bit DDS is decoded directly, including older paint.js files; other variants use the bundled codec. |
 | TIFF (`.tif`, `.tiff`) | Yes | Yes | Yes | Yes | paint.js saves uncompressed RGBA images only. |
 | GIF | Yes | Yes | Yes | Yes | paint.js saves a single static, palette-based image only. |
 | BMP | Yes | Yes | Yes | Yes | paint.js saves 32-bit images with alpha only. |
 | TGA | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. |
-| JPEG XR (`.jxr`, `.wdp`, `.wmp`) | Yes | Yes | Limited | No | paint.js can open RGB images with 8-bit, 16-bit, or 32-bit floating-point channels but cannot save JPEG XR. |
+| JPEG XR (`.jxr`, `.wdp`, `.wmp`) | Yes | Yes | Limited | Yes | Opens RGB images with 8-bit, 16-bit, or 32-bit floating-point channels. Saves 8-bit RGBA with lossless alpha; quality 100 also preserves RGB exactly. |
 
 Animated and multi-page files are imported and exported as a single static image in paint.js.
 

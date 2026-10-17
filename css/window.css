@@ -2861,7 +2861,7 @@ html.effect-rendering * {
     position: absolute;
     left: 280px;
     top: 10px;
-    width: 196px;
+    width: 264px;
 }
 
 #colorsForm #sliderPanel .entry {
@@ -2894,7 +2894,17 @@ html.effect-rendering * {
     flex: 1 1 auto;
 }
 
+#colorsForm #sliderPanel .channel {
+    gap: 8px;
+}
+
+#colorsForm #sliderPanel .channel .text {
+    flex: 1 0 auto;
+    min-width: 80px;
+}
+
 #colorsForm #sliderPanel .channel .row {
+    flex: 0 0 auto;
     display: flex;
     gap: 10px;
     align-items: center;

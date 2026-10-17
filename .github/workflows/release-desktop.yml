@@ -125,6 +125,8 @@ jobs:
           pattern: desktop-*
           path: release-artifacts
           merge-multiple: true
+      - name: Bundle corresponding codec sources
+        run: python3 scripts/package_codec_sources.py release-artifacts/paintdotjs-codec-sources.tar.gz
       - name: Generate release notes
         env:
           PREVIOUS_SHA: ${{ needs.version.outputs.previous_sha }}

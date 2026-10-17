@@ -28,6 +28,8 @@ const desktopScenarios = [
     {name: "desktop codecs, layer-name safety, document cleanup and worker cancellation", file: ""},
     {name: "desktop dialog submission, cancellation, effects and persistent settings", file: "checkDialogs.js"},
     {name: "desktop document import, image codecs, transformations and undo/redo", file: "checkDocumentIO.js"},
+    {name: "desktop HEIC and JPEG XR saving preserves alpha, quality and odd dimensions", file: "checkModernCodecs.js"},
+    {name: "browser HEIC and JPEG XR saving works without native dependencies", file: "checkModernCodecs.js", browser: true},
     {name: "desktop painting, shapes, selections, text, history and deferred scrolling", file: "checkPainting.js"},
     {name: "desktop pixel movement, resampling, flood fill, cloning and recoloring", file: "checkPixelTools.js"},
     {name: "desktop WebGL resampling matches the CPU reference", file: "checkGpu.js",

@@ -12,7 +12,6 @@
  * Licensed under LICENSE.md. See NOTICE.md for full attribution.
  */
 
-import jpegXrFactory from 'jpegxr'
 import {
     ImageMagick,
     MagickFormat,
@@ -20,8 +19,16 @@ import {
 } from '@imagemagick/magick-wasm'
 import magickWasmUrl from '@imagemagick/magick-wasm/magick.wasm'
 import DdsDecoder from './dds/DdsDecoder'
+import WasmImageEncoder from './codec/encoder/WasmImageEncoder'
+import JpegXrCodec from './codec/JpegXrCodec'
+import heicEncoderFactory from '../lib/codecs/heic-encoder'
+import heicEncoderWasm from '../lib/codecs/heic-encoder.wasm'
+import jxrEncoderFactory from '../lib/codecs/jxr-encoder'
+import jxrEncoderWasm from '../lib/codecs/jxr-encoder.wasm'
 
 let imageMagickPromise = null;
+let heicEncoder = new WasmImageEncoder(heicEncoderFactory, heicEncoderWasm);
+let jxrEncoder = new JpegXrCodec(jxrEncoderFactory, jxrEncoderWasm);
 
 const initializePortableCodecs = () => {
     if (imageMagickPromise === null) {
@@ -56,8 +63,7 @@ const magickFormat = format => ({
 })[format] || MagickFormat.Unknown;
 
 const decodeJpegXr = async bytes => {
-    const codec = await jpegXrFactory();
-    const decoded = codec.decode(bytes);
+    const decoded = await jxrEncoder.decode(bytes);
     const info = decoded.pixelInfo;
     if ((info.channels !== 3 && info.channels !== 4) || info.colorFormat !== 'RGB') {
         throw new Error('This JPEG XR pixel format is not supported');
@@ -122,6 +128,11 @@ export async function decode(bytes, format) {
 
 export async function encode(pngBytes, format, quality, options = {}) {
     await initializePortableCodecs();
+    if (['heic', 'heif', 'jxr', 'wdp', 'wmp'].includes(format)) {
+        let decoded = await decode(pngBytes, 'png');
+        let encoder = format === 'heic' || format === 'heif' ? heicEncoder : jxrEncoder;
+        return encoder.encode(decoded.rgba, decoded.width, decoded.height, quality);
+    }
     const outputFormat = magickFormat(format);
     if (outputFormat === MagickFormat.Unknown) {
         throw new Error('Unsupported image format: ' + format);

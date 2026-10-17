@@ -1,6 +1,35 @@
 # Runtime coverage handoff
 
-## Current verified checkpoint (2026-10-16)
+## Current verified checkpoint (2026-10-17)
+
+All 248 tests pass on Linux with Node 24.21.0. A clean
+`npm run test:coverage:check` includes all 282 runtime JavaScript source files;
+no coverage exclusions or ignore directives were added.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 45,953 | 45,953 | 100% | 0 |
+| Branches | 11,729 | 11,729 | 100% | 0 |
+| Functions | 2,827 | 2,827 | 100% | 0 |
+
+New native desktop and browser scenarios verify real HEIC/HEIF and JPEG XR
+encoding, quality 0/90/100, all advertised extension aliases, alpha, odd and tiny
+image dimensions, signatures and save-dialog previews. JPEG XR uses the pinned
+jxrlib module for decoding as well, fixing the old wrapper's missing planar
+alpha. Bridge contracts verify initialization retry, allocation failures, cleanup,
+independent output copies and memory growth. Source/binary checksums are checked.
+Colors-window layout and View-menu unit names have regressions matching the
+reported screenshots. The DEB builds successfully; the packaged application
+round-trips HEIC and JPEG XR through `paintjs://app`, preserving alpha 128.
+The archive contains each new WASM module once. Third-party native C/C++ coverage
+is not included in the JavaScript percentage; real codec output is tested.
+
+Source/test lint, source headers, asset manifest, version information and whitespace
+checks pass. Logs: `/tmp/paintdotjs-pre-push-coverage.log` and
+`/tmp/paintdotjs-codecs-packaged-smoke.log`. RPM and Flatpak were not rebuilt;
+native GPU hardware was not exercised.
+
+## Historical verified checkpoint (2026-10-16)
 
 All 241 tests pass, with zero failures, skips or TODO tests. The full clean run
 of `npm run test:coverage:check` on Ubuntu 24.04 with Node 24.21.0 includes

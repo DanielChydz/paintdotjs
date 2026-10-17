@@ -257,17 +257,20 @@
     "centimeter": {
       "text": "Centimeter",
       "name": "Centimeter",
-      "abbreviation": "cm"
+      "abbreviation": "cm",
+      "plural": "Centimeters"
     },
     "inch": {
       "text": "Inch",
       "name": "Inch",
-      "abbreviation": "in"
+      "abbreviation": "in",
+      "plural": "Inches"
     },
     "pixel": {
       "text": "Pixel",
       "name": "Pixel",
-      "abbreviation": "px"
+      "abbreviation": "px",
+      "plural": "Pixels"
     }
   },
   "medianBlurEffect": {
