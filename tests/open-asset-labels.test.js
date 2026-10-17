@@ -41,6 +41,9 @@ test("authored English resources resolve explicit application labels as text", (
             assert.equal(typeof lookup(dictionary, prefix + ".historyMemento." + mode), "string");
         }
     }
+    for (let [unit, plural] of [["pixel", "Pixels"], ["inch", "Inches"], ["centimeter", "Centimeters"]]) {
+        assert.equal(lookup(dictionary, "measurementUnit." + unit + ".plural"), plural);
+    }
     for (let channel of ["red", "green", "blue", "hue", "saturation", "value"]) {
         assert.equal(typeof lookup(dictionary, "colorsForm." + channel + "Label.text"), "string");
     }

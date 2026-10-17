@@ -1,6 +1,6 @@
 {
   "name": "paintdotjs",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "An open source general-purpose raster graphics editor program.",
   "main": "js/platform/desktop/main.js",
   "desktopName": "paintdotjs.desktop",
@@ -75,10 +75,9 @@
     "buffer": "^6.0.3",
     "custom-electron-titlebar": "^4.4.1",
     "electron-updater": "^6.8.9",
-    "jpegxr": "^0.3.0",
+    "fflate": "^0.8.3",
     "ms-nrbf-js": "^0.1.0",
-    "yauzl": "^3.4.0",
-    "fflate": "^0.8.3"
+    "yauzl": "^3.4.0"
   },
   "build": {
     "appId": "net.paintjs.desktop",
@@ -91,14 +90,15 @@
       "package.json",
       "LICENSE.md",
       "NOTICE.md",
+      "docs/image-encoders.md",
       "css/**/*",
       "js/**/*",
       "lib/**/*",
+      "!lib/codecs/**/*",
       "scripts/**/*",
       "desktop-resources/**/*",
       "build/web/**/*",
       "!node_modules/@imagemagick/magick-wasm/**/*",
-      "!node_modules/jpegxr/**/*",
       "!node_modules/ms-nrbf-js/**/*",
       "!node_modules/buffer/**/*",
       "!scripts/__pycache__/**/*",

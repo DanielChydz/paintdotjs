@@ -53,7 +53,7 @@ module.exports = {
                 }
             },
             {
-                test: /magick\.wasm$/,
+                test: /\.wasm$/,
                 type: 'asset/resource',
                 generator: {
                     filename: 'assets/codecs/[name][ext]'

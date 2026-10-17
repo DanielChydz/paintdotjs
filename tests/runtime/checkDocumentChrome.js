@@ -342,6 +342,9 @@ module.exports = async function checkDocumentChrome() {
         app.setMeasurementUnit(unit);
         view.updateMeasurementUnitChecks();
         check(view.get("measurementUnit." + unit).classNames.includes("checked-drop-entry"), "View menu did not check its selected unit");
+        let label = view.get("measurementUnit." + unit).getElement().textContent;
+        check(label.includes({pixel: 'Pixels', inch: 'Inches', centimeter: 'Centimeters'}[unit])
+            && !label.includes('measurementUnit.'), 'View menu shows an untranslated unit: ' + label);
     }
     effects.element.dispatchEvent(new MouseEvent("mouseenter"));
     check(effects.isOpen() && !view.isOpen(), "Effects menu did not replace View menu");

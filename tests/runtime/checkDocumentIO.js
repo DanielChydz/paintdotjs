@@ -48,13 +48,13 @@ module.exports = async function checkDocumentIO() {
     surface.context.putImageData(pixels, 0, 0);
     let source = surface.getCanvas();
     phase("image formats");
-    for (let format of ["png", "jpeg", "webp", "bmp", "gif", "tiff", "tga", "dds", "avif", "jxl"]) {
+    for (let format of ["png", "jpeg", "webp", "bmp", "gif", "tiff", "tga", "dds", "avif", "jxl", "heic", "jxr"]) {
         let blob = await ImageEncoder.encode(source, format, {quality: 100, subsampling: "4:4:4"});
         check(blob.size > 0 && blob.type === SaveImageDialog.find(format).mime, "Invalid encoded MIME: " + format);
         let bytes = new Uint8Array(await blob.arrayBuffer());
         let decoded = await window.portableImageCodec.decode(bytes, format);
         check(decoded.width === 3 && decoded.height === 2, "Image dimensions changed: " + format);
-        if (["png", "bmp", "tiff", "tga", "dds"].includes(format)) {
+        if (["png", "bmp", "tiff", "tga", "dds", "jxr"].includes(format)) {
             equal(decoded.rgba, pixels.data, "Lossless image pixels changed: " + format);
         }
         let image = await DocumentIO.loadImage(new window.File([blob], "fixture." + format, {type: blob.type}));

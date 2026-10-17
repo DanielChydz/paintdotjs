@@ -96,6 +96,10 @@ class ColorsForm extends Form {
         this.updateWindowSize();
     }
 
+    postInitialize() {
+        this.updateWindowSize();
+    }
+
     initializeDefault(window) {
         this.updateWindowSize();
         window.setAnchor(0, 1);
@@ -909,7 +913,7 @@ class ColorsForm extends Form {
 
     updateWindowSize() {
         if (this.expanded) {
-            this.window.setSize(492, 371);
+            this.window.setSize(560, 371);
         } else {
             this.window.setSize(270, 315);
         }

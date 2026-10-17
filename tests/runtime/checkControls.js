@@ -52,6 +52,22 @@ module.exports = async function checkControls() {
     let colors = FormRegistry.get("colorsForm");
     colors.setExpanded(true);
     check(colors.expanded && colors.sliderPanel.style.display === "block", "Expanded color controls stayed hidden");
+    colors.window.setSize(492, 371);
+    colors.postInitialize();
+    let panelBounds = colors.sliderPanel.getBoundingClientRect();
+    check(panelBounds.right <= colors.sliderPanel.parentElement.getBoundingClientRect().right,
+        "Expanded color controls extend beyond the window");
+    for (let channel of colors.sliderPanel.querySelectorAll(".channel")) {
+        let label = channel.querySelector(".text");
+        let slider = channel.querySelector(".color-slider").getBoundingClientRect();
+        let field = channel.querySelector(".pdn-number-input").getBoundingClientRect();
+        check(label.getBoundingClientRect().right + 4 <= slider.left,
+            "Color label overlaps its slider: " + label.textContent);
+        check(slider.width >= 85 && field.right <= panelBounds.right + 1,
+            "Color channel controls are compressed or clipped: " + label.textContent);
+        check(label.scrollWidth <= Math.ceil(label.getBoundingClientRect().width),
+            "Color label is clipped: " + label.textContent);
+    }
     colors.moreLessButtonElement.click();
     check(!colors.expanded && colors.sliderPanel.style.display === "none", "Less button did not hide extended color controls");
     colors.moreLessButtonElement.click();

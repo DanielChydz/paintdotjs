@@ -1,0 +1,17 @@
+{
+  "libheif": {
+    "version": "1.23.6",
+    "url": "https://codeload.github.com/strukturag/libheif/tar.gz/v1.23.6",
+    "sha256": "c9a00b0452f5c16d72ef71e5e40c0e90fbe2ad37148d27a1b2f9bb21546f5f03"
+  },
+  "kvazaar": {
+    "version": "2.3.2",
+    "url": "https://codeload.github.com/ultravideo/kvazaar/tar.gz/v2.3.2",
+    "sha256": "ddd0038696631ca5368d8e40efee36d2bbb805854b9b1dda8b12ea9b397ea951"
+  },
+  "jxrlib": {
+    "version": "19cc1fa19ca6607449d210aea946b3187f808f2c",
+    "url": "https://codeload.github.com/glencoesoftware/jxrlib/tar.gz/19cc1fa19ca6607449d210aea946b3187f808f2c",
+    "sha256": "4c1c28228b65f364917cb046285d566fef04f461025eb71b8c5b21de989b928d"
+  }
+}
