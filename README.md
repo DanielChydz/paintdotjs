@@ -95,7 +95,7 @@ WebGL availability alone is not proof of hardware acceleration.
 
 - Chromium is the supported browser family. Firefox and Safari are not regularly tested, and their
   file-system and clipboard capabilities differ.
-- Scanner acquisition and color-profile commands are not implemented yet.
+- Scanner acquisition is not implemented yet. ICC support uses an 8-bit sRGB working space; wide-gamut editing and soft proofing are not implemented.
 - Native Paint.NET DLL plugins cannot be loaded. JavaScript plugins can provide effects and file types; see [the plugin guide](docs/plugin-api/README.md).
 - Manual GPU/device selection and direct advanced-color management are not implemented.
 - Very large documents, large-radius effects, and complex selections may still be slower or more
@@ -107,7 +107,7 @@ WebGL availability alone is not proof of hardware acceleration.
 
 | Format | Paint.NET open | Paint.NET save | paint.js open | paint.js save | Important differences |
 | --- | :---: | :---: | :---: | :---: | --- |
-| Paint.NET (`.pdn`) | Yes | Yes | Limited | Limited | paint.js supports bitmap layers and basic layer properties, with a maximum of 64 layers when saving. History, selections, plugin data, and some newer PDN features are not preserved. |
+| Paint.NET (`.pdn`) | Yes | Yes | Limited | Limited | Bitmap layers, blend modes and document/layer string metadata are preserved. Saving supports up to 65,535 layers, subject to available memory. History, selections and newer non-bitmap structures are not preserved; see [PDN support](docs/pdn-format.md). |
 | PNG | Yes | Yes | Yes | Yes | — |
 | JPEG (`.jpg`, `.jpeg`, `.jpe`) | Yes | Yes | Yes | Yes | — |
 | JPEG XL (`.jxl`) | Yes | Yes | Yes | Yes | — |
@@ -122,6 +122,12 @@ WebGL availability alone is not proof of hardware acceleration.
 | JPEG XR (`.jxr`, `.wdp`, `.wmp`) | Yes | Yes | Limited | Yes | Opens RGB images with 8-bit, 16-bit, or 32-bit floating-point channels. Saves 8-bit RGBA with lossless alpha; quality 100 also preserves RGB exactly. |
 
 Animated and multi-page files are imported and exported as a single static image in paint.js.
+
+Embedded ICC profiles in supported raster formats are converted to the sRGB
+working space on import. **Image → Color Profile** shows the source/export
+profile and lets you choose an RGB ICC export profile. Supported exports convert
+the pixels and embed that profile; PDN retains the profile settings. See
+[color management](docs/color-management.md) for formats and limitations.
 
 ## Icon Packs
 

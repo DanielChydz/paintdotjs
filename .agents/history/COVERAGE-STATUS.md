@@ -4,7 +4,60 @@ Historical session checkpoints; see the [agent index](../README.md) for their sc
 Counts and instructions below describe recorded sessions, not the current checkout.
 Run commands from the repository root; plain-text source and artifact paths use that root.
 
-## Current verified checkpoint (2026-10-20)
+## Current ICC / PDN checkpoint (2026-10-20)
+
+All 269 tests pass with Node 24.21.0. `npm run test:coverage:check` includes all
+291 runtime JavaScript files, without new exclusions or ignore directives.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 47,382 | 47,382 | 100% | 0 |
+| Branches | 12,235 | 12,235 | 100% | 0 |
+| Functions | 2,911 | 2,911 | 100% | 0 |
+
+Implemented backlog items 17–18 within the documented scope:
+
+- ICC-tagged PNG/JPEG/WebP/TIFF/AVIF/JPEG XL import converts source pixels to the
+  sRGB working space. The source profile is retained separately. Image → Color
+  Profile selects an RGB export ICC profile or restores sRGB; changes support
+  undo/redo. Export converts the pixels and embeds the profile. Other formats
+  retain the existing sRGB behavior; wide-gamut/HDR editing and CMYK output are
+  outside this implementation.
+- Dynamic NRBF graph generation supports more than 64 layers (structural bound
+  65,535; actual capacity depends on memory). Document/layer string metadata,
+  names, visibility, background flag, opacity, blend modes and pixels round trip.
+  Resolution uses a paint.js metadata key. ICC settings and metadata survive
+  document transforms, canvas resizing and layer-property cloning.
+- Unknown layer types/blend modes and unsupported metadata structures are
+  rejected before pixel allocation. The OpenPDN 3.36.7 source audit confirmed its
+  older NameValueCollection metadata and EXIF-based DPI differ from the supported
+  5.x userMetadataItems schema. Legacy metadata collections are explicitly
+  rejected rather than silently discarded. Native EXIF DPI interpretation and
+  arbitrary newer container/plugin structures remain unsupported. No original
+  Paint.NET executable was run or decompiled; do not claim complete interoperability
+  with all Paint.NET versions.
+- The color oracle uses a swapped-primary ICC profile and a tagged PNG generated
+  independently with Pillow/Little CMS. Desktop and Node-disabled browser tests
+  exercise import, six profile-bearing exports, ICC bytes, clipboard import,
+  history, dialog validation/races/cancellation, PDN reopen and 65 real layers.
+  Node tests also verify all existing 1–64-layer templates remain byte-identical.
+
+Lint, source headers, version and asset checks pass. Built
+`dist/paintdotjs-2.6.0-linux-amd64.deb` (99,607,044 bytes), SHA-256
+`43654c700d64802bfa0774a020d67e60140419dbcf7b2e5a5bb60fb0c0eabea4`.
+Extracted without installing into `/tmp/paintjs-icc-pdn-final-root` and passed
+all 11 packaged-executable scenarios, including `checkColorProfilesPdn`.
+No release was pushed, published or installed. Other OS packages and physical
+camera/GPU hardware were not tested in this session.
+
+Logs: `/tmp/paintjs-icc-pdn-verified.log` (full coverage),
+`/tmp/paintjs-icc-pdn-final-deb.log` (build/checks),
+`/tmp/paintjs-icc-pdn-package.log` (all 11 packaged checks).
+Implementation commits: `416257e`, `41b7b47`. Further backlog: 19–21; item 7
+remains deferred. Scope and sources: [implementation backlog](../implementation-backlog.md),
+[color management](../../docs/color-management.md), [PDN format](../../docs/pdn-format.md).
+
+## Previous backlog 12–16 checkpoint (2026-10-20)
 
 All 266 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
 all 287 runtime JavaScript source files, without added exclusions or ignores.

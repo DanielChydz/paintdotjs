@@ -54,7 +54,7 @@ module.exports = {
                 }
             },
             {
-                test: /\.wasm$/,
+                test: /\.(wasm|icc)$/,
                 type: 'asset/resource',
                 generator: {
                     filename: 'assets/codecs/[name][ext]'

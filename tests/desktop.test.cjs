@@ -15,6 +15,8 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "desktop ICC color conversion and PDN metadata", file: "checkColorProfilesPdn.js"},
+    {name: "browser ICC color conversion and PDN metadata", file: "checkColorProfilesPdn.js", browser: true},
     {name: "desktop export options produce independently decoded image files", file: "checkExportOptions.js"},
     {name: "browser export options preserve settings and image structure", file: "checkExportOptions.js", browser: true},
     {name: "desktop camera preview, photo import, permission failures and stream cleanup", file: "checkCameraCapture.js",

@@ -149,8 +149,8 @@ test("PDN 7-bit string prefixes skip valid byte lengths and reject truncated/ove
 test("PDN encode/decode surface missing decoder, invalid layer counts and invalid templates", async () => {
     let codec = loadCodec();
     await assert.rejects(codec.decode(new Uint8Array(20)), /decoder is unavailable/);
-    for (let count of [0, 65]) {
-        await assert.rejects(codec.encode({getLayers: () => ({list: () => new Array(count)})}), /1 to 64 layers/);
+    for (let count of [0, 65536]) {
+        await assert.rejects(codec.encode({getLayers: () => ({list: () => new Array(count)})}), /1 to 65535 layers/);
     }
     assert.throws(() => codec.patchTemplate(new Uint8Array(100), 3, 2, [{}]), /template validation failed/);
     assert.throws(() => codec.patchLayerProperties(new Uint8Array(100), [{}]), /layer.*template/i);
@@ -312,7 +312,7 @@ test("PDN decode validates malformed object structures and propagates unrecovera
     }}, fetch: templateFetch});
     await assert.rejects(codec.decode(bytes), actual => actual === failure);
     await assert.rejects(loadCodec({fetch: async () => new Response("", {status: 404})})
-        .encode({getWidth: () => 1, getHeight: () => 1, getLayers: () => ({list: () => [{}]})}),
+        .encode({getWidth: () => 1, getHeight: () => 1, getLayers: () => ({list: () => [{properties: {}}]})}),
     /Could not load.*template/);
 });
 
@@ -342,7 +342,7 @@ test("PDN headers reject invalid dimensions and unsafe XML values before seriali
     for (let [width, height, layers] of [
         [0, 2, 1], [2, 0, 1], [1.5, 2, 1], [2, 1.5, 1],
         [32769, 2, 1], [2, 32769, 1], [Infinity, 2, 1], [2, Infinity, 1],
-        [2, 2, 0], [2, 2, 65], [2, 2, 1.5], ['2" invalid="true', 2, 1]
+        [2, 2, 0], [2, 2, 65536], [2, 2, 1.5], ['2" invalid="true', 2, 1]
     ]) {
         assert.throws(() => codec.createHeader(width, height, layers), /Invalid Paint.NET header dimensions or layer count/);
     }
@@ -369,8 +369,8 @@ test("independent PDN schemas cover all supported layer counts and reproduce com
     let {serialize, deserialize} = await import("ms-nrbf-js");
     let PdnTemplateFactory = require("../scripts/resource/PdnTemplateFactory");
     let codec = loadCodec();
-    for (let count of [0, -1, 65, 1.5]) {
-        assert.throws(() => PdnTemplateFactory.create(count), /1 to 64 layers/);
+    for (let count of [0, -1, 65536, 1.5]) {
+        assert.throws(() => PdnTemplateFactory.create(count), /1 to 65535 layers/);
     }
     for (let count = 1; count <= 64; ++count) {
         let graph = serialize(PdnTemplateFactory.create(count));
@@ -436,4 +436,65 @@ test("legacy blend repair retains negative enum object ids without old template 
         assert.deepEqual(repaired, expected, "Legacy enum identity or unaffected bytes changed for mode " + mode);
         assert.deepEqual(broken, snapshot, "Recovery mutated the caller's graph");
     }
+});
+
+
+test("PDN generated graphs round trip more than 64 bitmap layers and document/layer metadata", async () => {
+    let {serialize, deserialize} = await import("ms-nrbf-js");
+    let Factory = require("../src/pdn/PdnObjectGraph");
+    let codec = loadCodec({Nrbf: {serialize, deserialize, createDocumentGraph: (...args) => Factory.create(...args)},
+        ...codecCanvasGlobals()});
+    let metadata = [{key: "Author", value: "Żółw & <test>"}, {key: "custom", value: "x".repeat(300)}];
+    let layers = Array.from({length: 65}, (_, index) => ({
+        properties: {name: "Layer " + index, visible: index % 2 === 0, isBackground: index === 0,
+            opacity: index, blendMode: "multiply", userMetadataItems: [{key: "tag", value: String(index)}]},
+        getSurface: () => ({getCanvas: () => ({width: 1, height: 1,
+            getContext: () => ({getImageData: () => ({data: new Uint8Array([index, 55, 99, 255])})})})})
+    }));
+    let blob = await codec.encode({metadata, getWidth: () => 1, getHeight: () => 1,
+        getResolution: () => 300, getLayers: () => ({list: () => layers})});
+    let saved = await codec.decode(new Uint8Array(await blob.arrayBuffer()));
+    assert.equal(saved.layers.length, 65);
+    assert.equal(saved.resolution, 300);
+    assert.deepEqual(Array.from(saved.metadata.slice(0, 2), entry => ({...entry})), metadata);
+    for (let [index, layer] of saved.layers.entries()) {
+        assert.equal(layer.name, "Layer " + index);
+        assert.equal(layer.visible, index % 2 === 0);
+        assert.equal(layer.isBackground, index === 0);
+        assert.equal(layer.opacity, index);
+        assert.equal(layer.blendMode, "multiply");
+        assert.deepEqual(Array.from(layer.canvas.pixels), [index, 55, 99, 255]);
+        assert.deepEqual(Array.from(layer.userMetadataItems, entry => ({...entry})), [{key: "tag", value: String(index)}]);
+    }
+    let unnamed = {...layers[0], properties: {}};
+    let defaultBlob = await codec.encode({metadata, getWidth: () => 1, getHeight: () => 1,
+        getLayers: () => ({list: () => [unnamed]})});
+    let defaultLayer = (await codec.decode(new Uint8Array(await defaultBlob.arrayBuffer()))).layers[0];
+    assert.equal(defaultLayer.name, "Layer 1");
+    assert.equal(defaultLayer.opacity, 255);
+    assert.equal(defaultLayer.blendMode, "normal");
+    assert.throws(() => codec.readMetadata({}), /metadata structure/);
+    for (let entry of [null, {members: {key: 5, value: "a"}}, {members: {key: "x", value: false}}]) {
+        assert.throws(() => codec.readMetadata([entry]), /metadata entry/);
+    }
+    let graph = Factory.create(1, {width: 1, height: 1});
+    graph.members.layers.members["ArrayList+_items"][0].typeName = "PaintDotNet.FutureLayer";
+    let bytes = codec.concat([codec.createHeader(1, 1, 1), serialize(graph), pixelBlock(new Uint8Array(4), false)]);
+    await assert.rejects(codec.decode(bytes), /Unsupported Paint.NET layer type/);
+    graph = Factory.create(1, {width: 1, height: 1});
+    graph.members.layers.members["ArrayList+_items"][0].members["Layer+properties"].members.blendMode.members.value__ = 999;
+    bytes = codec.concat([codec.createHeader(1, 1, 1), serialize(graph), pixelBlock(new Uint8Array(4), false)]);
+    await assert.rejects(codec.decode(bytes), /Unsupported Paint.NET blend mode/);
+    for (let scope of ["document", "layer"]) {
+        graph = Factory.create(1, {width: 1, height: 1});
+        let owner = scope === "document" ? graph.members
+            : graph.members.layers.members["ArrayList+_items"][0].members["Layer+properties"].members;
+        delete owner.userMetadataItems;
+        owner.userMetaData = {typeName: "System.Collections.Specialized.NameValueCollection", members: {}};
+        bytes = codec.concat([codec.createHeader(1, 1, 1), serialize(graph), pixelBlock(new Uint8Array(4), false)]);
+        await assert.rejects(codec.decode(bytes), /Unsupported Paint.NET metadata structure/);
+    }
+    graph = Factory.create(1, {width: 1, height: 1, metadata: [{key: "paint.js.resolution", value: "NaN"}]});
+    bytes = codec.concat([codec.createHeader(1, 1, 1), serialize(graph), pixelBlock(new Uint8Array(4), false)]);
+    await assert.rejects(codec.decode(bytes), /resolution metadata/);
 });
