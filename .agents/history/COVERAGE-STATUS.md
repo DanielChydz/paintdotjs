@@ -4,6 +4,60 @@ Historical session checkpoints; see the [agent index](../README.md) for their sc
 Counts and instructions below describe recorded sessions, not the current checkout.
 Run commands from the repository root; plain-text source and artifact paths use that root.
 
+## Current backlog 19–20 / logo attribution checkpoint (2026-10-20)
+
+All 277 tests pass on Node 24.21.0. `npm run test:coverage:check` covers all
+292 runtime JavaScript files, without new exclusions or ignore directives.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 47,501 | 47,501 | 100% | 0 |
+| Branches | 12,347 | 12,347 | 100% | 0 |
+| Functions | 2,917 | 2,917 | 100% | 0 |
+
+- Logo attribution: TetratheBecherovka, upstream issue #7, in README, NOTICE,
+  artwork/SOURCES and About credits. The independently generated web mark is
+  distinct from the supplied desktop logo. The About regression checks the link.
+- Performance: morphology uses linear separable monotonic queues, in-place
+  vertical output, exact RGBA/edge results, with brute-force oracle tests.
+  Region.fromPath compacts identical adjacent spans; live selections are only
+  rasterized once per whole-image effect. No history, quality or size cuts.
+  Repeatable timing/allocation/retained-heap benchmark and limitations are in
+  docs/large-documents.md. Local 1024²/15² morphology: 95,757 → 662 ms; selection
+  rectangles 1,048,576 → 128, retained heap 99,730,072 → 14,392 bytes (separate GC run).
+- JPEG XR: original reference-encoded 38 fixtures cover gray/bilevel, RGB/BGR,
+  padded and packed layouts, fixed/half/float, RGBE, CMYK(A), premultiplied alpha
+  and rejected arbitrary N-channel data. Actual stride fixes padded RGB imports;
+  float alpha now remains linear coverage. Color remains SDR, unprofiled CMYK
+  fallback; JPEG XR ICC/printer transforms and HDR editing are not added.
+  Native JxrDecApp decoded 37 fixtures to TIFF; its writer does not support the
+  padded RGB32 format. Expected RGBA is calculated from encoder input patterns.
+- Node, desktop and Node-disabled browser regressions pass. The actual canvas
+  regression uses a 2048×1024 document, complex selection, effects and full undo/redo.
+- Four local ICC/PDN commit subjects were rewritten to Conventional Commits.
+  Historical identities: 416257e → 130f781, 41b7b47 → 173aac5,
+  0907443 → e4b850a, 75b2fda → a5713f9. All new commits (including merges) must
+  follow Conventional Commits; instructions.md records the user's requirement.
+
+Final exact-source coverage: `/tmp/paintjs-backlog-19-20-verified.log`.
+Other logs: `/tmp/paintjs-backlog-19-20-runtime.log` (new desktop/web scenarios),
+`/tmp/paintjs-performance-{before,after}.jsonl`,
+`/tmp/paintjs-performance-memory-{before,after}.jsonl`,
+`/tmp/paintjs-jxr-tests.log`. Native decoder outputs: `/tmp/paintjs-jxr-independent`.
+
+Built final `dist/paintdotjs-2.6.0-linux-amd64.deb` (99,594,400 bytes), SHA-256
+`eee53c183cbfb5fa20eb4f66c21bc62d7dfc19f44dd8d41c8e4aac849ba5fe53`. Extracted without installing to
+`/tmp/paintjs-backlog-19-20-final-root`; all 12 packaged-executable scenarios pass,
+including `checkOpenAssets` (visible logo author/link) and `checkLargeDocumentsJpegXr`.
+Build and package logs: `/tmp/paintjs-backlog-19-20-final-deb.log`,
+`/tmp/paintjs-backlog-19-20-package.log`. Lint, headers, assets and version checks pass.
+Implementation: `85bfd9f`, `c21a8bd`, `31caa30`, `df246cc` on develop, merged to
+local master after validation. Nothing pushed, published or installed.
+
+Further backlog: 21; item 7 remains explicitly deferred. Native EXIF PDN DPI,
+legacy 3.x metadata and independent original Paint.NET 5.1.12 interoperability
+remain outside the implemented PDN scope. No original executable was run.
+
 ## Previous ICC / PDN checkpoint (2026-10-20)
 
 All 269 tests pass with Node 24.21.0. `npm run test:coverage:check` includes all

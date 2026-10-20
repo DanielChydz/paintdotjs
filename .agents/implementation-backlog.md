@@ -210,12 +210,12 @@ z pakietu, w tym ICC i 65 warstw. Testy paczki i końcowy stan przekazania: [COV
 
 277 testów przeszło, w tym desktop/web JPEG XR i rzeczywisty dokument 2048×1024
 z efektem, złożonym zaznaczeniem oraz pełnym undo/redo. Pokrycie 292 plików runtime:
-47 500/47 500 linii, 12 347/12 347 gałęzi, 2 917/2 917 funkcji (100%), bez nowych
-wykluczeń. Log `/tmp/paintjs-backlog-19-20-coverage.log`. Testy paczki i końcowy
-stan zapisano w [COVERAGE-STATUS.md](history/COVERAGE-STATUS.md).
+47 501/47 501 linii, 12 347/12 347 gałęzi, 2 917/2 917 funkcji (100%), bez nowych
+wykluczeń. Log `/tmp/paintjs-backlog-19-20-verified.log`. Końcowy DEB (99,594,400 bajtów) przeszedł wszystkie 12 scenariuszy programu
+rozpakowanego z paczki, bez instalacji. SHA-256 i końcowy stan zapisano w [COVERAGE-STATUS.md](history/COVERAGE-STATUS.md).
 
 Autor ikony desktopowej został podpisany jako TetratheBecherovka z linkiem do
-zgłoszenia upstream #7 w README, NOTICE i artwork/SOURCES. Osobny znak webowy
+zgłoszenia upstream #7 w README, NOTICE, artwork/SOURCES oraz oknie O programie. Osobny znak webowy
 pochodzi z tego forka. Cztery ostatnie lokalne commity ICC/PDN przepisano na
 Conventional Commits; reguła dotyczy też kolejnych commitów. Bez pushowania.
 
