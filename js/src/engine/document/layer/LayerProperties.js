@@ -32,6 +32,7 @@ class LayerProperties {
     ]);
 
     constructor(name, visible, isBackground, opacity, blendMode = "normal") {
+        this.userMetadataItems = [];
         this.name = name;
         this.visible = visible;
         this.isBackground = isBackground;
@@ -40,13 +41,15 @@ class LayerProperties {
     }
 
     clone() {
-        return new LayerProperties(
+        let result = new LayerProperties(
             this.name,
             this.visible,
             this.isBackground,
             this.opacity,
             this.blendMode
         );
+        result.userMetadataItems = this.userMetadataItems.map(entry => ({...entry}));
+        return result;
     }
 
     static getBlendMode(value) {

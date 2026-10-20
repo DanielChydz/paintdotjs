@@ -14,6 +14,8 @@
 
 class DocumentIO {
 
+    static imageProfiles = new WeakMap();
+
     static cameraImportPromise = null;
 
     static acquireFromCamera() {
@@ -523,6 +525,20 @@ class DocumentIO {
     }
 
     static async loadImage(blob) {
+        let format = this.getImageFormat(blob);
+        if (ColorProfileManager.FORMATS.includes(format) && window.portableImageCodec?.readColorProfile !== undefined) {
+            let bytes = new Uint8Array(await blob.arrayBuffer());
+            let profile = await window.portableImageCodec.readColorProfile(bytes, format);
+            if (profile !== null) {
+                let decoded = await window.portableImageCodec.decode(bytes, format);
+                let canvas = document.createElement("canvas");
+                canvas.width = decoded.width;
+                canvas.height = decoded.height;
+                canvas.getContext("2d").putImageData(new ImageData(decoded.rgba, decoded.width, decoded.height), 0, 0);
+                this.imageProfiles.set(canvas, profile);
+                return canvas;
+            }
+        }
         let nativeError = null;
         if (typeof createImageBitmap === "function") {
             try {
@@ -597,6 +613,10 @@ class DocumentIO {
         }
         const image = await this.loadImage(file);
         const workspace = this.app.createBlankDocumentInNewWorkspace(image.width, image.height);
+        let profile = this.imageProfiles.get(image);
+        if (profile !== undefined) {
+            ColorProfileManager.store(workspace.getDocument(), profile, true);
+        }
         const layer = workspace.getActiveLayer();
         layer.getSurface().clear();
         layer.getSurface().context.drawImage(image, 0, 0);
@@ -810,6 +830,10 @@ class DocumentIO {
             return PluginFileTypes.encode(formatId, PluginFileTypes.snapshot(workspace, type.supportsLayers), options);
         }
         workspace.updateComposition();
+        let profile = ColorProfileManager.get(workspace.getDocument());
+        if (profile !== null && ColorProfileManager.FORMATS.includes(formatId)) {
+            options = {...options, colorProfile: profile.data};
+        }
         return ImageEncoder.encode(workspace.getCompositionSurface().getCanvas(), formatId, options);
     }
 
@@ -927,6 +951,7 @@ class DocumentIO {
         const workspace = this.app.createBlankDocumentInNewWorkspace(width, height, resolution);
         const activeToolType = this.finishActiveTool(false);
         const documentModel = new Document(width, height, resolution);
+        documentModel.metadata = (data.metadata || []).map(entry => ({...entry}));
         try {
             for (const saved of data.layers) {
                 documentModel.addLayer(this.createLayerFromPdnData(workspace, saved, width, height));
@@ -977,6 +1002,7 @@ class DocumentIO {
 
     static createLayerFromPdnData(workspace, saved, width, height) {
         const layer = Layer.createLayer(workspace, width, height, saved.name || "Layer");
+        layer.properties.userMetadataItems = (saved.userMetadataItems || []).map(entry => ({...entry}));
         layer.properties.visible = saved.visible !== false;
         layer.properties.isBackground = !!saved.isBackground;
         layer.properties.opacity = saved.opacity === undefined ? 255 : saved.opacity;
@@ -1092,6 +1118,10 @@ class DocumentIO {
 
         const image = await this.loadImage(blob);
         const workspace = this.app.createBlankDocumentInNewWorkspace(image.width, image.height);
+        let profile = this.imageProfiles.get(image);
+        if (profile !== undefined) {
+            ColorProfileManager.store(workspace.getDocument(), profile, true);
+        }
         const layer = workspace.getActiveLayer();
         layer.getSurface().clear();
         layer.getSurface().context.drawImage(image, 0, 0);
@@ -1615,6 +1645,7 @@ class DocumentIO {
         const activeToolType = activeTool === null ? null : activeTool.getType();
         this.app.setActiveTool(null);
         const replacement = new Document(width, height, this.getDocumentResolution(oldDocument));
+        replacement.metadata = oldDocument.metadata.map(entry => ({...entry}));
         workspace.setDocument(replacement);
         for (const oldLayer of oldDocument.getLayers().list()) {
             const layer = Layer.createLayer(workspace, width, height, oldLayer.properties.name);
@@ -1846,6 +1877,7 @@ class DocumentIO {
         historyIcon,
         activeToolType = null
     ) {
+        replacement.metadata = workspace.getDocument().metadata.map(entry => ({...entry}));
         const memento = new DocumentStateHistoryMemento(historyName, historyIcon, workspace);
         workspace.setDocument(replacement);
         workspace.setActiveLayerIndex(Math.max(0, Math.min(

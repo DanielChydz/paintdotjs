@@ -15,6 +15,12 @@
 class ImageEncoder {
     static async encode(canvas, format, options = {}) {
         const quality = Utility.clamp(Number(options.quality ?? 95), 0, 100) / 100;
+        if (options.colorProfile !== undefined) {
+            if (!ColorProfileManager.FORMATS.includes(format)) {
+                throw new Error("This format does not support ICC export");
+            }
+            return this.encodePortable(format === "jpeg" ? this.flatten(canvas) : canvas, format, {...options, quality: Math.round(quality * 100)});
+        }
         switch (format) {
             case "png": return this.canvasToBlob(canvas, "image/png");
             case "jpeg": return this.encodeJpeg(canvas, quality, options);
@@ -80,6 +86,7 @@ class ImageEncoder {
 
     static mimeFor(format) {
         return {
+            png: "image/png", jpeg: "image/jpeg", webp: "image/webp",
             avif: "image/avif", heic: "image/heic", jxl: "image/jxl", jxr: "image/vnd.ms-photo",
             bmp: "image/bmp", gif: "image/gif", tiff: "image/tiff", tga: "image/x-tga", dds: "image/vnd-ms.dds"
         }[format] || "application/octet-stream";

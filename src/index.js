@@ -13,7 +13,8 @@
  */
 
 import './languages'
-import {deserialize as deserializeNrbf} from 'ms-nrbf-js'
+import PdnObjectGraph from './pdn/PdnObjectGraph'
+import {serialize as serializeNrbf, deserialize as deserializeNrbf} from 'ms-nrbf-js'
 import {unzipSync} from 'fflate'
 
 let portableImageCodecPromise = null;
@@ -25,6 +26,8 @@ const getPortableImageCodec = () => {
 };
 
 window.portableImageCodec = {
+    inspectColorProfile: (...args) => getPortableImageCodec().then(codec => codec.inspectColorProfile(...args)),
+    readColorProfile: (...args) => getPortableImageCodec().then(codec => codec.readColorProfile(...args)),
     decode: (...args) => getPortableImageCodec().then(codec => codec.decode(...args)),
     encode: (...args) => getPortableImageCodec().then(codec => codec.encode(...args))
 };
@@ -34,6 +37,8 @@ if (window.PDJDISTRIBUTION === undefined) {
     window.PDJDISTRIBUTION = PDJDISTRIBUTION;
 }
 window.Nrbf = {
-    deserialize: deserializeNrbf
+    deserialize: deserializeNrbf,
+    serialize: serializeNrbf,
+    createDocumentGraph: (...args) => PdnObjectGraph.create(...args)
 };
 window.ZipArchive = {unzipSync};

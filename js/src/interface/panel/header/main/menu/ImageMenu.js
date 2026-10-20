@@ -26,7 +26,7 @@ class ImageMenu extends DropMenuItem {
             ImageMenu.create("rotate90CCW"),
             ImageMenu.create("rotate180"),
             new VerticalSeparator(),
-            new DropEntry("menu.image.colorProfile", null),
+            new DropEntry("menu.image.colorProfile", () => ColorProfileDialog.open()),
             new VerticalSeparator(),
             ImageMenu.create("flatten"),
         ]);

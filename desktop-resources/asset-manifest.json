@@ -414,6 +414,7 @@
     "pdn/templates/64.bin": "ea220be48ff0b841de3c684593542ec3a7d852a0c6c95ebf9395b6a496730384",
     "pdn/templates/7.bin": "da8fac9d8d1ba49e4c836573f4417cb278942f0e4c21da5d4ae46602d03d108d",
     "pdn/templates/8.bin": "8bbab603ed9f2c422ccd9324aff49a9497d99c6a89b672b05b13bcab1fbba2b0",
-    "pdn/templates/9.bin": "c67403185d93f853aeb03ecf2e5867c259bfe6691002054bc4a0b35c6b07be8c"
+    "pdn/templates/9.bin": "c67403185d93f853aeb03ecf2e5867c259bfe6691002054bc4a0b35c6b07be8c",
+    "profiles/sRGB.icc": "2e9efee4d1be9422997b1ced449d9833495bcbe061ab0e7df86dda1e002d5634"
   }
 }

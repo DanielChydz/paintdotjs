@@ -53,3 +53,9 @@ Move and rotation cursors (`assets/cursors/{move,rotate}_tool_cursor.png`) are
 original vector artwork under the project MIT license. Sources are retained in
 `artwork/*_tool_cursor.svg`; `scripts/generate_artwork.py` rasterizes them to 32px.
 They contain no Paint.NET artwork.
+
+## Working ICC profile
+
+`assets/profiles/sRGB.icc` is generated with Little CMS through Pillow's
+`ImageCms.createProfile("sRGB")`. Its embedded copyright is "No copyright, use freely".
+It contains standard sRGB colorimetry, without Paint.NET data or assets.

@@ -71,7 +71,7 @@ class PdnDocumentCodec {
         const layerObjects = layerList["ArrayList+_items"].slice(0, layerCount);
 
         if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1
-            || width > 32768 || height > 32768 || layerCount < 1 || layerObjects.length !== layerCount) {
+            || width > 32768 || height > 32768 || !Number.isInteger(layerCount) || layerCount < 1 || layerCount > 65535 || layerObjects.length !== layerCount) {
             throw new Error("Invalid Paint.NET document structure");
         }
 
@@ -90,6 +90,9 @@ class PdnDocumentCodec {
                 throw new Error("Invalid Paint.NET layer entry");
             }
 
+            if (layerObject.typeName !== undefined && layerObject.typeName !== "PaintDotNet.BitmapLayer") {
+                throw new Error("Unsupported Paint.NET layer type: " + layerObject.typeName);
+            }
             const properties = layerObject.members["Layer+properties"].members;
             return {
                 name: properties.name || "Layer " + (index + 1),
@@ -99,28 +102,70 @@ class PdnDocumentCodec {
                 blendMode: LayerProperties.getBlendMode(
                     properties.blendMode?.members?.value__ ?? properties.blendMode
                 ).value,
+                userMetadataItems: this.readMetadata(properties.userMetadataItems),
                 canvas: this.createCanvasFromBgra(pixelBlocks[index], width, height)
             };
         });
 
-        return {width, height, activeLayer: layerCount - 1, layers};
+        let metadata = this.readMetadata(root.members.userMetadataItems);
+        let resolution = Number(metadata.find(entry => entry.key === "paint.js.resolution")?.value || 96);
+        if (!Number.isFinite(resolution) || resolution <= 0) {
+            throw new Error("Invalid Paint.NET resolution metadata");
+        }
+        return {width, height, activeLayer: layerCount - 1, layers, metadata, resolution};
+    }
+
+    static readMetadata(items) {
+        if (items === undefined) {
+            return [];
+        }
+        if (!Array.isArray(items)) {
+            throw new Error("Unsupported Paint.NET metadata structure");
+        }
+        return items.map(item => {
+            let key = item?.members?.key;
+            let value = item?.members?.value;
+            if (typeof key !== "string" || typeof value !== "string") {
+                throw new Error("Unsupported Paint.NET metadata entry");
+            }
+            return {key, value};
+        });
     }
 
     static async encode(documentModel) {
         const layers = documentModel.getLayers().list();
-        if (layers.length < 1 || layers.length > 64) {
-            throw new Error("Native .pdn saving currently supports 1 to 64 layers.");
+        if (layers.length < 1 || layers.length > 65535) {
+            throw new Error("Native .pdn saving currently supports 1 to 65535 layers.");
         }
 
         const width = documentModel.getWidth();
         const height = documentModel.getHeight();
-        const response = await fetch("assets/pdn/templates/" + layers.length + ".bin");
-        if (!response.ok) {
-            throw new Error("Could not load the Paint.NET document template");
+        let metadata = (documentModel.metadata || []).filter(entry => entry.key !== "paint.js.resolution");
+        let resolution = documentModel.getResolution?.() ?? 96;
+        if (resolution !== 96) {
+            metadata.push({key: "paint.js.resolution", value: String(resolution)});
         }
-
-        const template = new Uint8Array(await response.arrayBuffer());
-        const graph = this.patchTemplate(template, width, height, layers);
+        let graph;
+        if (layers.length > 64 || metadata.length > 0
+            || layers.some(layer => layer.properties.userMetadataItems?.length > 0)) {
+            graph = Nrbf.serialize(Nrbf.createDocumentGraph(layers.length, {
+                width, height, metadata,
+                layers: layers.map((layer, index) => ({
+                    name: layer.properties.name || "Layer " + (index + 1),
+                    visible: layer.properties.visible !== false,
+                    isBackground: !!layer.properties.isBackground,
+                    opacity: Math.max(0, Math.min(255, layer.properties.opacity ?? 255)),
+                    userMetadataItems: layer.properties.userMetadataItems || [],
+                    blendMode: LayerProperties.getBlendMode(layer.properties.blendMode).pdnValue}))
+            }));
+        } else {
+            const response = await fetch("assets/pdn/templates/" + layers.length + ".bin");
+            if (!response.ok) {
+                throw new Error("Could not load the Paint.NET document template");
+            }
+            const template = new Uint8Array(await response.arrayBuffer());
+            graph = this.patchTemplate(template, width, height, layers);
+        }
         const parts = [this.createHeader(width, height, layers.length), graph];
 
         for (const layer of layers) {
@@ -133,7 +178,7 @@ class PdnDocumentCodec {
     static createHeader(width, height, layerCount) {
         if (!Number.isInteger(width) || !Number.isInteger(height) || !Number.isInteger(layerCount)
             || width < 1 || height < 1 || width > 32768 || height > 32768
-            || layerCount < 1 || layerCount > 64) {
+            || layerCount < 1 || layerCount > 65535) {
             throw new Error("Invalid Paint.NET header dimensions or layer count");
         }
         const xml = new TextEncoder().encode(

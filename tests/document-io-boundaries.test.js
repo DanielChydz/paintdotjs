@@ -91,6 +91,8 @@ function documentFixture(options = {}) {
             return state.choice || "cancel";
         }}
     });
+    let profileFile = path.resolve(__dirname, "../js/src/io/color/ColorProfileManager.js");
+    vm.runInContext(fs.readFileSync(profileFile, "utf8"), context, {filename: pathToFileURL(profileFile).href});
     let filename = path.resolve(__dirname, "../js/src/io/DocumentIO.js");
     vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
     let io = vm.runInContext("DocumentIO", context);
@@ -493,7 +495,7 @@ function savingFixture(options = {}) {
         fileFormat: options.fileFormat === undefined ? "png" : options.fileFormat,
         fileHandle: options.fileHandle ?? null,
         saveOptions: options.saveOptions ?? null,
-        getDocument: () => ({getLayers: () => ({getLayerCount: () => options.layers ?? 1})}),
+        getDocument: () => ({metadata: [], getLayers: () => ({getLayerCount: () => options.layers ?? 1})}),
         getFriendlyName: () => options.friendlyName ?? "image.png",
         getFilePath: () => options.filePath ?? null,
         updateComposition: () => ++state.updates,

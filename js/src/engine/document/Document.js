@@ -15,6 +15,7 @@
 class Document {
 
     constructor(width, height, resolution = 96) {
+        this.metadata = [];
         this.width = width;
         this.height = height;
         this.resolution = Math.max(0.01, Number(resolution) || 96);
