@@ -15,6 +15,7 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "document view composition and allocation measurements", file: "checkViewPerformance.js"},
     {name: "selection fades, overlay invalidation, renderer ownership and gesture history series", file: "checkRendererHistory.js"},
     {name: "recent files, plugin help, busy operations and history failure recovery", file: "checkFirstBatchFeatures.js"},
     {name: "browser recent file handles persist and retain permissions", file: "checkFirstBatchFeaturesBrowser.js", browser: true},
@@ -235,6 +236,9 @@ if (process.versions.electron) {
     let lastPhase = "loading";
     ipcMain.on("paintdotjs:test-phase", (_event, phase) => {
         lastPhase = phase;
+        if (scenario.file === "checkViewPerformance.js") {
+            console.log("View measurement: " + phase);
+        }
     });
     ipcMain.handle("paintdotjs:test-input", (event, input) => {
         let window = BrowserWindow.fromWebContents(event.sender);
@@ -369,6 +373,9 @@ if (process.versions.electron) {
             assert.equal(result.error, undefined, result.stdout + result.stderr);
             assert.equal(result.status, 0, result.stdout + result.stderr);
             assert.match(result.stdout, /Desktop regression checks passed/);
+            for (let line of result.stdout.split("\n").filter(line => line.startsWith("View measurement: "))) {
+                console.log(line);
+            }
         } finally {
             fs.rmSync(directory, {recursive: true, force: true});
         }

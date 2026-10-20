@@ -69,6 +69,9 @@ still some additions and limitations worth noting.
   geometry changes, without recompositing document pixels. Each transform gesture and Finish retain
   a distinct history series through undo/redo. Closing a document or changing tools releases renderer
   subscriptions and owned selection paths while preserving borrowed surfaces.
+- Scrolling reuses composed pixels. Window resizing preserves the document-space
+  center at a fixed zoom, or refits and centers **Fit to Window** views; unchanged
+  canvas dimensions do not reset its backing store. New documents compose once.
 - The deployed web version can work offline and provides browser-oriented file, clipboard, and drag
   and drop workflows.
 

@@ -68,9 +68,6 @@ class AppWorkspace extends AppView {
         document.addLayer(backgroundLayer);
         documentWorkspace.setActiveLayer(backgroundLayer);
 
-        // TODO improve invalidating?
-        document.invalidate();
-
         // Add document workspace to list
         this.documentWorkspaces.push(documentWorkspace);
 

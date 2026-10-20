@@ -390,8 +390,14 @@ class AppView {
         // use physical display pixels. Otherwise Chromium stretches a 1x
         // bitmap over a HiDPI viewport and soft brush edges are resampled a
         // second time by the browser compositor.
-        this.canvas.setWidth(Math.max(1, Math.round(viewWidth * displayScale)));
-        this.canvas.setHeight(Math.max(1, Math.round(viewHeight * displayScale)));
+        let canvasWidth = Math.max(1, Math.round(viewWidth * displayScale));
+        let canvasHeight = Math.max(1, Math.round(viewHeight * displayScale));
+        if (this.canvas.getWidth() !== canvasWidth) {
+            this.canvas.setWidth(canvasWidth);
+        }
+        if (this.canvas.getHeight() !== canvasHeight) {
+            this.canvas.setHeight(canvasHeight);
+        }
         const canvasElement = this.canvas.getCanvas();
         canvasElement.style.width = viewWidth + "px";
         canvasElement.style.height = viewHeight + "px";
@@ -566,12 +572,11 @@ class AppView {
     }
 
     onResize(width, height) {
-        this.updateCanvasBounds();
-
-        // TODO change logic after implementing movement of the document
         let documentWorkspace = this.getActiveDocumentWorkspace();
         if (documentWorkspace !== null && documentWorkspace.isZoomToWindow()) {
             documentWorkspace.fitViewport();
+        } else {
+            this.updateCanvasBounds();
         }
 
         this.fire("app:resize", width, height);

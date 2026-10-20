@@ -64,7 +64,7 @@ została rozpoczęta. Zalecana kolejność: 12–14, następnie 15 i osobno każ
 format z punktu 16. Szczegółowy zakres, kryteria ukończenia i odnośniki do kodu
 znajdują się w tabeli poniżej.
 
-- [ ] **12:** zmierzyć i usprawnić przewijanie, zmianę rozmiaru okna oraz
+- [x] **12:** zmierzyć i usprawnić przewijanie, zmianę rozmiaru okna oraz
   tworzenie dokumentu, zachowując zoom, pozycję widoku i poprawne odświeżanie.
 - [ ] **13:** ustalić i wdrożyć kontrakt całkowitoliczbowych skanów oraz granic
   regionu; uwzględnić współrzędne ułamkowe, ujemne, otwory i puste regiony.
@@ -75,6 +75,15 @@ znajdują się w tabeli poniżej.
   anulowanie, obsługę braku urządzenia i zwolnienie strumienia.
 - [ ] **16:** po audycie kodeków rozszerzać opcje eksportu kolejno dla TIFF,
   BMP/TGA i DDS; wyniki weryfikować niezależnym dekoderem.
+
+**Pomiary punktu 12:** scenariusz `checkViewPerformance.js`, dokument 1024×768:
+tworzenie — 2 → 1 kompozycja, niezmiennie 3 powierzchnie robocze; 100 zmian
+przewinięcia — 0 kompozycji/alokacji/resetów canvasu; 20 zdarzeń resize bez
+zmiany wymiarów — 40 → 0 resetów canvasu; resize Fit to Window — 4 → 0 resetów.
+Rzeczywista zmiana wymiarów zmienia tylko backing store widoku, nie powierzchnie
+dokumentu. Usunięto podwójną inwalidację nowego dokumentu i podwójne
+przeliczanie układu przy dopasowaniu. Nieaktywne dokumenty zachowują pozycję
+bez przewijania aktywnego widoku.
 
 **Przekazanie:** punkty 1–6 i 8–11 są ukończone; punkt 7 pozostaje odłożony
 na wyraźną decyzję użytkownika (brak wydań prerelease). Ostatnia weryfikacja:
