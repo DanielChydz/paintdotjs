@@ -1,3 +1,10 @@
+### Disclaimer
+I've used Paint.NET for years while daily driving Windows. After switching to Linux, it's been a hole that I simply couldn't fill with other software, and been considering vibecoding it from scratch for a while. After stumbiling upon LabyStudio's port, I've decided to use it as a base and vibecode further. While it's not perfect, I don't expect it to be, and am deeply grateful to LabyStudio for creating it.
+
+This is a fork that I maintain on my own. Feel free to use it. Please keep in mind that all the code that differs from original LabyStudio's project, is entirely vibecoded. Don't hesitate to open tickets for bugs/feature requests, I'll try to help. Main target is Linux, especially Ubuntu 24.04+.
+
+I mean no harm and did my best to ensure no copyright violations and to credit all the authors & licenses. Though if you're an author and notice any violations, please let me know via an issue or mail dan.devmail@proton.me.
+
 ![header.png](.github/assets/header.png)
 
 **paint.js** is an unofficial, proof-of-concept, cross-platform **JavaScript** port of the Windows only
