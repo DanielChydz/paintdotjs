@@ -42,8 +42,7 @@ class MoveTool extends MoveToolBase {
             }
         }
 
-        // TODO find the texture for the move tool cursor
-        // this.app.setCursorImg("move_tool_cursor");
+        this.app.setCursorImg("move_tool_cursor");
 
         this.context.lifted = false;
         this.context.liftedPixels = null;
@@ -313,7 +312,6 @@ class MoveTool extends MoveToolBase {
         );
         let previousBounds = this.context.previewBounds;
 
-        // TODO wait cursor changer
 
         if (!this.context.copying) {
             this.context.liftedPixels.eraseFrom(this.renderArgs.getSurface());

@@ -24,7 +24,7 @@ class HelpMenu extends DropMenuItem {
             new DropEntry("menu.help.donate", () => open("https://www.getpaint.net/donate.html")),
             new DropEntry("menu.help.forum", () => open("https://forums.getpaint.net/")),
             new DropEntry("menu.help.tutorials", () => open("https://forums.getpaint.net/forum/20-publishing-only/")),
-            new DropEntry("menu.help.plugins", null),
+            new DropEntry("menu.help.plugins", () => SettingsDialog.open("plugins")),
             new DropEntry("menu.help.sendFeedback", () => open("https://github.com/LabyStudio/paintdotjs/issues")),
             new VerticalSeparator(),
             new DropEntry("menu.help.about", () => AboutDialog.open())

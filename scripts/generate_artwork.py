@@ -73,3 +73,7 @@ sample = svg('''<defs><linearGradient id="sky" x2="1" y2="1"><stop stop-color="#
 <path d="M640 640C640 80 1040 30 1140 640Z" fill="#47d4c0"/>''', 1280, 720)
 (ART / 'sample.svg').write_text(sample + '\n')
 raster(sample, ROOT / 'run/test.png', (1280, 720))
+
+# Original move and rotation cursors; browser defaults provide their center hotspot.
+for name in ['move_tool_cursor', 'rotate_tool_cursor']:
+    raster((ART / (name + '.svg')).read_text(), ASSETS / 'cursors' / (name + '.png'), (32, 32))
