@@ -20,6 +20,9 @@ class FileMenu extends DropMenuItem {
             new RecentFilesDropEntry().withNoIcon(),
             new DropEntry("menu.file.acquire", null)
                 .withNoIcon(),
+            new DropEntry("menu.file.camera", () => {
+                void DocumentIO.acquireFromCamera();
+            }).withNoIcon(),
             new VerticalSeparator(),
             FileMenu.create("save"),
             FileMenu.create("saveAs"),

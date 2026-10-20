@@ -71,7 +71,7 @@ znajdują się w tabeli poniżej.
 - [x] **14:** uruchomić rzeczywisty przełącznik akceleracji sprzętowej desktopu,
   z trwałą preferencją, zastosowaniem przy starcie Electrona i informacją
   o wymaganym restarcie.
-- [ ] **15:** dodać pobieranie obrazu z kamery: podgląd, uprawnienia, zdjęcie,
+- [x] **15:** dodać pobieranie obrazu z kamery: podgląd, uprawnienia, zdjęcie,
   anulowanie, obsługę braku urządzenia i zwolnienie strumienia.
 - [ ] **16:** po audycie kodeków rozszerzać opcje eksportu kolejno dla TIFF,
   BMP/TGA i DDS; wyniki weryfikować niezależnym dekoderem.

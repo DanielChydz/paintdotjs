@@ -14,6 +14,31 @@
 
 class DocumentIO {
 
+    static cameraImportPromise = null;
+
+    static acquireFromCamera() {
+        if (this.cameraImportPromise !== null) {
+            return this.cameraImportPromise;
+        }
+        this.cameraImportPromise = this.importCameraImage().finally(() => {
+            this.cameraImportPromise = null;
+        });
+        return this.cameraImportPromise;
+    }
+
+    static async importCameraImage() {
+        try {
+            await this.app.busyOperation;
+            let file = await CameraDialog.open();
+            if (file !== null) {
+                let workspace = await this.openImage(file);
+                workspace.setDirty(true);
+            }
+        } catch (error) {
+            this.app.handleError(error);
+        }
+    }
+
     static initialize(app) {
         if (this.initialized) {
             return;

@@ -15,6 +15,10 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "desktop camera preview, photo import, permission failures and stream cleanup", file: "checkCameraCapture.js",
+        extraArgs: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]},
+    {name: "browser camera preview, photo import, permission failures and stream cleanup", file: "checkCameraCapture.js", browser: true,
+        extraArgs: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]},
     {name: "desktop hardware acceleration startup and persistent settings", file: "checkGraphicsSettings.js", graphicsAcceleration: false},
     {name: "document view composition and allocation measurements", file: "checkViewPerformance.js"},
     {name: "selection fades, overlay invalidation, renderer ownership and gesture history series", file: "checkRendererHistory.js"},

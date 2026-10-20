@@ -276,6 +276,9 @@
       "gatekeeperAssess": false,
       "entitlements": "packaging/entitlements.mac.plist",
       "entitlementsInherit": "packaging/entitlements.mac.plist",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Take a photo and open it as an image in paint.js."
+      },
       "notarize": true,
       "target": [
         "dmg",

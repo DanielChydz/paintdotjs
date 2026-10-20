@@ -78,6 +78,15 @@ still some additions and limitations worth noting.
   use the same even/odd pixel-center rasterization as selection statistics.
 - The deployed web version can work offline and provides browser-oriented file, clipboard, and drag
   and drop workflows.
+- **File → From Camera** requests video access only after **Start Camera**,
+  displays a live preview and opens **Take Photo** as an unsaved PNG document.
+  Cancel, Escape, closing the dialog, page exit and device failure release the
+  stream, including permission granted after cancellation. Permission denial,
+  missing/busy cameras and capture failures are displayed in the dialog.
+  Supported in Chromium over HTTPS/localhost and desktop installations with
+  camera access. System privacy controls still apply; the Flatpak sandbox may
+  prevent direct webcam access. The application does not broaden sandbox device
+  permissions or request audio.
 
 **Settings → Updates → Automatically check for updates** is persistent. On desktop it controls
 startup and hourly checks; **Check now** remains available. In the web app it controls application
@@ -95,7 +104,7 @@ WebGL availability alone is not proof of hardware acceleration.
 
 - Chromium is the supported browser family. Firefox and Safari are not regularly tested, and their
   file-system and clipboard capabilities differ.
-- Scanner/camera acquisition and color-profile commands are not implemented yet.
+- Scanner acquisition and color-profile commands are not implemented yet.
 - Native Paint.NET DLL plugins cannot be loaded. JavaScript plugins can provide effects and file types; see [the plugin guide](docs/plugin-api/README.md).
 - Manual GPU/device selection and direct advanced-color management are not implemented.
 - Very large documents, large-radius effects, and complex selections may still be slower or more
