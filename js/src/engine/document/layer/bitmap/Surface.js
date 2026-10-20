@@ -30,6 +30,9 @@ class Surface {
             alpha: true,
             willReadFrequently: options.willReadFrequently === true
         });
+        if (this.context === null) {
+            throw new Error("Canvas allocation failed: no 2D context is available.");
+        }
         this.context.imageSmoothingEnabled = false;
 
         this.checkerboard = null;
@@ -60,20 +63,23 @@ class Surface {
         }
 
         targetContext.save();
-        targetContext.beginPath();
-        targetContext.rect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
-        targetContext.clip();
-        targetContext.globalAlpha = opacity;
-        targetContext.globalCompositeOperation = blendMode === null
-            ? "source-over"
-            : blendMode.canvasOperation;
-        targetContext.imageSmoothingEnabled = false;
-        // Cropping both the source and destination makes the browser sample
-        // the transparent pixels just outside every dirty rectangle. At high
-        // zoom that becomes the checkerboard box around every brush update.
-        // Clip only the destination and sample the full layer instead.
-        targetContext.drawImage(this.canvas, 0, 0);
-        targetContext.restore();
+        try {
+            targetContext.beginPath();
+            targetContext.rect(rectangle.x, rectangle.y, rectangle.width, rectangle.height);
+            targetContext.clip();
+            targetContext.globalAlpha = opacity;
+            targetContext.globalCompositeOperation = blendMode === null
+                ? "source-over"
+                : blendMode.canvasOperation;
+            targetContext.imageSmoothingEnabled = false;
+            // Cropping both the source and destination makes the browser sample
+            // the transparent pixels just outside every dirty rectangle. At high
+            // zoom that becomes the checkerboard box around every brush update.
+            // Clip only the destination and sample the full layer instead.
+            targetContext.drawImage(this.canvas, 0, 0);
+        } finally {
+            targetContext.restore();
+        }
     }
 
     renderCustomBlend(targetContext, rectangle, opacity, blendMode) {
@@ -347,9 +353,15 @@ class Surface {
 
     static create(width, height, options = {}) {
         let canvas = document.createElement('canvas');
-        let surface = new Surface(canvas, options);
-        surface.setWidth(width);
-        surface.setHeight(height);
-        return surface;
+        try {
+            let surface = new Surface(canvas, options);
+            surface.setWidth(width);
+            surface.setHeight(height);
+            return surface;
+        } catch (error) {
+            canvas.width = 0;
+            canvas.height = 0;
+            throw error;
+        }
     }
 }

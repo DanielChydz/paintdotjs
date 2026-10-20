@@ -160,6 +160,9 @@ if (typeof isApp !== 'undefined' && !isApp && 'serviceWorker' in navigator) {
 
                 try {
                     await waitForFreeDialogSlot();
+                    if (!automaticUpdatesEnabled()) {
+                        return;
+                    }
                     const version = await getAvailableVersion();
                     const result = await TaskDialog.show({
                         title: 'paint.js Updates',
@@ -235,6 +238,9 @@ if (typeof isApp !== 'undefined' && !isApp && 'serviceWorker' in navigator) {
             window.addEventListener('paintdotjs:setting-changed', event => {
                 if (event.detail.path === 'updates.automatic' && event.detail.value === true) {
                     void checkForUpdate();
+                    if (registration.waiting !== null && navigator.serviceWorker.controller !== null) {
+                        void showUpdatePrompt(registration.waiting);
+                    }
                 }
             });
             setInterval(() => void checkForUpdate(), 60 * 60 * 1000);

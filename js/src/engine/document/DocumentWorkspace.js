@@ -143,20 +143,29 @@ class DocumentWorkspace extends DocumentView {
     }
 
     executeFunction(historyFunction) {
+        let transaction = null;
         let result;
+        let previous = this.historyTransaction;
         try {
+            transaction = new HistoryFunctionTransaction(this);
+            this.historyTransaction = transaction;
             let memento = historyFunction.execute(this);
-
             if (memento !== null) {
                 this.history.pushNewMemento(memento);
             }
-
             result = HistoryFunctionResult.SUCCESS;
-
-            // TODO handle out of memory
-        } catch (e) {
-            result = HistoryFunctionResult.NON_FATAL_ERROR;
-            throw e; // TODO log instead in future
+        } catch (error) {
+            let reported = error;
+            try {
+                transaction?.rollback();
+            } catch (recoveryError) {
+                reported = new AggregateError([error, recoveryError], "The operation failed and recovery was incomplete.");
+            }
+            this.app.handleError(reported);
+            result = /out of memory|allocation|array buffer|array length/i.test(String(error.message))
+                ? HistoryFunctionResult.OUT_OF_MEMORY : HistoryFunctionResult.NON_FATAL_ERROR;
+        } finally {
+            this.historyTransaction = previous;
         }
         return result;
     }

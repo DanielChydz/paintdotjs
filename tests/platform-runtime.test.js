@@ -977,3 +977,26 @@ test("automatic update preferences survive startup, stop scheduled checks and pr
     assert.equal(browser.state.updates, 1);
     browser.state.settingChanged({detail: {path: "updates.automatic", value: false}});
 });
+
+test("web automatic update prompts recheck preferences after waiting for a modal slot", async () => {
+    let fixture = bootFixture({waiting: true, modal: true});
+    await fixture.flush();
+    fixture.state.automatic = false;
+    fixture.state.modal = false;
+    fixture.state.observer();
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 0);
+    fixture.state.automatic = true;
+    fixture.state.settingChanged({detail: {path: "updates.automatic", value: true}});
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 1);
+    fixture.registration.waiting = null;
+    fixture.state.settingChanged({detail: {path: "updates.automatic", value: true}});
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 1);
+    fixture.registration.waiting = fixture.worker;
+    fixture.serviceWorker.controller = null;
+    fixture.state.settingChanged({detail: {path: "updates.automatic", value: true}});
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 1);
+});

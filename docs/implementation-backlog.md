@@ -2,15 +2,28 @@
 
 Stan przeglądu: 2026-10-20. Źródła: README, FIXME.md, komentarze TODO w `js/`
 oraz nieaktywne pozycje menu i ustawień. To audyt repozytorium, a nie pełna
-inwentaryzacja wszystkich funkcji najnowszego Paint.NET. Lista nie oznacza
-rozpoczęcia implementacji.
+inwentaryzacja wszystkich funkcji najnowszego Paint.NET. Pierwsza partia
+(punkty 1–6) została zaimplementowana; pozostałe pozycje pozostają planem prac.
 
 Skala: **S** — mała, lokalna zmiana; **M** — kilka współpracujących komponentów;
 **L** — większa funkcja lub praca wymagająca pomiarów; **XL** — osobny projekt.
 Priorytet P1 oznacza proponowaną pierwszą partię, P2 kolejne usprawnienia,
 a P3 prace odłożone. Szacunki wymagają doprecyzowania przy wdrażaniu.
 
-## P1 — praktyczna pierwsza partia
+## P1 — ukończona pierwsza partia (1–6)
+
+Wdrożono trwałą listę dziesięciu ostatnich plików (ścieżki desktopowe i uchwyty
+przeglądarki), przejście Pomoc → Pluginy, własne kursory przesuwania i obrotu,
+modalny stan zajętości przed końcowym przeliczeniem dużej transformacji,
+trwały przełącznik automatycznych aktualizacji oraz transakcje operacji historii
+z odtwarzaniem dokumentu po wykrywalnym błędzie. Zwykłe pobrania przeglądarkowe
+bez uchwytu nie trafiają na listę ostatnich plików. Przełącznik aktualizacji web
+steruje kontrolami i monitami aplikacji; nie wyłącza mechanizmów przeglądarki.
+Ręczne sprawdzanie pozostaje dostępne na obu platformach.
+
+Poniższa tabela zachowuje zakres zleconych zadań. Testy obejmują zapis i ponowne
+odczytanie listy, brakujące pliki, błędy uprawnień i magazynu, sprzątanie stanu
+zajętości oraz zachowanie pikseli i historii po błędach alokacji.
 
 | ID | Zadanie | Skala | Zakres i kryterium ukończenia | Miejsce w kodzie |
 | --- | --- | --- | --- | --- |
