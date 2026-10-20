@@ -7,7 +7,7 @@ Stan przeglądu: 2026-10-20. Źródła: [README](../README.md),
 [FIXME.md](history/FIXME.md), komentarze TODO w `js/`
 oraz nieaktywne pozycje menu i ustawień. To audyt repozytorium, a nie pełna
 inwentaryzacja wszystkich funkcji najnowszego Paint.NET. Pierwsza partia
-(punkty 1–6) oraz punkty 8–18 zostały zaimplementowane w opisanym poniżej zakresie. Punkt 7 jest odłożony
+(punkty 1–6) oraz punkty 8–20 zostały zaimplementowane w opisanym poniżej zakresie. Punkt 7 jest odłożony
 na decyzję użytkownika; pozostałe pozycje pozostają planem prac.
 
 Skala: **S** — mała, lokalna zmiana; **M** — kilka współpracujących komponentów;
@@ -60,7 +60,7 @@ Punkty **8–16 ukończone**:
   jest również tymczasowy podgląd narzędzia zaznaczania.
 
 Tabela zachowuje pierwotny zakres; podsumowanie punktów **12–16** znajduje się
-poniżej. Punkty 17–18 opisano niżej; kolejne większe zadania (19–21) wymagają osobnej decyzji.
+poniżej. Punkty 17–18 opisano niżej; punkty 19–20 ukończono w kolejnej partii; punkt 21 pozostaje planem.
 
 ### Ukończona partia 12–16
 
@@ -182,7 +182,44 @@ undo/redo, błędy/anulowanie/równoległy odczyt profilu i rzeczywisty round tr
 DEB (99 607 044 bajty) przeszedł wszystkie 11 scenariuszy aplikacji rozpakowanej
 z pakietu, w tym ICC i 65 warstw. Testy paczki i końcowy stan przekazania: [COVERAGE-STATUS.md](history/COVERAGE-STATUS.md).
 
-Tabela zachowuje pierwotny zakres. **19–21 pozostają do zrobienia; 7 odłożony.**
+### Ukończona partia 19–20 (2026-10-20)
+
+- **19 — wydajność:** powtarzalny benchmark `scripts/benchmark_large_documents.js`
+  mierzy czas, alokacje ImageData i zatrzymaną pamięć regionu po GC. Filtr
+  minimum/maksimum ma dwa liniowe przebiegi z kolejkami monotonicznymi; pionowy
+  działa w miejscu, bez dodatkowego pełnego obrazu. Wynik pikseli RGBA zgadza się
+  z prostym wzorcem również dla niesymetrycznych/dużych masek i brzegów.
+  Region scala identyczne sąsiednie skany bez zmiany otworów/przerw, a efekty
+  całego obrazu nie rasteryzują ponownie tej samej maski podczas blendowania.
+  Benchmark 1024×1024, 15×15: 95 757 → 662 ms (Node 24 VM, mediana trzech prób).
+  128 pasków przez 8192 wiersze: 1 048 576 → 128 prostokątów; osobny pomiar
+  zatrzymanego heapu po GC: 99 730 072 → 14 392 bajty. Nie traktować tych liczb
+  jako gwarancji prędkości ani pomiaru szczytowego RSS. Jakość, rozmiar obrazu
+  i historia pozostają zachowane. Szczegóły: [large-documents.md](../docs/large-documents.md).
+- **20 — JPEG XR:** rzeczywiste 38 plików referencyjnych obejmuje gray/bilevel,
+  RGB/BGR/RGBA (także z paddingiem), packed 555/565/10-bit, signed fixed point,
+  IEEE half/float, RGBE i CMYK(A) 8/16. Mostek udostępnia rzeczywisty stride;
+  poprawiono odczyt paddingu oraz mapowanie float alpha (liniowe pokrycie, bez
+  tone mappingu). Kolory fixed/float/RGBE zachowują dotychczasową konwersję SDR,
+  CMYK ma jawny fallback bez ICC drukarki. Arbitralny N-channel i surowe zewnętrzne
+  YUV są nieobsługiwane. Nie jest to edycja HDR ani nowy eksporter; zapis RGBA8
+  pozostaje dotychczasowy. Generator fixture używa przypiętego jxrlib; 37 plików
+  odczytał też natywny JxrDecApp do TIFF (jego writer nie obsługuje padded RGB32).
+  Oczekiwane RGBA wyliczono z wejścia kodera, nie z naszego dekodera.
+  Szczegóły i ograniczenia: [image-encoders.md](../docs/image-encoders.md#jpeg-xr-decoding).
+
+277 testów przeszło, w tym desktop/web JPEG XR i rzeczywisty dokument 2048×1024
+z efektem, złożonym zaznaczeniem oraz pełnym undo/redo. Pokrycie 292 plików runtime:
+47 500/47 500 linii, 12 347/12 347 gałęzi, 2 917/2 917 funkcji (100%), bez nowych
+wykluczeń. Log `/tmp/paintjs-backlog-19-20-coverage.log`. Testy paczki i końcowy
+stan zapisano w [COVERAGE-STATUS.md](history/COVERAGE-STATUS.md).
+
+Autor ikony desktopowej został podpisany jako TetratheBecherovka z linkiem do
+zgłoszenia upstream #7 w README, NOTICE i artwork/SOURCES. Osobny znak webowy
+pochodzi z tego forka. Cztery ostatnie lokalne commity ICC/PDN przepisano na
+Conventional Commits; reguła dotyczy też kolejnych commitów. Bez pushowania.
+
+Tabela zachowuje pierwotny zakres. **19–20 ukończone w poniższym zakresie; 21 pozostaje do zrobienia, 7 odłożony.**
 
 | ID | Zadanie | Skala | Uwagi |
 | --- | --- | --- | --- |

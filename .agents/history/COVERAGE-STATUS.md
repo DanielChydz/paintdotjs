@@ -4,7 +4,7 @@ Historical session checkpoints; see the [agent index](../README.md) for their sc
 Counts and instructions below describe recorded sessions, not the current checkout.
 Run commands from the repository root; plain-text source and artifact paths use that root.
 
-## Current ICC / PDN checkpoint (2026-10-20)
+## Previous ICC / PDN checkpoint (2026-10-20)
 
 All 269 tests pass with Node 24.21.0. `npm run test:coverage:check` includes all
 291 runtime JavaScript files, without new exclusions or ignore directives.
@@ -53,7 +53,7 @@ camera/GPU hardware were not tested in this session.
 Logs: `/tmp/paintjs-icc-pdn-verified.log` (full coverage),
 `/tmp/paintjs-icc-pdn-final-deb.log` (build/checks),
 `/tmp/paintjs-icc-pdn-package.log` (all 11 packaged checks).
-Implementation commits: `416257e`, `41b7b47`. Further backlog: 19–21; item 7
+Implementation commits: `130f781`, `173aac5`. Further backlog: 19–21; item 7
 remains deferred. Scope and sources: [implementation backlog](../implementation-backlog.md),
 [color management](../../docs/color-management.md), [PDN format](../../docs/pdn-format.md).
 

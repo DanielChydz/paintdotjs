@@ -2,7 +2,10 @@
 
 Run `node --expose-gc scripts/benchmark_large_documents.js` with the project's Node
 version. It reports the median of three runs after a warmup, the number of bytes
-allocated as ImageData by the measured operation, and its result. Timings are
+allocated as ImageData by the measured operation, and its result. With
+`--expose-gc`, it separately measures retained region heap
+after garbage collection; these deltas include JavaScript object overhead and
+can vary between runs. Timings are
 observations, not portable performance guarantees or test thresholds. ImageData
 bytes are allocation totals, not peak process memory. Use `PAINTJS_BENCH_SIZE`
 to change the square effect input size. `PAINTJS_BENCH_BASELINE` can point to a
@@ -18,6 +21,7 @@ and a selection with 128 disconnected vertical strips over 8192 rows. On the
 | Morphology ImageData allocations | 4,194,304 bytes | 4,194,304 bytes |
 | Selection region median | 511 ms | 448 ms |
 | Retained region rectangles | 1,048,576 | 128 |
+| Retained region heap (separate run after GC) | 99,730,072 bytes | 14,392 bytes |
 
 The minimum/maximum filter now uses two separable monotonic-queue passes. It
 performs linear work in the pixel count instead of visiting every kernel sample

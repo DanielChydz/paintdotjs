@@ -79,3 +79,16 @@ for (let x = 0; x < 512; x += 4) {
     selection.addRectangle(new api.Rectangle(x, 0, 2, 8192));
 }
 measure("selection-region-128-strips-8192-rows", () => api.Region.fromPath(selection).size());
+
+// Measure retained region heap separately from timing and transient allocations.
+if (global.gc) {
+    global.gc();
+    let before = process.memoryUsage();
+    let region = api.Region.fromPath(selection);
+    global.gc();
+    let after = process.memoryUsage();
+    console.log(JSON.stringify({name: "selection-retained-memory", rectangles: region.size(),
+        heapDeltaBytes: after.heapUsed - before.heapUsed,
+        arrayBufferDeltaBytes: after.arrayBuffers - before.arrayBuffers}));
+    region.dispose();
+}
