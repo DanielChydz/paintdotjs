@@ -171,14 +171,16 @@ starsze `NameValueCollection userMetaData`; DPI jest w sekcji `$exif` jako
 PropertyItem. Obecna implementacja zachowuje tablice `userMetadataItems` schematu
 5.x, a własny DPI zapisuje pod `paint.js.resolution`; nie jest to implementacja
 odczytu/zapisu natywnego EXIF DPI ani automatyczna obsługa kolekcji z wersji 3.x.
+Starsze kolekcje metadanych są jawnie odrzucane zamiast cicho usuwane.
 Oryginalnej aplikacji 5.1.12 nie dekompilowano ani nie uruchamiano.
 
 Weryfikacja: 269 testów przeszło; 100% linii/gałęzi/funkcji 291 plików runtime,
 bez nowych wykluczeń. Testy obejmują profil z zamienionymi czerwonymi/zielonymi
 primariami (niezależny wzorzec Pillow/Little CMS), odczyt wyeksportowanego ICC,
 undo/redo, błędy/anulowanie/równoległy odczyt profilu i rzeczywisty round trip
-65 warstw w desktopie/web. Log: `/tmp/paintjs-icc-pdn-coverage-complete.log`.
-Testy paczki i końcowy stan przekazania: [COVERAGE-STATUS.md](history/COVERAGE-STATUS.md).
+65 warstw w desktopie/web. Log: `/tmp/paintjs-icc-pdn-verified.log`.
+DEB (99 607 044 bajty) przeszedł wszystkie 11 scenariuszy aplikacji rozpakowanej
+z pakietu, w tym ICC i 65 warstw. Testy paczki i końcowy stan przekazania: [COVERAGE-STATUS.md](history/COVERAGE-STATUS.md).
 
 Tabela zachowuje pierwotny zakres. **19–21 pozostają do zrobienia; 7 odłożony.**
 
