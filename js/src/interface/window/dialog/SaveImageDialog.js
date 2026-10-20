@@ -22,7 +22,14 @@ class SaveImageDialog {
         {id: "heic", name: "HEIC", extension: ".heic", extensions: [".heic", ".heif"], mime: "image/heic", quality: 90},
         {id: "webp", name: "WebP", extension: ".webp", mime: "image/webp", quality: 90},
         {id: "dds", name: "DirectDraw Surface (DDS)", extension: ".dds", mime: "image/vnd-ms.dds"},
-        {id: "tiff", name: "TIFF", extension: ".tif", extensions: [".tif", ".tiff"], mime: "image/tiff"},
+        {id: "tiff", name: "TIFF", extension: ".tif", extensions: [".tif", ".tiff"], mime: "image/tiff", controls: [
+            {key: "colorMode", type: "select", label: "Color:", defaultValue: "rgba", choices: [
+                {value: "rgba", label: "RGBA (32-bit, with alpha)"}, {value: "rgb", label: "RGB (24-bit, white background)"}
+            ]},
+            {key: "compression", type: "select", label: "Compression:", defaultValue: "none", choices: [
+                {value: "none", label: "Uncompressed"}, {value: "lzw", label: "LZW (lossless)"}, {value: "zip", label: "Deflate (lossless)"}
+            ]}
+        ]},
         {id: "gif", name: "GIF", extension: ".gif", mime: "image/gif"},
         {id: "bmp", name: "BMP", extension: ".bmp", mime: "image/bmp"},
         {id: "tga", name: "TGA", extension: ".tga", mime: "image/x-tga"},
@@ -89,12 +96,12 @@ class SaveImageDialog {
                 ? {} : AppSettingsStore.get("fileTypes.saveOptions", {});
             const persistedOptions = savedOptions !== null && typeof savedOptions === "object"
                 ? savedOptions : {};
-            let pluginOptions = new Map();
+            let formatOptions = new Map();
             let pluginControls = document.createElement("div");
             pluginControls.className = "save-config-plugin-controls";
             settings.appendChild(pluginControls);
-            for (let format of PluginFileTypes.saveFormats()) {
-                pluginOptions.set(format.id, {...Object.fromEntries(format.controls.map(control =>
+            for (let format of this.formats().filter(format => format.controls?.length)) {
+                formatOptions.set(format.id, {...Object.fromEntries(format.controls.map(control =>
                     [control.key, control.defaultValue])), ...persistedOptions[format.id],
                     ...(format.id === initialFormat.id ? initialOptions : {})});
             }
@@ -225,8 +232,8 @@ class SaveImageDialog {
             const selectedOptions = () => {
                 const format = this.find(formatSelect.value);
                 const result = {};
-                if (pluginOptions.has(format.id)) {
-                    return {...pluginOptions.get(format.id)};
+                if (formatOptions.has(format.id)) {
+                    return {...formatOptions.get(format.id)};
                 }
                 if (format.quality !== undefined) {
                     result.quality = qualities.get(format.id);
@@ -242,10 +249,10 @@ class SaveImageDialog {
                 chromaGroup.hidden = format.id !== "jpeg";
                 defaults.hidden = format.quality === undefined && !(format.controls?.length);
                 pluginControls.replaceChildren();
-                if (pluginOptions.has(format.id)) {
+                if (formatOptions.has(format.id)) {
                     for (let control of format.controls) {
                         pluginControls.appendChild(EffectConfigDialog.createGenericControl(
-                            control, pluginOptions.get(format.id), scheduleRender).element);
+                            control, formatOptions.get(format.id), scheduleRender).element);
                     }
                 }
                 if (format.quality !== undefined) {
@@ -343,8 +350,8 @@ class SaveImageDialog {
             };
             defaults.onclick = () => {
                 const format = this.find(formatSelect.value);
-                if (pluginOptions.has(format.id)) {
-                    pluginOptions.set(format.id, Object.fromEntries(format.controls.map(control =>
+                if (formatOptions.has(format.id)) {
+                    formatOptions.set(format.id, Object.fromEntries(format.controls.map(control =>
                         [control.key, control.defaultValue])));
                     refreshControls();
                 }

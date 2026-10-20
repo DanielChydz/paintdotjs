@@ -124,7 +124,7 @@ WebGL availability alone is not proof of hardware acceleration.
 | HEIC/HEIF | With the Windows codec | With the Windows codec | Yes | Yes | Bundled libheif/Kvazaar saves 8-bit HEVC 4:2:0 images with alpha. RGB conversion and chroma subsampling can change colors even at quality 100. |
 | WebP | Yes | Yes | Yes | Yes | — |
 | DDS | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. RGBA/BGRA 32-bit DDS is decoded directly, including older paint.js files; other variants use the bundled codec. |
-| TIFF (`.tif`, `.tiff`) | Yes | Yes | Yes | Yes | paint.js saves uncompressed RGBA images only. |
+| TIFF (`.tif`, `.tiff`) | Yes | Yes | Yes | Yes | Saves 8-bit/channel RGB or RGBA, uncompressed, LZW or Deflate. RGB composites transparency onto white; RGBA retains alpha. |
 | GIF | Yes | Yes | Yes | Yes | paint.js saves a single static, palette-based image only. |
 | BMP | Yes | Yes | Yes | Yes | paint.js saves 32-bit images with alpha only. |
 | TGA | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. |
@@ -373,8 +373,9 @@ or a guaranteed whole-application memory reduction.
 
 ### Tests and runtime coverage
 
-On Linux, the desktop tests require `xvfb-run` and the system libraries needed by
-Electron. Use Node.js 24 LTS for the following commands:
+On Linux, the desktop tests require `xvfb-run`, FFmpeg (independent image export
+decoding), and the system libraries needed by Electron. Use Node.js 24 LTS for
+the following commands:
 
 ```bash
 npm run test:coverage

@@ -21,7 +21,7 @@ class ImageEncoder {
             case "webp": return this.canvasToBlob(canvas, "image/webp", quality);
             case "bmp": return this.encodeBmp(canvas);
             case "gif": return this.encodeGif(canvas);
-            case "tiff": return this.encodeTiff(canvas);
+            case "tiff": return this.encodeTiff(canvas, options);
             case "tga": return this.encodeTga(canvas);
             case "dds": return this.encodeDds(canvas);
             case "avif": return this.encodeModern(canvas, "image/avif", "avif", quality);
@@ -52,12 +52,16 @@ class ImageEncoder {
                 // Use the bundled portable codec below when available.
             }
         }
+        return this.encodePortable(canvas, format, {quality: Math.round(quality * 100)});
+    }
+
+    static async encodePortable(canvas, format, options) {
         if (window.portableImageCodec?.encode === undefined) {
             throw new Error(format.toUpperCase() + " encoding is not available");
         }
         const png = await this.canvasToBlob(canvas, "image/png");
         const result = await window.portableImageCodec.encode(
-            new Uint8Array(await png.arrayBuffer()), format, Math.round(quality * 100));
+            new Uint8Array(await png.arrayBuffer()), format, options.quality ?? 100, options);
         return new Blob([result], {type: this.mimeFor(format)});
     }
 
@@ -168,7 +172,15 @@ class ImageEncoder {
         return new Blob([bytes], {type: "image/vnd-ms.dds"});
     }
 
-    static encodeTiff(canvas) {
+    static encodeTiff(canvas, options = {}) {
+        let compression = options.compression ?? "none";
+        let colorMode = options.colorMode ?? "rgba";
+        if (!["none", "lzw", "zip"].includes(compression) || !["rgba", "rgb"].includes(colorMode)) {
+            throw new Error("Unsupported TIFF export options");
+        }
+        if (compression !== "none" || colorMode !== "rgba") {
+            return this.encodePortable(canvas, "tiff", {compression, colorMode});
+        }
         const image = this.getPixels(canvas);
         const entryCount = 11;
         const bitsOffset = 8 + 2 + entryCount * 12 + 4;

@@ -1,4 +1,31 @@
-# HEIC and JPEG XR encoders
+# Image encoders
+
+## Extended export audit (2026-10-20)
+
+The installed `@imagemagick/magick-wasm` 0.0.44 reports read/write support for
+TIFF, BMP, TGA and DDS; its TIFF delegate is libtiff 4.7.2. Merely reporting
+support is insufficient: tests inspect encoded headers and decode the files
+with FFmpeg, independently of the application codec.
+
+- TIFF: writing requires `image.settings.compression`, not just
+  `image.setCompression()`. Verified TIFF compression tags are 1 (none),
+  5 (LZW) and 8 (Deflate). Export selects 8-bit/channel RGB or RGBA; RGB removes
+  alpha over white. The existing uncompressed RGBA writer remains the default.
+  Multi-page images and higher bit depths are not offered.
+- BMP/TGA: the existing native JavaScript writers produce 32-bit true-color
+  pixels. Their headers and row layout permit a separate 24-bit RGB mode
+  without another dependency.
+- DDS: the bundled encoder can write BC1/DXT1 and BC3/DXT5. Selecting the
+  compression enum alone produced DXT5 for both in the audit; the explicit
+  `dds:compression` define is required. `dds:mipmaps=0` disables implicit mipmap
+  generation. This is lossy block compression, not lossless RGBA storage.
+
+The export regression uses odd dimensions, transparent pixels, actual save
+controls, per-format persistence and restoring defaults in desktop and browser
+runtimes. The desktop test additionally invokes FFmpeg; FFmpeg is a test
+prerequisite, never a runtime or packaged application dependency.
+
+## HEIC and JPEG XR encoders
 
 Research and API verification: 2026-10-17. Encoding must work offline in both the
 desktop application and the browser, without installed system tools.

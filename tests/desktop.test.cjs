@@ -15,6 +15,8 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "desktop export options produce independently decoded image files", file: "checkExportOptions.js"},
+    {name: "browser export options preserve settings and image structure", file: "checkExportOptions.js", browser: true},
     {name: "desktop camera preview, photo import, permission failures and stream cleanup", file: "checkCameraCapture.js",
         extraArgs: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]},
     {name: "browser camera preview, photo import, permission failures and stream cleanup", file: "checkCameraCapture.js", browser: true,

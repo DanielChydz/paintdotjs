@@ -13,7 +13,11 @@
  */
 
 import {
+    AlphaAction,
+    ColorType,
+    CompressionMethod,
     ImageMagick,
+    MagickColors,
     MagickFormat,
     initializeImageMagick
 } from '@imagemagick/magick-wasm'
@@ -139,6 +143,21 @@ export async function encode(pngBytes, format, quality, options = {}) {
     }
     return ImageMagick.read(pngBytes, MagickFormat.Png, image => {
         image.quality = quality;
+        if (outputFormat === MagickFormat.Tiff) {
+            let compression = options.compression ?? 'none';
+            let colorMode = options.colorMode ?? 'rgba';
+            let methods = {none: CompressionMethod.NoCompression, lzw: CompressionMethod.LZW, zip: CompressionMethod.Zip};
+            if (!Object.hasOwn(methods, compression) || !['rgb', 'rgba'].includes(colorMode)) {
+                throw new Error('Unsupported TIFF export options');
+            }
+            image.depth = 8;
+            image.settings.compression = methods[compression];
+            if (colorMode === 'rgb') {
+                image.backgroundColor = MagickColors.White;
+                image.alpha(AlphaAction.Remove);
+            }
+            image.colorType = colorMode === 'rgba' ? ColorType.TrueColorAlpha : ColorType.TrueColor;
+        }
         if (outputFormat === MagickFormat.Jpeg && options.subsampling) {
             image.settings.setDefine(MagickFormat.Jpeg, 'sampling-factor', options.subsampling);
             image.setArtifact('jpeg:sampling-factor', options.subsampling);
