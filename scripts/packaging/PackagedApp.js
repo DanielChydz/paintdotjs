@@ -76,14 +76,27 @@ class PackagedApp {
             }
             this.pending.clear();
         });
-        await this.evaluate(`(async () => {
-            while (window.paintDotJsReady === undefined) {
-                await new Promise(resolve => setTimeout(resolve, 50));
+        // First-run asset initialization can reload the page after CDP connects.
+        // Retry only the readiness probe; never replay a scenario after an error.
+        let packaged;
+        while (true) {
+            try {
+                packaged = await this.evaluate(`(async () => {
+                    while (window.paintDotJsReady === undefined) {
+                        await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+                    await window.paintDotJsReady;
+                    return require('electron').ipcRenderer !== undefined && isApp;
+                })()`);
+                break;
+            } catch (error) {
+                if (!/Execution context was destroyed|Cannot find context with specified id/.test(error.message)
+                    || Date.now() >= deadline) {
+                    throw error;
+                }
+                await delay(100);
             }
-            await window.paintDotJsReady;
-            return true;
-        })()`);
-        let packaged = await this.evaluate("require('electron').ipcRenderer !== undefined && isApp");
+        }
         if (!packaged) {
             throw new Error("Wrong application platform");
         }
