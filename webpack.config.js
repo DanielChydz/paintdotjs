@@ -14,6 +14,7 @@
 
 const {BannerPlugin, DefinePlugin, ProvidePlugin} = require('webpack')
 const path = require('node:path')
+const OptimizeWasmPlugin = require('./scripts/webpack/OptimizeWasmPlugin')
 const {pathToFileURL} = require('node:url')
 
 const attributionBanner = [
@@ -62,6 +63,7 @@ module.exports = {
         ]
     },
     plugins: [
+        new OptimizeWasmPlugin(),
         new BannerPlugin({banner: attributionBanner}),
         new ProvidePlugin({
             Buffer: ['buffer', 'Buffer']

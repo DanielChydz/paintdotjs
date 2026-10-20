@@ -12,13 +12,15 @@
  * Licensed under LICENSE.md. See NOTICE.md for full attribution.
  */
 
-module.exports = async function checkOpenAssets() {
+module.exports = async function checkOpenAssets(catalog = null) {
     let check = (condition, message) => {
         if (!condition) {
             throw new Error(message);
         }
     };
-    let catalog = await (await fetch("desktop-resources/asset-manifest.json")).json();
+    if (catalog === null) {
+        catalog = await (await fetch("desktop-resources/asset-manifest.json")).json();
+    }
     check(catalog.assetSet === "paintjs-open-v1", "Unexpected asset provenance");
     if (isApp) {
         check(!PdjInfo.version().includes("(Web)"), "Desktop bundle overwrote its distribution label");
@@ -33,8 +35,15 @@ module.exports = async function checkOpenAssets() {
         await image.decode();
         check(image.naturalWidth > 0 && image.naturalHeight > 0, "Empty or broken asset: " + relative);
     }));
-    let faces = await document.fonts.load('14px "Inter"');
-    check(faces.length > 0 && faces.every(face => face.status === "loaded"), "Bundled Inter did not load");
+    // Load every bundled family, including variable extremes, in Chromium.
+    for (let font of FontManager.bundledFonts) {
+        for (let weight of [100, 400, 900]) {
+            let faces = await document.fonts.load(weight + ' 20px "' + font.family + '"',
+                'Zażółć gęślą jaźń — Åß Ελληνικά Кириллица 0123456789');
+            check(faces.length > 0 && faces.every(face => face.status === "loaded"),
+                "Bundled font did not load: " + font.family + " / " + weight);
+        }
+    }
     let license = await (await fetch("assets/licenses/Inter-OFL.txt")).text();
     check(license.includes("SIL OPEN FONT LICENSE"), "Bundled font license is missing");
     license = await (await fetch("assets/licenses/paintjs-icons-LICENSE.txt")).text();

@@ -23,9 +23,9 @@ commit and SHA-256 of every file. The generic effect fallback is a byte-identica
 alias of upstream glow_effect.png; its mapping is recorded there as well.
 The previous Lucide vendor sources and generated UI pack have been removed.
 
-UI font: Inter variable, unmodified, SIL Open Font License 1.1.
+UI font: Inter variable, SIL Open Font License 1.1; losslessly repackaged as WOFF2.
 https://github.com/google/fonts/tree/0b58fb370093f9a9f4ff785d94405710b79de67c/ofl/inter
-License: assets/licenses/Inter-OFL.txt. SHA-256: 29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031
+License: assets/licenses/Inter-OFL.txt. Original TTF SHA-256: 29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031
 
 The application mark, document mark, sample document, repository banner and English
 interface dictionary are authored for this project and distributed under its MIT
@@ -42,3 +42,9 @@ MIT-licensed ms-nrbf-js dependency. The schema is explicit in
 format's CLR serialization contract. Empty metadata and deferred pixel blocks are
 constructed from scratch. No original application binaries, resource archives,
 artwork or translation dictionaries are inputs to the generator.
+
+Bundled fonts are stored in WOFF2 containers, preserving complete SFNT tables
+(except empty digital signatures and container checksum/flag updates). Original
+TTF hashes are pinned in `artwork/fonts.json`; see `assets/font/README.md` for
+offline regeneration and round-trip verification. Duplicate Inter TTFs were
+consolidated into `assets/font/inter/Inter-Variable.woff2`.
