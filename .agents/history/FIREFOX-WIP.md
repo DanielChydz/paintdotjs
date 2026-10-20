@@ -121,3 +121,12 @@ session (436 precached files, about 25.11 MB), but may need regeneration as sour
 changes. Other logs: `/tmp/paintjs-firefox-pages.log`,
 `/tmp/paintjs-firefox-report/geckodriver.log`. These paths are local session aids;
 repo code and this report must suffice after /tmp cleanup.
+
+## Remote development version retained
+
+After the checkpoint commit, origin/develop was fetched and its sole additional
+commit `791a183 chore: start 2.6.1 development` was merged normally, without
+rewriting remote history. Develop now uses **2.6.1-dev.0** in package.json and
+package-lock.json; the Firefox runs above used 2.6.0 builds. Regenerate builds on
+resume. Master stays at 6486561 (completed 19–20 and the user's README disclaimer).
+The user explicitly authorized pushing master and develop in this save/stop turn.
