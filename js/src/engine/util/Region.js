@@ -137,7 +137,30 @@ class Region {
             throw new Error("Input must be a GraphicsPath");
         }
 
-        return Region.fromRectangles([...path.getScans()]);
+        // Adjacent scanlines with identical spans form one exact rectangle.
+        // Retain only the latest span for each x/width pair; holes and gaps
+        // remain separate, without keeping a rectangle per selected row.
+        let rectangles = [];
+        let previous = new Map();
+        let current = new Map();
+        let row = null;
+        for (let scan of path.getScans()) {
+            if (scan.y !== row) {
+                previous = current;
+                current = new Map();
+                row = scan.y;
+            }
+            let key = scan.x + "," + scan.width;
+            let rectangle = previous.get(key);
+            if (rectangle !== undefined && rectangle.getBottom() === scan.y) {
+                rectangle.height += scan.height;
+            } else {
+                rectangle = scan;
+                rectangles.push(rectangle);
+            }
+            current.set(key, rectangle);
+        }
+        return Region.fromRectangles(rectangles);
     }
 
     static fromRectangle(rectangle) {

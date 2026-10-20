@@ -785,3 +785,50 @@ test("invalid Gaussian quality falls back to the documented middle-quality outpu
     }
     assert.deepEqual(source.data, pixels(7, 5).data);
 });
+
+
+test("linear morphology matches a brute force oracle for large, anisotropic and unit kernels", () => {
+    let {BitmapEffectEngine: effects} = loadContext();
+    for (let [width, height] of [[1, 1], [1, 7], [8, 1], [13, 9]]) {
+        let source = pixels(width, height);
+        let original = new Uint8ClampedArray(source.data);
+        for (let mode of ["erode", "dilate"]) {
+            for (let [kernelWidth, kernelHeight, linked] of [[1, 1, false], [3, 7, false], [33, 5, false], [5, 1, true]]) {
+                let result = effects.morphology(source, width, height,
+                    {mode, width: kernelWidth, height: kernelHeight, linked});
+                let rx = Math.floor((kernelWidth - 1) / 2);
+                let ry = Math.floor(((linked ? kernelWidth : kernelHeight) - 1) / 2);
+                for (let y = 0; y < height; ++y) {
+                    for (let x = 0; x < width; ++x) {
+                        for (let channel = 0; channel < 4; ++channel) {
+                            let expected = mode === "dilate" ? 0 : 255;
+                            for (let sy = Math.max(0, y - ry); sy <= Math.min(height - 1, y + ry); ++sy) {
+                                for (let sx = Math.max(0, x - rx); sx <= Math.min(width - 1, x + rx); ++sx) {
+                                    let value = source.data[(sy * width + sx) * 4 + channel];
+                                    expected = mode === "dilate" ? Math.max(expected, value) : Math.min(expected, value);
+                                }
+                            }
+                            assert.equal(result.data[(y * width + x) * 4 + channel], expected);
+                        }
+                    }
+                }
+            }
+        }
+        assert.deepEqual(source.data, original);
+    }
+});
+
+test("whole-image effects rasterize a live selection once and preserve fractional coverage", () => {
+    let {BitmapEffectEngine: effects} = loadContext();
+    let calls = 0;
+    let mask = new Uint8Array([0, 128, 255]);
+    effects.createSelectionMask = () => { ++calls; return mask; };
+    let source = new ImageData(new Uint8ClampedArray(12).fill(10), 3, 1);
+    let result = effects.apply(source, 3, 1, {apply: (_source, _width, _height, _values, selected) => {
+        assert.equal(selected, mask);
+        return new ImageData(new Uint8ClampedArray(12).fill(110), 3, 1);
+    }}, {}, {});
+    assert.equal(calls, 1);
+    assert.deepEqual([...result.data], [10, 10, 10, 10, 60, 60, 60, 60, 110, 110, 110, 110]);
+    assert.ok(source.data.every(value => value === 10));
+});
