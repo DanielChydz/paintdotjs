@@ -152,6 +152,7 @@ module.exports = async function checkRendererHistory() {
     path.dispose = () => { ++disposals; disposePath(); };
     temporaryBox.dispose();
     temporaryBox.dispose();
+    temporary.dispose();
     check(temporarySelection.changed.listeners.length === baseline && disposals === 1
         && temporaryBox.getRendererList().length === 0 && temporaryBox.getSurface() === null
         && borrowed.canvas.width === 4, "Renderer teardown leaked listeners/paths or disposed a borrowed surface");
