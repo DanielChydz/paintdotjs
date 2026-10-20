@@ -33,9 +33,47 @@ let closeDialogReady = false;
 let closeDialogPending = false;
 let quittingForUpdate = false;
 let saveWindowStateTimer = null;
+let graphicsPreference = readGraphicsPreference();
+const startupGraphicsPreference = graphicsPreference;
+let gpuInfoReady = false;
+if (!startupGraphicsPreference) {
+    app.disableHardwareAcceleration();
+}
+app.on('gpu-info-update', () => {
+    gpuInfoReady = true;
+});
 
 const defaultWindowBounds = {width: 1080, height: 720};
 const minimumWindowBounds = {width: 640, height: 480};
+
+function graphicsPreferencePath() {
+    return path.join(app.getPath('userData'), 'graphics-preferences.json');
+}
+
+function readGraphicsPreference() {
+    try {
+        let saved = JSON.parse(fs.readFileSync(graphicsPreferencePath(), 'utf8'));
+        if (typeof saved.hardwareAcceleration !== 'boolean') {
+            throw new TypeError('Hardware acceleration preference must be a boolean');
+        }
+        return saved.hardwareAcceleration;
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            console.warn('Could not read graphics preferences:', error);
+        }
+        return true;
+    }
+}
+
+function graphicsStatus() {
+    return {
+        preference: graphicsPreference,
+        startupPreference: startupGraphicsPreference,
+        restartRequired: graphicsPreference !== startupGraphicsPreference,
+        enabled: gpuInfoReady ? app.isHardwareAccelerationEnabled() : null,
+        features: gpuInfoReady ? app.getGPUFeatureStatus() : null
+    };
+}
 
 function windowStatePath() {
     return path.join(app.getPath('userData'), 'window-state.json');
@@ -331,6 +369,24 @@ ipcMain.on('desktop:automatic-updates', (event, enabled) => {
     if (mainWindow !== null && event.sender === mainWindow.webContents) {
         updater.setAutomaticUpdates(enabled);
     }
+});
+ipcMain.handle('desktop:graphics-status', event => {
+    if (mainWindow === null || event.sender !== mainWindow.webContents) {
+        throw new Error('Graphics settings are only available to the application window');
+    }
+    return graphicsStatus();
+});
+ipcMain.handle('desktop:graphics-preference', (event, enabled) => {
+    if (mainWindow === null || event.sender !== mainWindow.webContents) {
+        throw new Error('Graphics settings are only available to the application window');
+    }
+    if (typeof enabled !== 'boolean') {
+        throw new TypeError('Hardware acceleration preference must be a boolean');
+    }
+    fs.mkdirSync(app.getPath('userData'), {recursive: true});
+    fs.writeFileSync(graphicsPreferencePath(), JSON.stringify({hardwareAcceleration: enabled}));
+    graphicsPreference = enabled;
+    return graphicsStatus();
 });
 
 async function prepareApplication() {

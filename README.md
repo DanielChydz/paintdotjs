@@ -84,6 +84,13 @@ startup and hourly checks; **Check now** remains available. In the web app it co
 update checks and prompts. The browser may independently check its service worker for updates;
 disabling the preference keeps offline support intact.
 
+**Settings → Graphics → Use hardware acceleration** is available on desktop.
+The preference is saved for the next Electron launch; changing it requires
+closing and restarting the application. The page reports the current process
+acceleration and Chromium feature statuses separately from the preference.
+It does not select a physical GPU. In the browser the switch remains disabled;
+WebGL availability alone is not proof of hardware acceleration.
+
 ### Missing or limited compared with Paint.NET
 
 - Chromium is the supported browser family. Firefox and Safari are not regularly tested, and their

@@ -15,6 +15,7 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "desktop hardware acceleration startup and persistent settings", file: "checkGraphicsSettings.js", graphicsAcceleration: false},
     {name: "document view composition and allocation measurements", file: "checkViewPerformance.js"},
     {name: "selection fades, overlay invalidation, renderer ownership and gesture history series", file: "checkRendererHistory.js"},
     {name: "recent files, plugin help, busy operations and history failure recovery", file: "checkFirstBatchFeatures.js"},
@@ -361,6 +362,10 @@ if (process.versions.electron) {
         }
         let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintdotjs-desktop-test-"));
         try {
+            if (scenario.graphicsAcceleration !== undefined) {
+                fs.writeFileSync(path.join(directory, "graphics-preferences.json"),
+                    JSON.stringify({hardwareAcceleration: scenario.graphicsAcceleration}));
+            }
             let result = spawnSync("xvfb-run", [
                 "-a", path.join(root, "node_modules/.bin/electron"),
                 "--ozone-platform=x11", ...(scenario.extraArgs || []), __filename

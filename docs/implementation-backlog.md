@@ -68,7 +68,7 @@ znajdują się w tabeli poniżej.
   tworzenie dokumentu, zachowując zoom, pozycję widoku i poprawne odświeżanie.
 - [x] **13:** ustalić i wdrożyć kontrakt całkowitoliczbowych skanów oraz granic
   regionu; uwzględnić współrzędne ułamkowe, ujemne, otwory i puste regiony.
-- [ ] **14:** uruchomić rzeczywisty przełącznik akceleracji sprzętowej desktopu,
+- [x] **14:** uruchomić rzeczywisty przełącznik akceleracji sprzętowej desktopu,
   z trwałą preferencją, zastosowaniem przy starcie Electrona i informacją
   o wymaganym restarcie.
 - [ ] **15:** dodać pobieranie obrazu z kamery: podgląd, uprawnienia, zdjęcie,
