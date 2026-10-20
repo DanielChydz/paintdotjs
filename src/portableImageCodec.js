@@ -77,44 +77,6 @@ const magickFormat = format => ({
     tga: MagickFormat.Tga
 })[format] || MagickFormat.Unknown;
 
-const decodeJpegXr = async bytes => {
-    const decoded = await jxrEncoder.decode(bytes);
-    const info = decoded.pixelInfo;
-    if ((info.channels !== 3 && info.channels !== 4) || info.colorFormat !== 'RGB') {
-        throw new Error('This JPEG XR pixel format is not supported');
-    }
-    let samples;
-    let sample = null;
-    if (info.bitDepth === '8') {
-        samples = decoded.bytes;
-        sample = index => samples[index] / 255;
-    } else if (info.bitDepth === '16') {
-        samples = new Uint16Array(decoded.bytes.buffer, decoded.bytes.byteOffset, decoded.bytes.byteLength / 2);
-        sample = index => samples[index] / 65535;
-    } else if (info.bitDepth === '32Float') {
-        samples = new Float32Array(decoded.bytes.buffer, decoded.bytes.byteOffset, decoded.bytes.byteLength / 4);
-        sample = index => Math.max(0, samples[index]) / (1 + Math.max(0, samples[index]));
-    } else {
-        throw new Error('This JPEG XR bit depth is not supported: ' + info.bitDepth);
-    }
-    const rgba = new Uint8ClampedArray(decoded.width * decoded.height * 4);
-    const linearColor = info.bitDepth === '32Float';
-    for (let source = 0, target = 0; target < rgba.length; source += info.channels, target += 4) {
-        const alpha = info.hasAlpha ? Math.max(0, Math.min(1, sample(source + 3))) : 1;
-        const color = channel => {
-            const value = sample(source + channel);
-            const unpremultiplied = info.premultipledAlpha && alpha > 0 ? value / alpha : value;
-            const normalized = Math.max(0, Math.min(1, unpremultiplied));
-            return Math.round((linearColor ? Math.pow(normalized, 1 / 2.2) : normalized) * 255);
-        };
-        rgba[target] = color(info.bgr ? 2 : 0);
-        rgba[target + 1] = color(1);
-        rgba[target + 2] = color(info.bgr ? 0 : 2);
-        rgba[target + 3] = Math.round(alpha * 255);
-    }
-    return {width: decoded.width, height: decoded.height, rgba};
-};
-
 export async function inspectColorProfile(bytes) {
     await initializePortableCodecs();
     if (bytes.length < 128 || bytes.length > 16 * 1024 * 1024
@@ -147,7 +109,7 @@ export async function decode(bytes, format) {
         }
     }
     if (format === 'jxr' || format === 'wdp' || format === 'wmp') {
-        return decodeJpegXr(bytes);
+        return jxrEncoder.decodeRgba(bytes);
     }
     await initializePortableCodecs();
     const inputFormat = magickFormat(format);

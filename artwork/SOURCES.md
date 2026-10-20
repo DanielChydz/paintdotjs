@@ -5,7 +5,9 @@ were imported from LabyStudio/paintdotjs commit b4e6fc5 (2.4.3). See
 `assets/font/README.md` and each family's `LICENSE.txt`. The supplied desktop icon
 and independently generated PDN templates are preserved.
 
-Desktop application icon: user-selected image, downloaded unchanged from
+Desktop application icon: created by [TetratheBecherovka](https://github.com/TetratheBecherovka)
+and offered in [upstream issue #7](https://github.com/LabyStudio/paintdotjs/issues/7).
+User-selected image, downloaded unchanged from
 https://github.com/user-attachments/assets/6ad3bc51-1684-4d19-aa44-7a2881907f3c
 on 2026-10-16. The original PNG is retained as `artwork/desktop-icon.png` and
 copied unchanged to `assets/desktop-icon.png` and `desktop-resources/icon.png`.

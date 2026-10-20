@@ -480,9 +480,9 @@ class BitmapEffectEngine {
 
     static apply(source, width, height, definition, values, selection = null) {
         if (typeof definition.apply === "function") {
-            const rendered = definition.apply(source, width, height, values,
-                this.createSelectionMask(width, height, selection));
-            return this.maskResult(source, rendered, width, height, selection);
+            const mask = this.createSelectionMask(width, height, selection);
+            const rendered = definition.apply(source, width, height, values, mask);
+            return this.maskResult(source, rendered, width, height, mask);
         }
         const output = new ImageData(new Uint8ClampedArray(source.data), width, height);
         const state = definition.prepare === null ? null : definition.prepare(source.data, values);
@@ -1719,28 +1719,42 @@ class BitmapEffectEngine {
         const output = new ImageData(width, height);
         const radiusX = Math.floor((values.width - 1) / 2);
         const radiusY = Math.floor(((values.linked ? values.width : values.height) - 1) / 2);
-        for (let y = 0; y < height; ++y) {
-            for (let x = 0; x < width; ++x) {
-            const offset = (y * width + x) * 4;
-            const results = values.mode === "dilate" ? [0, 0, 0, 0] : [255, 255, 255, 255];
-            for (let dy = -radiusY; dy <= radiusY; ++dy) {
-                const sy = Math.max(0, Math.min(height - 1, y + dy));
-                for (let dx = -radiusX; dx <= radiusX; ++dx) {
-                    const sx = Math.max(0, Math.min(width - 1, x + dx));
-                    const sampleOffset = (sy * width + sx) * 4;
-                    for (let channel = 0; channel < 4; ++channel) {
-                        results[channel] = values.mode === "dilate"
-                            ? Math.max(results[channel], source.data[sampleOffset + channel])
-                            : Math.min(results[channel], source.data[sampleOffset + channel]);
+        const dilate = values.mode === "dilate";
+        this.extremaPass(source.data, output.data, width, height, radiusX, true, dilate);
+        // The queue retains values before overwriting the horizontal pass, so
+        // the vertical pass needs no second full-document pixel buffer.
+        this.extremaPass(output.data, output.data, width, height, radiusY, false, dilate);
+        return output;
+    }
+
+    static extremaPass(source, output, width, height, radius, horizontal, dilate) {
+        const length = horizontal ? width : height;
+        const lines = horizontal ? height : width;
+        const step = horizontal ? 4 : width * 4;
+        const lineStep = horizontal ? width * 4 : 4;
+        const indices = new Int32Array(length);
+        const samples = new Uint8Array(length);
+        for (let line = 0; line < lines; ++line) {
+            for (let channel = 0; channel < 4; ++channel) {
+                let head = 0, tail = 0, next = 0;
+                const base = line * lineStep + channel;
+                for (let position = 0; position < length; ++position) {
+                    const end = Math.min(length - 1, position + radius);
+                    while (next <= end) {
+                        const value = source[base + next * step];
+                        while (tail > head && (dilate ? samples[tail - 1] <= value : samples[tail - 1] >= value)) {
+                            --tail;
+                        }
+                        indices[tail] = next++;
+                        samples[tail++] = value;
                     }
+                    while (indices[head] < position - radius) {
+                        ++head;
+                    }
+                    output[base + position * step] = samples[head];
                 }
             }
-            for (let channel = 0; channel < 4; ++channel) {
-                output.data[offset + channel] = results[channel];
-            }
         }
-        }
-        return output;
     }
 
     static outline(source, width, height, values) {

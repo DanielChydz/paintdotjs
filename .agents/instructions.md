@@ -6,6 +6,12 @@
 - Merge `develop` into `master`; do not cherry-pick release or hotfix commits directly onto `master`.
 - After the merge is pushed, switch back to `develop` and bump it to the next development version.
 
+## Commit messages
+
+Use Conventional Commits for every new commit, including local merge commits
+(e.g. `feat(jxr): ...`, `fix(pdn): ...`, `test(images): ...`, `chore(release): ...`).
+Do not push unless explicitly requested by the user.
+
 ## Control flow
 
 - Always use braces for `if`, `else`, loops, and every other control-flow body, including one-line bodies.

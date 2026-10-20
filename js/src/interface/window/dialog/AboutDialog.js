@@ -166,7 +166,8 @@ class AboutDialog {
                 // Asset credits
                 credits.appendChild(document.createElement("br"));
                 let assetCredits = document.createElement("span");
-                assetCredits.textContent = "Interface artwork: LabyStudio paint.js default pack. Typeface: Inter (SIL OFL 1.1). Original project logo.";
+                assetCredits.textContent = "Interface artwork: LabyStudio paint.js default pack. Typeface: Inter (SIL OFL 1.1). Web mark: paint.js contributors. Desktop logo: ";
+                assetCredits.appendChild(this.createLink("TetratheBecherovka", "https://github.com/LabyStudio/paintdotjs/issues/7"));
                 credits.appendChild(assetCredits);
             }
 

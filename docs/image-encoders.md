@@ -131,3 +131,30 @@ at 256 × 256 and 633 ms at 1024 × 1024, excluding module initialization and PN
 conversion. This is one local measurement, not a guarantee for photographs,
 larger documents or slower hardware. Encoding currently runs synchronously
 inside WASM, consistent with the existing ImageMagick path.
+
+
+## JPEG XR decoding
+
+The jxrlib bridge exposes the actual bits per pixel, rather than assuming the
+channel count describes the physical stride. This preserves padded RGB layouts
+and avoids shifting subsequent pixels. Bilevel data is expanded by the reference
+converter, including its polarity and non-byte-aligned row widths.
+
+Supported inputs are gray (1/8/16-bit, signed 16/32-bit fixed point, half and float),
+RGB/BGR/RGBA with 8/16-bit integer samples, signed fixed point (s2.13 or s7.24),
+IEEE half or float samples, RGB555/565/101010, RGBE, and CMYK/CMYKA 8/16-bit.
+Premultiplied RGB is unpremultiplied before display conversion; zero-alpha pixels
+become transparent black. Float alpha is linear coverage, without tone mapping.
+
+Editing remains 8-bit SDR. Fixed/float/RGBE colors use the existing HDR-to-SDR
+mapping `pow(max(0,x)/(1+max(0,x)), 1/2.2)`; this is not lossless HDR import or
+wide-gamut editing. CMYK uses an unprofiled subtractive conversion, not an ICC
+printer transform. JPEG XR ICC metadata is not currently applied or preserved.
+Arbitrary N-channel data has no inferred color interpretation and is rejected.
+YUV storage inside ordinary RGB JPEG XR is handled by jxrlib; raw external YUV
+pixel models are not exposed as RGB. Export remains 8-bit RGBA.
+
+The 38 original reference-encoded fixtures and generation instructions live in
+`tests/fixtures/jxr`. They cover padding, odd dimensions, color order, fixed/half
+samples, alpha and ambiguous channel rejection, with independent native reference
+decoder output and input-derived RGBA expectations.

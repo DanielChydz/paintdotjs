@@ -396,7 +396,7 @@ test("regions intersect without mutating source rectangles and preserve independ
     assert.equal(copy.size(), 0);
     let graphic = new GraphicsPath([new VertexList()]);
     graphic.addRectangle(source);
-    assert.equal(Region.fromPath(graphic).size(), 4);
+    assert.equal(Region.fromPath(graphic).size(), 1);
     assert.throws(() => Region.fromPath({}), /must be a GraphicsPath/);
     let rectangles = [new Rectangle(2, 3, 2, 2), new Rectangle(0, 0, 8, 8), new Rectangle(1, 1, 1, 1)];
     let detailed = Region.fromRectangles(rectangles);
@@ -542,7 +542,7 @@ test("integer region paths preserve unions, holes, negative origins and fraction
     assert.equal(covered(roundTrip).has("0,0"), false);
     let triangle = new GraphicsPath();
     triangle.addLines(donut.getPathPoints().slice(0, 3));
-    assert.equal(Region.fromPath(triangle).getRectangles().reduce((sum, rect) => sum + rect.width, 0), 21);
+    assert.equal(Region.fromPath(triangle).getRectangles().reduce((sum, rect) => sum + rect.width * rect.height, 0), 21);
 });
 
 test("single-rectangle regions produce independent paths with unchanged coordinates", () => {
@@ -569,4 +569,31 @@ test("catalog paths report unavailable native geometry capabilities without buil
         assert.equal(catalog.createPath(shape, {x: 1, y: 2, width: 3, height: 4}), null);
         assert.equal(catalog.createPath("unknown-shape", {x: 1, y: 2, width: 3, height: 4}), null);
     }
+});
+
+
+test("region compaction keeps holes, disconnected rows and changing spans exact", () => {
+    let {GraphicsPath, Rectangle, Region} = loadGeometry();
+    let path = new GraphicsPath();
+    for (let rect of [[0, 0, 8, 2], [0, 4, 8, 3], [12, 0, 2, 7]]) {
+        path.addRectangle(new Rectangle(...rect));
+    }
+    let expected = new Set();
+    for (let scan of path.getScans()) {
+        for (let x = scan.x; x < scan.getRight(); ++x) {
+            expected.add(x + "," + scan.y);
+        }
+    }
+    let region = Region.fromPath(path);
+    assert.equal(region.size(), 3);
+    let actual = new Set();
+    for (let rect of region.getRectangles()) {
+        for (let y = rect.y; y < rect.getBottom(); ++y) {
+            for (let x = rect.x; x < rect.getRight(); ++x) {
+                actual.add(x + "," + y);
+            }
+        }
+    }
+    assert.deepEqual(actual, expected);
+    assert.equal(Region.fromPath(new GraphicsPath()).size(), 0);
 });

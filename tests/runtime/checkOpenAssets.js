@@ -92,6 +92,9 @@ module.exports = async function checkOpenAssets(catalog = null) {
     AboutDialog.open();
     let banner = document.querySelector(".project-info-banner-artwork img");
     check(banner !== null && banner.getAttribute("src") === "assets/icon.png", "About dialog does not use the project mark");
+    let logoCredit = document.querySelector('.project-info-highlight-credit a[href="https://github.com/LabyStudio/paintdotjs/issues/7"]');
+    check(logoCredit !== null && logoCredit.textContent === "TetratheBecherovka",
+        "About dialog does not credit the desktop logo author");
     await banner.decode();
     AboutDialog.instance.close();
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
