@@ -21,11 +21,32 @@ class SaveImageDialog {
         {id: "avif", name: "AV1 (AVIF)", extension: ".avif", mime: "image/avif", quality: 90},
         {id: "heic", name: "HEIC", extension: ".heic", extensions: [".heic", ".heif"], mime: "image/heic", quality: 90},
         {id: "webp", name: "WebP", extension: ".webp", mime: "image/webp", quality: 90},
-        {id: "dds", name: "DirectDraw Surface (DDS)", extension: ".dds", mime: "image/vnd-ms.dds"},
-        {id: "tiff", name: "TIFF", extension: ".tif", extensions: [".tif", ".tiff"], mime: "image/tiff"},
+        {id: "dds", name: "DirectDraw Surface (DDS)", extension: ".dds", mime: "image/vnd-ms.dds", controls: [
+            {key: "compression", type: "select", label: "Compression:", defaultValue: "none", choices: [
+                {value: "none", label: "Uncompressed RGBA (32-bit)"},
+                {value: "bc1", label: "BC1 / DXT1 (lossy RGB, white background)"},
+                {value: "bc3", label: "BC3 / DXT5 (lossy RGBA)"}
+            ]}
+        ]},
+        {id: "tiff", name: "TIFF", extension: ".tif", extensions: [".tif", ".tiff"], mime: "image/tiff", controls: [
+            {key: "colorMode", type: "select", label: "Color:", defaultValue: "rgba", choices: [
+                {value: "rgba", label: "RGBA (32-bit, with alpha)"}, {value: "rgb", label: "RGB (24-bit, white background)"}
+            ]},
+            {key: "compression", type: "select", label: "Compression:", defaultValue: "none", choices: [
+                {value: "none", label: "Uncompressed"}, {value: "lzw", label: "LZW (lossless)"}, {value: "zip", label: "Deflate (lossless)"}
+            ]}
+        ]},
         {id: "gif", name: "GIF", extension: ".gif", mime: "image/gif"},
-        {id: "bmp", name: "BMP", extension: ".bmp", mime: "image/bmp"},
-        {id: "tga", name: "TGA", extension: ".tga", mime: "image/x-tga"},
+        {id: "bmp", name: "BMP", extension: ".bmp", mime: "image/bmp", controls: [
+            {key: "bitDepth", type: "select", label: "Bit depth:", defaultValue: "32", choices: [
+                {value: "32", label: "32-bit (with alpha)"}, {value: "24", label: "24-bit RGB (white background)"}
+            ]}
+        ]},
+        {id: "tga", name: "TGA", extension: ".tga", mime: "image/x-tga", controls: [
+            {key: "bitDepth", type: "select", label: "Bit depth:", defaultValue: "32", choices: [
+                {value: "32", label: "32-bit (with alpha)"}, {value: "24", label: "24-bit RGB (white background)"}
+            ]}
+        ]},
         {id: "jxr", name: "JPEG XR", extension: ".jxr", extensions: [".jxr", ".wdp", ".wmp"], mime: "image/vnd.ms-photo", quality: 90}
     ];
 
@@ -89,12 +110,12 @@ class SaveImageDialog {
                 ? {} : AppSettingsStore.get("fileTypes.saveOptions", {});
             const persistedOptions = savedOptions !== null && typeof savedOptions === "object"
                 ? savedOptions : {};
-            let pluginOptions = new Map();
+            let formatOptions = new Map();
             let pluginControls = document.createElement("div");
             pluginControls.className = "save-config-plugin-controls";
             settings.appendChild(pluginControls);
-            for (let format of PluginFileTypes.saveFormats()) {
-                pluginOptions.set(format.id, {...Object.fromEntries(format.controls.map(control =>
+            for (let format of this.formats().filter(format => format.controls?.length)) {
+                formatOptions.set(format.id, {...Object.fromEntries(format.controls.map(control =>
                     [control.key, control.defaultValue])), ...persistedOptions[format.id],
                     ...(format.id === initialFormat.id ? initialOptions : {})});
             }
@@ -225,8 +246,8 @@ class SaveImageDialog {
             const selectedOptions = () => {
                 const format = this.find(formatSelect.value);
                 const result = {};
-                if (pluginOptions.has(format.id)) {
-                    return {...pluginOptions.get(format.id)};
+                if (formatOptions.has(format.id)) {
+                    return {...formatOptions.get(format.id)};
                 }
                 if (format.quality !== undefined) {
                     result.quality = qualities.get(format.id);
@@ -242,10 +263,10 @@ class SaveImageDialog {
                 chromaGroup.hidden = format.id !== "jpeg";
                 defaults.hidden = format.quality === undefined && !(format.controls?.length);
                 pluginControls.replaceChildren();
-                if (pluginOptions.has(format.id)) {
+                if (formatOptions.has(format.id)) {
                     for (let control of format.controls) {
                         pluginControls.appendChild(EffectConfigDialog.createGenericControl(
-                            control, pluginOptions.get(format.id), scheduleRender).element);
+                            control, formatOptions.get(format.id), scheduleRender).element);
                     }
                 }
                 if (format.quality !== undefined) {
@@ -265,7 +286,14 @@ class SaveImageDialog {
                     }
                     currentBlob = blob;
                     let displayBlob = blob;
-                    if (!["png", "jpeg", "webp", "gif", "bmp", "avif"].includes(format.id)) {
+                    if (["tiff", "tga", "dds"].includes(format.id)) {
+                        let decoded = await window.portableImageCodec.decode(new Uint8Array(await blob.arrayBuffer()), format.id);
+                        let previewCanvas = document.createElement("canvas");
+                        previewCanvas.width = decoded.width;
+                        previewCanvas.height = decoded.height;
+                        previewCanvas.getContext("2d").putImageData(new ImageData(decoded.rgba, decoded.width, decoded.height), 0, 0);
+                        displayBlob = await ImageEncoder.canvasToBlob(previewCanvas, "image/png");
+                    } else if (!["png", "jpeg", "webp", "gif", "bmp", "avif"].includes(format.id)) {
                         displayBlob = await ImageEncoder.canvasToBlob(canvas, "image/png");
                     }
                     if (closed || ownGeneration !== generation) {
@@ -343,8 +371,8 @@ class SaveImageDialog {
             };
             defaults.onclick = () => {
                 const format = this.find(formatSelect.value);
-                if (pluginOptions.has(format.id)) {
-                    pluginOptions.set(format.id, Object.fromEntries(format.controls.map(control =>
+                if (formatOptions.has(format.id)) {
+                    formatOptions.set(format.id, Object.fromEntries(format.controls.map(control =>
                         [control.key, control.defaultValue])));
                     refreshControls();
                 }

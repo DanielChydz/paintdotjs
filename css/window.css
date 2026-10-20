@@ -3934,3 +3934,18 @@ html.effect-rendering * {
     justify-content: center;
     white-space: nowrap;
 }
+.camera-dialog {
+    width: min(680px, calc(100vw - 32px));
+}
+
+.camera-content {
+    padding: 12px;
+}
+
+.camera-content video {
+    display: block;
+    width: 100%;
+    height: min(45vh, 420px);
+    background: #000;
+    object-fit: contain;
+}

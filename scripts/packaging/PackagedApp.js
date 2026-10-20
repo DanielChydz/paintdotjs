@@ -18,9 +18,10 @@ const {spawn} = require("node:child_process");
 const {setTimeout: delay} = require("node:timers/promises");
 
 class PackagedApp {
-    constructor(executable, profile) {
+    constructor(executable, profile, args = []) {
         this.executable = executable;
         this.profile = profile;
+        this.args = args;
         this.pending = new Map();
         this.sequence = 0;
         this.logs = "";
@@ -28,7 +29,7 @@ class PackagedApp {
 
     async open() {
         this.process = spawn("xvfb-run", ["-a", this.executable, "--ozone-platform=x11",
-            "--user-data-dir=" + this.profile, "--remote-debugging-port=0"],
+            "--user-data-dir=" + this.profile, "--remote-debugging-port=0", ...this.args],
         {detached: true, stdio: ["ignore", "pipe", "pipe"],
             env: {...process.env, XDG_CONFIG_HOME: path.join(this.profile, "config"),
                 XDG_CACHE_HOME: path.join(this.profile, "cache")}});

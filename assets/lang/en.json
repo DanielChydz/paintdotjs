@@ -375,6 +375,10 @@
         "text": "Acquire",
         "name": "Acquire"
       },
+      "camera": {
+        "text": "From Camera...",
+        "name": "From Camera"
+      },
       "close": {
         "text": "Close",
         "name": "Close"

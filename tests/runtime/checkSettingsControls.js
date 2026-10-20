@@ -350,8 +350,9 @@ module.exports = async function checkSettingsControls() {
             check(cells[cells.indexOf(name) + 1] === "Unavailable", "Diagnostics falsely advertised capability: " + name);
         }
         settings.selectSection("graphics");
-        check(settings.page.textContent.includes("Graphics acceleration is not available."),
-            "Graphics settings falsely advertised unavailable acceleration");
+        await waitFor(() => settings.page.textContent.includes("Current process acceleration:"));
+        check(!settings.page.textContent.includes("Graphics acceleration is not available."),
+            "Desktop diagnostics confused unavailable WebGL with process acceleration");
     } finally {
         diagnosticProperties.forEach((name, index) => {
             if (navigatorDescriptors[index] === undefined) {

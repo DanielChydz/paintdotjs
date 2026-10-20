@@ -3,7 +3,7 @@
 Stan przeglądu: 2026-10-20. Źródła: README, FIXME.md, komentarze TODO w `js/`
 oraz nieaktywne pozycje menu i ustawień. To audyt repozytorium, a nie pełna
 inwentaryzacja wszystkich funkcji najnowszego Paint.NET. Pierwsza partia
-(punkty 1–6) oraz punkty 8–11 zostały zaimplementowane. Punkt 7 jest odłożony
+(punkty 1–6) oraz punkty 8–16 zostały zaimplementowane. Punkt 7 jest odłożony
 na decyzję użytkownika; pozostałe pozycje pozostają planem prac.
 
 Skala: **S** — mała, lokalna zmiana; **M** — kilka współpracujących komponentów;
@@ -38,7 +38,7 @@ zajętości oraz zachowanie pikseli i historii po błędach alokacji.
 ## P2 — konkretne uzupełnienia i zaległości techniczne
 
 **Status:** punkt 7 odłożony — obecnie nie publikujemy wydań prerelease.
-Punkty **8–11 ukończone**:
+Punkty **8–16 ukończone**:
 
 - 8: biały obrys wraca płynnie przez 200 ms po resecie; globalne wyłączenie
   animacji pozostawia pełny, statyczny obrys. Wykorzystana jest istniejąca pętla
@@ -55,33 +55,74 @@ Punkty **8–11 ukończone**:
   odpina zdarzenia zaznaczenia i ustawień oraz zwalnia własną ścieżkę. Sprzątany
   jest również tymczasowy podgląd narzędzia zaznaczania.
 
-Tabela zachowuje pierwotny zakres; następne nieukończone punkty to **12–16**.
+Tabela zachowuje pierwotny zakres; podsumowanie punktów **12–16** znajduje się
+poniżej. Kolejne większe zadania (17–21) wymagają osobnej decyzji.
 
-### TODO — do przejęcia przez kolejnego agenta
+### Ukończona partia 12–16
 
-Poniższe zadania są zapisane do późniejszej realizacji; ich implementacja nie
-została rozpoczęta. Zalecana kolejność: 12–14, następnie 15 i osobno każdy
-format z punktu 16. Szczegółowy zakres, kryteria ukończenia i odnośniki do kodu
-znajdują się w tabeli poniżej.
+Wdrożono kolejno punkty 12–15, a następnie osobno TIFF, BMP/TGA i DDS.
+Szczegółowy pierwotny zakres, kryteria ukończenia i odnośniki do kodu pozostają
+w tabeli poniżej.
 
-- [ ] **12:** zmierzyć i usprawnić przewijanie, zmianę rozmiaru okna oraz
+- [x] **12:** zmierzyć i usprawnić przewijanie, zmianę rozmiaru okna oraz
   tworzenie dokumentu, zachowując zoom, pozycję widoku i poprawne odświeżanie.
-- [ ] **13:** ustalić i wdrożyć kontrakt całkowitoliczbowych skanów oraz granic
+- [x] **13:** ustalić i wdrożyć kontrakt całkowitoliczbowych skanów oraz granic
   regionu; uwzględnić współrzędne ułamkowe, ujemne, otwory i puste regiony.
-- [ ] **14:** uruchomić rzeczywisty przełącznik akceleracji sprzętowej desktopu,
+- [x] **14:** uruchomić rzeczywisty przełącznik akceleracji sprzętowej desktopu,
   z trwałą preferencją, zastosowaniem przy starcie Electrona i informacją
   o wymaganym restarcie.
-- [ ] **15:** dodać pobieranie obrazu z kamery: podgląd, uprawnienia, zdjęcie,
+- [x] **15:** dodać pobieranie obrazu z kamery: podgląd, uprawnienia, zdjęcie,
   anulowanie, obsługę braku urządzenia i zwolnienie strumienia.
-- [ ] **16:** po audycie kodeków rozszerzać opcje eksportu kolejno dla TIFF,
+- [x] **16:** po audycie kodeków rozszerzać opcje eksportu kolejno dla TIFF,
   BMP/TGA i DDS; wyniki weryfikować niezależnym dekoderem.
 
-**Przekazanie:** punkty 1–6 i 8–11 są ukończone; punkt 7 pozostaje odłożony
+**Pomiary punktu 12:** scenariusz `checkViewPerformance.js`, dokument 1024×768:
+tworzenie — 2 → 1 kompozycja, niezmiennie 3 powierzchnie robocze; 100 zmian
+przewinięcia — 0 kompozycji/alokacji/resetów canvasu; 20 zdarzeń resize bez
+zmiany wymiarów — 40 → 0 resetów canvasu; resize Fit to Window — 4 → 0 resetów.
+Rzeczywista zmiana wymiarów zmienia tylko backing store widoku, nie powierzchnie
+dokumentu. Usunięto podwójną inwalidację nowego dokumentu i podwójne
+przeliczanie układu przy dopasowaniu. Nieaktywne dokumenty zachowują pozycję
+bez przewijania aktywnego widoku.
+
+**Kontrakt punktu 13:** `getRegionScansInt()` zwraca niezależne półotwarte
+prostokąty całkowitoliczbowe, zaokrąglając niepuste prostokąty na zewnątrz.
+`getBoundsInt()` obejmuje wyłącznie te skany; pusty region ma granice (0,0,0,0).
+Współrzędne niefinitywne i przekraczające bezpieczne liczby całkowite zgłaszają
+błąd zamiast indeksować tablicę ułamkami. Region z geometrii ścieżki używa
+wspólnego ze statystykami zaznaczenia skanowania even/odd w środkach pikseli,
+zamiast prostokątów otaczających kontury, które wypełniały otwory.
+
+**Punkt 14:** desktop zapisuje preferencję w profilu aplikacji i stosuje
+`disableHardwareAcceleration()` przed gotowością Electrona. Ustawienia oddzielają
+preferencję następnego startu, konieczność restartu, bieżący stan procesu oraz
+statusy funkcji Chromium. Web nie udaje, że może zmieniać akcelerację; dostępność
+WebGL nie jest traktowana jako identyfikacja fizycznego GPU.
+
+**Punkt 15:** osobne File → From Camera, start na żądanie użytkownika,
+podgląd bez audio i zdjęcie jako niezapisany dokument PNG. Testy desktop/web
+obejmują rzeczywiste `getUserMedia` z testową kamerą Chromium, odmowę zgody,
+brak/zajętość urządzenia, odłączenie, błędy podglądu/alokacji/kodowania/importu
+i anulowanie podczas oczekiwania na zgodę oraz podczas kodowania. Wszystkie
+ścieżki zamknięcia zwalniają strumień. Ograniczeń prywatności systemu i sandboxu
+Flatpak nie obchodzimy.
+
+**Punkt 16:** TIFF RGB/RGBA 8 bit/kanał, bez kompresji/LZW/Deflate; BMP/TGA
+24-bit RGB lub dotychczasowy 32-bit z alfa; DDS bez kompresji lub BC1/DXT1
+i BC3/DXT5, bez mipmap. Warianty RGB składają przezroczystość na bieli.
+Opcje są trwałe per format; można przywrócić domyślne. Podgląd TIFF/TGA/DDS
+dekoduje wynik zapisu, w tym stratny DDS. Testy kontrolują nagłówki, rzeczywiste
+bajty, nieparzyste i minimalne wymiary, alfa oraz padding; niezależny FFmpeg
+odczytuje eksporty desktopowe. Audyt opisano w [image-encoders.md](image-encoders.md).
+
+**Przekazanie:** punkty 1–6 i 8–16 są ukończone; punkt 7 pozostaje odłożony
 na wyraźną decyzję użytkownika (brak wydań prerelease). Ostatnia weryfikacja:
-255 testów przeszło, pokrycie linii, gałęzi i funkcji runtime wynosi 100%; testy
-aplikacji rozpakowanej z DEB również przeszły. Szczegóły zapisano w
+266 testów przeszło, pokrycie linii, gałęzi i funkcji wszystkich 287 plików
+runtime wynosi 100%, bez nowych wykluczeń. Szczegóły testów paczki zapisano w
 [COVERAGE-STATUS.md](../COVERAGE-STATUS.md). Pracować na `develop`, commitować
 lokalnie, a po zakończeniu i testach scalać do lokalnego `master`; nie pushować.
+Zbudowano DEB i przetestowano jego rzeczywisty plik wykonywalny w dziesięciu
+scenariuszach, w tym nowych testach widoku, akceleracji, kamery i eksportu.
 
 | ID | Zadanie | Skala | Zakres i kryterium ukończenia | Miejsce w kodzie |
 | --- | --- | --- | --- | --- |

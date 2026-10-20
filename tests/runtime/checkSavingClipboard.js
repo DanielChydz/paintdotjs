@@ -263,7 +263,7 @@ module.exports = async function checkSavingClipboard() {
                 check(input === canvas && type === "image/png", "Fallback preview converted the wrong source or type");
                 return new Promise(resolve => resolveFallback = resolve);
             };
-            pending = SaveImageDialog.open({canvas, initialFormat: "tiff", encode: async () => realPng});
+            pending = SaveImageDialog.open({canvas, initialFormat: "jxl", encode: async () => realPng});
             await waitFor(() => typeof resolveFallback === "function");
             let fallbackDialog = form();
             if (action === "close") {

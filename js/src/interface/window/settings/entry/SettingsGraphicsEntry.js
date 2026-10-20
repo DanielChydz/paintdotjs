@@ -16,15 +16,53 @@ class SettingsGraphicsEntry extends SettingsEntry {
 
     render() {
         this.addHeading("Graphics");
-        this.addCheckbox("graphics.hardwareAcceleration", "Use hardware acceleration for the user interface", {
-            disabled: true,
-            note: "Hardware acceleration is controlled by the browser and cannot be changed here."
+        let desktop = typeof isApp !== "undefined" && isApp;
+        let input = this.addCheckbox("graphics.hardwareAcceleration", "Use hardware acceleration for the user interface", {
+            disabled: !desktop,
+            note: desktop
+                ? "Changes take effect after restarting paint.js. Save your work before closing."
+                : "Hardware acceleration is controlled by the browser and cannot be changed here."
         });
-        this.addNote("Graphics acceleration is " + (this.isWebGlAvailable() ? "available." : "not available."));
+        if (desktop) {
+            let diagnostic = this.addNote("Reading the current graphics status...");
+            input.disabled = true;
+            input.onchange = () => {
+                void this.updateDesktopGraphics(input, diagnostic, input.checked);
+            };
+            void this.updateDesktopGraphics(input, diagnostic);
+        } else {
+            this.addNote("WebGL is " + (this.isWebGlAvailable() ? "available." : "not available.")
+                + " This does not identify a physical GPU.");
+        }
         this.addSelect("graphics.renderingDevice", "Rendering device:", [["auto", "Automatic (browser default)"]], {
             disabled: true,
-            note: "Rendering-device selection is not available to web applications."
+            note: "Selecting a physical rendering device is not supported."
         });
+    }
+
+    async updateDesktopGraphics(input, diagnostic, enabled = null) {
+        let previous = AppSettingsStore.get("graphics.hardwareAcceleration", true);
+        input.disabled = true;
+        try {
+            let status = enabled === null
+                ? await window.desktopGraphics.getStatus()
+                : await window.desktopGraphics.setEnabled(enabled);
+            input.checked = status.preference;
+            AppSettingsStore.set("graphics.hardwareAcceleration", status.preference);
+            let current = status.enabled === null ? "pending GPU initialization"
+                : (status.enabled ? "enabled" : "disabled");
+            let features = status.features === null ? "" : Object.entries(status.features)
+                .map(([feature, value]) => feature + ": " + value).join("; ");
+            diagnostic.textContent = "Current process acceleration: " + current + ". "
+                + (status.restartRequired ? "Restart required. " : "No restart required. ")
+                + features;
+        } catch (error) {
+            input.checked = previous;
+            diagnostic.textContent = "Could not read or save graphics settings: " + error.message;
+            console.error("Could not update desktop graphics settings", error);
+        } finally {
+            input.disabled = false;
+        }
     }
 
     isWebGlAvailable() {

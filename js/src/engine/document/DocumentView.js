@@ -36,14 +36,14 @@ class DocumentView {
         this.onDocumentInvalidated = this.onDocumentInvalidated.bind(this);
 
         this.onUpdateViewport = documentView => {
-            if (documentView !== this) {
+            if (documentView !== this || this.app.getActiveDocumentWorkspace() !== this) {
                 return;
             }
 
             this.app.setViewPosition(this.viewportX, this.viewportY);
 
-            // TODO Surface box pre-paint? (bad performance on scroll)
-            // this.updateComposition();
+            // Scrolling presents the existing composition; only document
+            // invalidations below change its pixels.
         };
         this.onInvalidatedDocument = document => {
             if (document === this.document) {

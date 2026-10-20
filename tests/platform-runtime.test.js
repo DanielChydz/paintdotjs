@@ -416,6 +416,12 @@ function mainFixture(directory, options = {}) {
     app.requestSingleInstanceLock = () => options.locked !== false;
     app.quit = () => state.quits = (state.quits || 0) + 1;
     app.whenReady = () => ({then: callback => state.start = callback});
+    app.disableHardwareAcceleration = () => {
+        assert.equal(state.start, undefined, "Acceleration was disabled after scheduling startup");
+        state.accelerationDisabled = true;
+    };
+    app.isHardwareAccelerationEnabled = () => !state.accelerationDisabled;
+    app.getGPUFeatureStatus = () => ({gpu_compositing: state.accelerationDisabled ? "disabled_software" : "enabled"});
     ipcMain.handle = (name, callback) => state.handlers.set(name, callback);
     let BrowserWindow = function (settings) {
         let window = new EventEmitter();
@@ -486,6 +492,50 @@ function mainFixture(directory, options = {}) {
     let api = vm.runInContext("({readWindowState, restoreWindowBounds, writeWindowState, commandLineFiles, resolveAppRequest, prepareApplication})", context);
     return {state, app, ipcMain, nativeAutoUpdater, api};
 }
+
+test("desktop graphics preference persists, applies before ready and reports actual process status", async t => {
+    let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintdotjs-graphics-test-"));
+    t.after(() => fs.rmSync(directory, {recursive: true, force: true}));
+    let filename = path.join(directory, "graphics-preferences.json");
+    for (let contents of ["invalid", "{}", "null", '{"hardwareAcceleration":"false"}']) {
+        fs.writeFileSync(filename, contents);
+        let fixture = mainFixture(directory);
+        assert.equal(fixture.state.warnings.length, 1);
+        assert.equal(fixture.state.accelerationDisabled, undefined);
+    }
+    fs.writeFileSync(filename, '{"hardwareAcceleration":false}');
+    let {state, app} = mainFixture(directory);
+    assert.equal(state.accelerationDisabled, true);
+    let get = state.handlers.get("desktop:graphics-status");
+    let set = state.handlers.get("desktop:graphics-preference");
+    assert.throws(() => get({sender: {}}), /application window/);
+    assert.throws(() => set({sender: {}}, true), /application window/);
+    await state.start();
+    let event = {sender: state.windows[0].webContents};
+    assert.equal(get(event).enabled, null);
+    assert.equal(get(event).features, null);
+    app.emit("gpu-info-update");
+    assert.equal(get(event).enabled, false);
+    assert.equal(get(event).features.gpu_compositing, "disabled_software");
+    assert.equal(get(event).restartRequired, false);
+    assert.throws(() => set(event, 1), /boolean/);
+    assert.throws(() => get({sender: {}}), /application window/);
+    assert.throws(() => set({sender: {}}, true), /application window/);
+    assert.equal(set(event, true).restartRequired, true);
+    assert.equal(get(event).enabled, false);
+    let restarted = mainFixture(directory);
+    assert.equal(restarted.state.accelerationDisabled, undefined);
+    await restarted.state.start();
+    restarted.app.emit("gpu-info-update");
+    let status = restarted.state.handlers.get("desktop:graphics-status")({sender: restarted.state.windows[0].webContents});
+    assert.equal(status.preference, true);
+    assert.equal(status.enabled, true);
+    assert.equal(status.restartRequired, false);
+    fs.unlinkSync(filename);
+    fs.mkdirSync(filename);
+    assert.throws(() => set(event, false), /EISDIR/);
+    assert.equal(get(event).preference, true);
+});
 
 test("desktop main restores monitor bounds, persists window state and filters protocol/file inputs", async t => {
     let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintdotjs-main-test-"));

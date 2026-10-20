@@ -15,6 +15,14 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "desktop export options produce independently decoded image files", file: "checkExportOptions.js"},
+    {name: "browser export options preserve settings and image structure", file: "checkExportOptions.js", browser: true},
+    {name: "desktop camera preview, photo import, permission failures and stream cleanup", file: "checkCameraCapture.js",
+        extraArgs: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]},
+    {name: "browser camera preview, photo import, permission failures and stream cleanup", file: "checkCameraCapture.js", browser: true,
+        extraArgs: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"]},
+    {name: "desktop hardware acceleration startup and persistent settings", file: "checkGraphicsSettings.js", graphicsAcceleration: false},
+    {name: "document view composition and allocation measurements", file: "checkViewPerformance.js"},
     {name: "selection fades, overlay invalidation, renderer ownership and gesture history series", file: "checkRendererHistory.js"},
     {name: "recent files, plugin help, busy operations and history failure recovery", file: "checkFirstBatchFeatures.js"},
     {name: "browser recent file handles persist and retain permissions", file: "checkFirstBatchFeaturesBrowser.js", browser: true},
@@ -235,6 +243,9 @@ if (process.versions.electron) {
     let lastPhase = "loading";
     ipcMain.on("paintdotjs:test-phase", (_event, phase) => {
         lastPhase = phase;
+        if (scenario.file === "checkViewPerformance.js") {
+            console.log("View measurement: " + phase);
+        }
     });
     ipcMain.handle("paintdotjs:test-input", (event, input) => {
         let window = BrowserWindow.fromWebContents(event.sender);
@@ -357,6 +368,10 @@ if (process.versions.electron) {
         }
         let directory = fs.mkdtempSync(path.join(os.tmpdir(), "paintdotjs-desktop-test-"));
         try {
+            if (scenario.graphicsAcceleration !== undefined) {
+                fs.writeFileSync(path.join(directory, "graphics-preferences.json"),
+                    JSON.stringify({hardwareAcceleration: scenario.graphicsAcceleration}));
+            }
             let result = spawnSync("xvfb-run", [
                 "-a", path.join(root, "node_modules/.bin/electron"),
                 "--ozone-platform=x11", ...(scenario.extraArgs || []), __filename
@@ -369,6 +384,9 @@ if (process.versions.electron) {
             assert.equal(result.error, undefined, result.stdout + result.stderr);
             assert.equal(result.status, 0, result.stdout + result.stderr);
             assert.match(result.stdout, /Desktop regression checks passed/);
+            for (let line of result.stdout.split("\n").filter(line => line.startsWith("View measurement: "))) {
+                console.log(line);
+            }
         } finally {
             fs.rmSync(directory, {recursive: true, force: true});
         }

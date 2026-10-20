@@ -19,6 +19,11 @@ const path = require('node:path');
 
 const localFilePaths = new WeakMap();
 
+window.desktopGraphics = {
+    getStatus: () => ipcRenderer.invoke('desktop:graphics-status'),
+    setEnabled: enabled => ipcRenderer.invoke('desktop:graphics-preference', enabled)
+};
+
 window.desktopFileActions = {
     copyText: text => navigator.clipboard.writeText(text),
     readFile: async filename => {

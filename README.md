@@ -69,19 +69,42 @@ still some additions and limitations worth noting.
   geometry changes, without recompositing document pixels. Each transform gesture and Finish retain
   a distinct history series through undo/redo. Closing a document or changing tools releases renderer
   subscriptions and owned selection paths while preserving borrowed surfaces.
+- Scrolling reuses composed pixels. Window resizing preserves the document-space
+  center at a fixed zoom, or refits and centers **Fit to Window** views; unchanged
+  canvas dimensions do not reset its backing store. New documents compose once.
+- Region-to-path conversion uses half-open integer pixel scans: fractional
+  rectangles round outward, empty rectangles contribute nothing, and negative
+  origins, disconnected islands and holes are preserved. Path-derived regions
+  use the same even/odd pixel-center rasterization as selection statistics.
 - The deployed web version can work offline and provides browser-oriented file, clipboard, and drag
   and drop workflows.
+- **File → From Camera** requests video access only after **Start Camera**,
+  displays a live preview and opens **Take Photo** as an unsaved PNG document.
+  Cancel, Escape, closing the dialog, page exit and device failure release the
+  stream, including permission granted after cancellation. Permission denial,
+  missing/busy cameras and capture failures are displayed in the dialog.
+  Supported in Chromium over HTTPS/localhost and desktop installations with
+  camera access. System privacy controls still apply; the Flatpak sandbox may
+  prevent direct webcam access. The application does not broaden sandbox device
+  permissions or request audio.
 
 **Settings → Updates → Automatically check for updates** is persistent. On desktop it controls
 startup and hourly checks; **Check now** remains available. In the web app it controls application
 update checks and prompts. The browser may independently check its service worker for updates;
 disabling the preference keeps offline support intact.
 
+**Settings → Graphics → Use hardware acceleration** is available on desktop.
+The preference is saved for the next Electron launch; changing it requires
+closing and restarting the application. The page reports the current process
+acceleration and Chromium feature statuses separately from the preference.
+It does not select a physical GPU. In the browser the switch remains disabled;
+WebGL availability alone is not proof of hardware acceleration.
+
 ### Missing or limited compared with Paint.NET
 
 - Chromium is the supported browser family. Firefox and Safari are not regularly tested, and their
   file-system and clipboard capabilities differ.
-- Scanner/camera acquisition and color-profile commands are not implemented yet.
+- Scanner acquisition and color-profile commands are not implemented yet.
 - Native Paint.NET DLL plugins cannot be loaded. JavaScript plugins can provide effects and file types; see [the plugin guide](docs/plugin-api/README.md).
 - Manual GPU/device selection and direct advanced-color management are not implemented.
 - Very large documents, large-radius effects, and complex selections may still be slower or more
@@ -100,11 +123,11 @@ disabling the preference keeps offline support intact.
 | AVIF | Yes | Yes | Yes | Yes | — |
 | HEIC/HEIF | With the Windows codec | With the Windows codec | Yes | Yes | Bundled libheif/Kvazaar saves 8-bit HEVC 4:2:0 images with alpha. RGB conversion and chroma subsampling can change colors even at quality 100. |
 | WebP | Yes | Yes | Yes | Yes | — |
-| DDS | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. RGBA/BGRA 32-bit DDS is decoded directly, including older paint.js files; other variants use the bundled codec. |
-| TIFF (`.tif`, `.tiff`) | Yes | Yes | Yes | Yes | paint.js saves uncompressed RGBA images only. |
+| DDS | Yes | Yes | Yes | Yes | Saves uncompressed RGBA or lossy BC1/DXT1 (RGB over white) and BC3/DXT5 (RGBA), without mipmaps. RGBA/BGRA 32-bit DDS is decoded directly, including older paint.js files; other variants use the bundled codec. |
+| TIFF (`.tif`, `.tiff`) | Yes | Yes | Yes | Yes | Saves 8-bit/channel RGB or RGBA, uncompressed, LZW or Deflate. RGB composites transparency onto white; RGBA retains alpha. |
 | GIF | Yes | Yes | Yes | Yes | paint.js saves a single static, palette-based image only. |
-| BMP | Yes | Yes | Yes | Yes | paint.js saves 32-bit images with alpha only. |
-| TGA | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. |
+| BMP | Yes | Yes | Yes | Yes | Saves 32-bit with alpha or 24-bit RGB over white. |
+| TGA | Yes | Yes | Yes | Yes | Saves uncompressed 32-bit with alpha or 24-bit RGB over white. |
 | JPEG XR (`.jxr`, `.wdp`, `.wmp`) | Yes | Yes | Limited | Yes | Opens RGB images with 8-bit, 16-bit, or 32-bit floating-point channels. Saves 8-bit RGBA with lossless alpha; quality 100 also preserves RGB exactly. |
 
 Animated and multi-page files are imported and exported as a single static image in paint.js.
@@ -231,6 +254,9 @@ layer-name safety, document cleanup, worker cancellation, dialogs, image codecs,
 painting, selections, text, move history, and CPU/WebGL resampling. The WebGL
 scenario uses SwiftShader to execute the actual shaders without requiring a
 hardware GPU; this is a correctness check, not a hardware GPU benchmark.
+Camera scenarios use Chromium's synthetic video device, not a physical webcam.
+Export scenarios require FFmpeg to decode TIFF, BMP, TGA and DDS independently;
+the application itself does not depend on FFmpeg.
 
 Additional scenarios verify save previews, native file writes, clipboard history,
 color palettes, keyboard navigation, error recovery, and real FontFace/IndexedDB
@@ -350,8 +376,9 @@ or a guaranteed whole-application memory reduction.
 
 ### Tests and runtime coverage
 
-On Linux, the desktop tests require `xvfb-run` and the system libraries needed by
-Electron. Use Node.js 24 LTS for the following commands:
+On Linux, the desktop tests require `xvfb-run`, FFmpeg (independent image export
+decoding), and the system libraries needed by Electron. Use Node.js 24 LTS for
+the following commands:
 
 ```bash
 npm run test:coverage

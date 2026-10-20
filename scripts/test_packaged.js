@@ -20,17 +20,24 @@ const PackagedApp = require("./packaging/PackagedApp");
 async function testPackaged() {
     let profile = await fs.mkdtemp(path.join(os.tmpdir(), "paintjs-packaged-"));
     let executable = path.resolve(process.argv[2] || "dist/linux-unpacked/paintdotjs");
-    let application = new PackagedApp(executable, profile);
+    let application = new PackagedApp(executable, profile, [
+        "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"
+    ]);
     try {
         await application.open();
-        for (let scenario of ["checkOpenAssets", "checkModernCodecs", "checkUpstreamFeatures", "checkPainting", "checkFirstBatchFeatures", "checkRendererHistory"]) {
+        for (let scenario of ["checkOpenAssets", "checkModernCodecs", "checkUpstreamFeatures", "checkPainting",
+            "checkFirstBatchFeatures", "checkRendererHistory", "checkViewPerformance", "checkGraphicsSettings",
+            "checkCameraCapture", "checkExportOptions"]) {
             let run = require("../tests/runtime/" + scenario + ".js");
             // Archive creation is fixture tooling; the app only needs its bundled reader.
             let source = run.toString().replace('require("fflate")',
                 "require(" + JSON.stringify(require.resolve("fflate")) + ")");
-            let args = scenario === "checkOpenAssets"
-                ? 'JSON.parse(require("node:fs").readFileSync(require("node:path").join(process.resourcesPath, "desktop/asset-manifest.json"), "utf8"))'
-                : "";
+            let args = "";
+            if (scenario === "checkOpenAssets") {
+                args = 'JSON.parse(require("node:fs").readFileSync(require("node:path").join(process.resourcesPath, "desktop/asset-manifest.json"), "utf8"))';
+            } else if (scenario === "checkGraphicsSettings") {
+                args = "true";
+            }
             await application.evaluate("(" + source + ")(" + args + ").then(() => true)");
             console.log("Packaged check passed: " + scenario);
         }
