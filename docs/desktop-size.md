@@ -23,6 +23,7 @@ use UPX, runtime extraction, font subsetting, or remove Chromium features.
   artifacts and their pinned checksums remain unchanged.
 - Node copies of webpack-bundled libraries and maintenance-only ZIP readers are
   excluded, along with unused ESM/CLI distributions of CommonJS dependencies.
+  The YAML CLI-only argparse dependency is excluded as well.
   The updater and native titlebar retain their CommonJS entry points. Bundled
   library notices remain in `assets/licenses`.
 
@@ -52,3 +53,19 @@ its bundled ZIP reader.
 A custom Chromium/Electron build is intentionally outside these optimizations:
 the prebuilt executable is already stripped. Disabling browser subsystems or
 removing ICU/locales, GPU fallbacks and runtime resources could lose behavior.
+
+## Measured Linux x64 result (2026-10-20)
+
+Both builds use version 2.6.0, Electron 44.7.0 and the same lockfile versions
+for runtime dependencies. Baseline: commit `4e16b78`. Installed payload is the
+sum of logical file sizes in `linux-unpacked`, rather than filesystem allocation.
+
+| Payload | Baseline | Optimized | Reduction |
+| --- | ---: | ---: | ---: |
+| Installed files | 317.88 MiB | 307.36 MiB | 10.52 MiB (3.31%) |
+| DEB download | 106.84 MiB | 94.99 MiB | 11.85 MiB (11.09%) |
+
+The Electron executable, shared libraries, snapshots, locale packs, ICU data and
+Chromium license document are unchanged. The final DEB is extracted into a
+temporary directory and its actual executable passes `npm run test:package`.
+No system installation or remote push is performed by this validation.

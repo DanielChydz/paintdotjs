@@ -30,6 +30,16 @@ test("bundled assets carry open provenance, checked licenses and no proprietary 
         assert.equal(typeof manifest.files[relative], "string");
     }
     assert.equal(fs.existsSync(path.join(root, "assets/font/segoe_ui.ttf")), false);
+    // Removing duplicate Node packages must retain the bundled code's notices.
+    for (let dependency of ["fflate", "buffer", "base64-js", "ieee754", "ms-nrbf-js"]) {
+        assert.equal(fs.readFileSync(path.join(root, "assets/licenses", dependency + "-LICENSE.txt"), "utf8"),
+            fs.readFileSync(path.join(root, "node_modules", dependency, "LICENSE"), "utf8"));
+    }
+    for (let notice of ["LICENSE", "NOTICE"]) {
+        assert.equal(fs.readFileSync(path.join(root, "assets/licenses/magick-wasm-" + notice + ".txt"), "utf8"),
+            fs.readFileSync(path.join(root, "node_modules/@imagemagick/magick-wasm", notice), "utf8"));
+    }
+
     let provenance = require("../artwork/upstream-icons.json");
     for (let [relative, hash] of Object.entries(provenance.files)) {
         assert.equal(crypto.createHash("sha256").update(fs.readFileSync(path.join(root, "assets", relative))).digest("hex"), hash,

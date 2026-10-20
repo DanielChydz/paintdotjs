@@ -29,7 +29,9 @@ class PackagedApp {
     async open() {
         this.process = spawn("xvfb-run", ["-a", this.executable, "--ozone-platform=x11",
             "--user-data-dir=" + this.profile, "--remote-debugging-port=0"],
-        {detached: true, stdio: ["ignore", "pipe", "pipe"]});
+        {detached: true, stdio: ["ignore", "pipe", "pipe"],
+            env: {...process.env, XDG_CONFIG_HOME: path.join(this.profile, "config"),
+                XDG_CACHE_HOME: path.join(this.profile, "cache")}});
         this.process.on("error", error => { this.startError = error; });
         for (let stream of [this.process.stdout, this.process.stderr]) {
             stream.on("data", data => { this.logs = (this.logs + data).slice(-65536); });

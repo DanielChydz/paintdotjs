@@ -59,4 +59,4 @@ are provided in `scripts/codecs/sources.json` and `docs/image-encoders.md`.
 
 Bundled codec and archive JavaScript is compiled into the web bundle rather than
 installed a second time as Node packages. Its notices are retained in
-`assets/licenses/{magick-wasm,fflate,buffer,ms-nrbf-js}-*.txt`.
+`assets/licenses/{magick-wasm,fflate,buffer,base64-js,ieee754,ms-nrbf-js}-*.txt`.

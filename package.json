@@ -115,7 +115,8 @@
       "!node_modules/ieee754/**/*",
       "!node_modules/custom-electron-titlebar/**/*.mjs",
       "!node_modules/js-yaml/dist/**/*",
-      "!node_modules/js-yaml/bin/**/*"
+      "!node_modules/js-yaml/bin/**/*",
+      "!node_modules/argparse/**/*"
     ],
     "extraResources": [
       {

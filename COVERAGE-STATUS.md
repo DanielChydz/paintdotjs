@@ -1,6 +1,37 @@
 # Runtime coverage handoff
 
-## Current verified checkpoint (2026-10-17)
+## Current verified checkpoint (2026-10-20)
+
+All 250 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
+all 282 runtime JavaScript source files, without added exclusions or ignores.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 45,953 | 45,953 | 100% | 0 |
+| Branches | 11,728 | 11,728 | 100% | 0 |
+| Functions | 2,827 | 2,827 | 100% | 0 |
+
+Desktop size changes retain all font families, glyphs, variable axes, codecs,
+locales, GPU resources and extension APIs. Fonts use lossless WOFF2; release
+JS/CSS is minified with reflection/global contracts preserved. WASM size passes
+validate imports/exports and cache unchanged modules for watch builds. Packaging
+excludes duplicate bundled dependencies and maintenance scripts; library notices
+are retained. DEB uses XZ level 9. See `docs/desktop-size.md` for measurements,
+regeneration and the real packaged-executable smoke test.
+
+The full suite verifies desktop/browser codecs and fonts. Packaging tests verify
+minified reflection, cross-file globals, worker serialization, CSS paths and
+executable WASM exports across repeated builds. `npm run test:package` separately
+checks the real packaged Linux executable (fonts, modern codecs, icon packs,
+extensions and painting) in a disposable profile under Xvfb. RPM/macOS/Windows
+packages and native GPU hardware were not exercised in this Linux task.
+
+Logs: `/tmp/paintjs-size-coverage-final.log`,
+`/tmp/paintjs-size-final-deb.log`, `/tmp/paintjs-size-final-package.log`,
+`/tmp/paintjs-size-final-smoke.log`.
+Font table verification: `/tmp/paintjs-size-font-verify.log`.
+
+## Historical verified checkpoint (2026-10-17)
 
 All 248 tests pass on Linux with Node 24.21.0. A clean
 `npm run test:coverage:check` includes all 282 runtime JavaScript source files;
