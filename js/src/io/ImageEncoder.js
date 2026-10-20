@@ -19,10 +19,10 @@ class ImageEncoder {
             case "png": return this.canvasToBlob(canvas, "image/png");
             case "jpeg": return this.encodeJpeg(canvas, quality, options);
             case "webp": return this.canvasToBlob(canvas, "image/webp", quality);
-            case "bmp": return this.encodeBmp(canvas);
+            case "bmp": return this.encodeBmp(canvas, options);
             case "gif": return this.encodeGif(canvas);
             case "tiff": return this.encodeTiff(canvas, options);
-            case "tga": return this.encodeTga(canvas);
+            case "tga": return this.encodeTga(canvas, options);
             case "dds": return this.encodeDds(canvas);
             case "avif": return this.encodeModern(canvas, "image/avif", "avif", quality);
             case "heic": return this.encodeModern(canvas, "image/heic", "heic", quality);
@@ -102,50 +102,72 @@ class ImageEncoder {
             .getImageData(0, 0, source.width, source.height);
     }
 
-    static encodeBmp(canvas) {
-        const image = this.getPixels(canvas);
-        const offset = 122;
-        const buffer = new ArrayBuffer(offset + image.data.length);
+    static encodeBmp(canvas, options = {}) {
+        let bitDepth = Number(options.bitDepth ?? 32);
+        if (bitDepth !== 24 && bitDepth !== 32) {
+            throw new Error("Unsupported BMP bit depth");
+        }
+        const image = this.getPixels(canvas, bitDepth === 24);
+        let pixelSize = bitDepth / 8;
+        let stride = Math.ceil(image.width * pixelSize / 4) * 4;
+        let headerSize = bitDepth === 32 ? 108 : 40;
+        const offset = 14 + headerSize;
+        const buffer = new ArrayBuffer(offset + stride * image.height);
         const view = new DataView(buffer);
         const bytes = new Uint8Array(buffer);
         bytes.set([0x42, 0x4d]);
         view.setUint32(2, buffer.byteLength, true);
         view.setUint32(10, offset, true);
-        view.setUint32(14, 108, true);
+        view.setUint32(14, headerSize, true);
         view.setInt32(18, image.width, true);
         view.setInt32(22, -image.height, true);
         view.setUint16(26, 1, true);
-        view.setUint16(28, 32, true);
-        view.setUint32(30, 3, true);
-        view.setUint32(34, image.data.length, true);
-        view.setUint32(54, 0x00ff0000, true);
-        view.setUint32(58, 0x0000ff00, true);
-        view.setUint32(62, 0x000000ff, true);
-        view.setUint32(66, 0xff000000, true);
-        bytes.set([0x20, 0x6e, 0x69, 0x57], 70);
-        for (let source = 0, target = offset; source < image.data.length; source += 4, target += 4) {
-            bytes[target] = image.data[source + 2];
-            bytes[target + 1] = image.data[source + 1];
-            bytes[target + 2] = image.data[source];
-            bytes[target + 3] = image.data[source + 3];
+        view.setUint16(28, bitDepth, true);
+        view.setUint32(30, bitDepth === 32 ? 3 : 0, true);
+        view.setUint32(34, stride * image.height, true);
+        if (bitDepth === 32) {
+            view.setUint32(54, 0x00ff0000, true);
+            view.setUint32(58, 0x0000ff00, true);
+            view.setUint32(62, 0x000000ff, true);
+            view.setUint32(66, 0xff000000, true);
+            bytes.set([0x20, 0x6e, 0x69, 0x57], 70);
+        }
+        for (let y = 0; y < image.height; ++y) {
+            for (let x = 0; x < image.width; ++x) {
+                let source = (y * image.width + x) * 4;
+                let target = offset + y * stride + x * pixelSize;
+                bytes[target] = image.data[source + 2];
+                bytes[target + 1] = image.data[source + 1];
+                bytes[target + 2] = image.data[source];
+                if (bitDepth === 32) {
+                    bytes[target + 3] = image.data[source + 3];
+                }
+            }
         }
         return new Blob([buffer], {type: "image/bmp"});
     }
 
-    static encodeTga(canvas) {
-        const image = this.getPixels(canvas);
-        const bytes = new Uint8Array(18 + image.data.length);
+    static encodeTga(canvas, options = {}) {
+        let bitDepth = Number(options.bitDepth ?? 32);
+        if (bitDepth !== 24 && bitDepth !== 32) {
+            throw new Error("Unsupported TGA bit depth");
+        }
+        const image = this.getPixels(canvas, bitDepth === 24);
+        let pixelSize = bitDepth / 8;
+        const bytes = new Uint8Array(18 + image.width * image.height * pixelSize);
         const view = new DataView(bytes.buffer);
         bytes[2] = 2;
         view.setUint16(12, image.width, true);
         view.setUint16(14, image.height, true);
-        bytes[16] = 32;
-        bytes[17] = 0x28;
-        for (let source = 0, target = 18; source < image.data.length; source += 4, target += 4) {
+        bytes[16] = bitDepth;
+        bytes[17] = bitDepth === 32 ? 0x28 : 0x20;
+        for (let source = 0, target = 18; source < image.data.length; source += 4, target += pixelSize) {
             bytes[target] = image.data[source + 2];
             bytes[target + 1] = image.data[source + 1];
             bytes[target + 2] = image.data[source];
-            bytes[target + 3] = image.data[source + 3];
+            if (bitDepth === 32) {
+                bytes[target + 3] = image.data[source + 3];
+            }
         }
         return new Blob([bytes], {type: "image/x-tga"});
     }

@@ -103,7 +103,32 @@ module.exports = async function checkExportOptions() {
     }
     // The portable API has defaults independently of the native writer.
     await window.portableImageCodec.encode(png, "tiff", 100);
-    let formats = [{format: "tiff", values: ["rgb", "zip"], keys: ["colorMode", "compression"]}];
+    for (let format of ["bmp", "tga"]) {
+        for (let bitDepth of [24, 32]) {
+            let blob = await ImageEncoder.encode(canvas, format, {bitDepth});
+            let bytes = new Uint8Array(await blob.arrayBuffer());
+            let view = new DataView(bytes.buffer);
+            check((format === "bmp" ? view.getUint16(28, true) : bytes[16]) === bitDepth,
+                format + " writer ignored bit depth");
+            if (format === "bmp" && bitDepth === 24) {
+                let offset = view.getUint32(10, true);
+                check(bytes.length === offset + 16 * 7 && bytes[offset + 15] === 0 && bytes[offset + 31] === 0,
+                    "24-bit BMP rows were not padded to four-byte boundaries");
+            }
+            let decoded = await window.portableImageCodec.decode(bytes, format);
+            let reference = bitDepth === 24 ? opaque : expected;
+            equal(decoded.rgba, reference, 0, format + " round trip");
+            if (isApp) {
+                equal(independentDecode(bytes, format), reference, 0, "Independent " + format);
+            }
+        }
+        await rejects(() => ImageEncoder.encode(canvas, format, {bitDepth: 16}), /Unsupported .* bit depth/);
+    }
+    let formats = [
+        {format: "tiff", values: ["rgb", "zip"], keys: ["colorMode", "compression"]},
+        {format: "bmp", values: ["24"], keys: ["bitDepth"]},
+        {format: "tga", values: ["24"], keys: ["bitDepth"]}
+    ];
     for (let {format, values, keys} of formats) {
         let savedOptions = AppSettingsStore.get("fileTypes.saveOptions", {});
         let open = () => SaveImageDialog.open({canvas, initialFormat: format,

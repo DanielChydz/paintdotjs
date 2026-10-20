@@ -126,8 +126,8 @@ WebGL availability alone is not proof of hardware acceleration.
 | DDS | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. RGBA/BGRA 32-bit DDS is decoded directly, including older paint.js files; other variants use the bundled codec. |
 | TIFF (`.tif`, `.tiff`) | Yes | Yes | Yes | Yes | Saves 8-bit/channel RGB or RGBA, uncompressed, LZW or Deflate. RGB composites transparency onto white; RGBA retains alpha. |
 | GIF | Yes | Yes | Yes | Yes | paint.js saves a single static, palette-based image only. |
-| BMP | Yes | Yes | Yes | Yes | paint.js saves 32-bit images with alpha only. |
-| TGA | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. |
+| BMP | Yes | Yes | Yes | Yes | Saves 32-bit with alpha or 24-bit RGB over white. |
+| TGA | Yes | Yes | Yes | Yes | Saves uncompressed 32-bit with alpha or 24-bit RGB over white. |
 | JPEG XR (`.jxr`, `.wdp`, `.wmp`) | Yes | Yes | Limited | Yes | Opens RGB images with 8-bit, 16-bit, or 32-bit floating-point channels. Saves 8-bit RGBA with lossless alpha; quality 100 also preserves RGB exactly. |
 
 Animated and multi-page files are imported and exported as a single static image in paint.js.

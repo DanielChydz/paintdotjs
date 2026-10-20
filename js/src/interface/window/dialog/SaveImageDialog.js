@@ -31,8 +31,16 @@ class SaveImageDialog {
             ]}
         ]},
         {id: "gif", name: "GIF", extension: ".gif", mime: "image/gif"},
-        {id: "bmp", name: "BMP", extension: ".bmp", mime: "image/bmp"},
-        {id: "tga", name: "TGA", extension: ".tga", mime: "image/x-tga"},
+        {id: "bmp", name: "BMP", extension: ".bmp", mime: "image/bmp", controls: [
+            {key: "bitDepth", type: "select", label: "Bit depth:", defaultValue: "32", choices: [
+                {value: "32", label: "32-bit (with alpha)"}, {value: "24", label: "24-bit RGB (white background)"}
+            ]}
+        ]},
+        {id: "tga", name: "TGA", extension: ".tga", mime: "image/x-tga", controls: [
+            {key: "bitDepth", type: "select", label: "Bit depth:", defaultValue: "32", choices: [
+                {value: "32", label: "32-bit (with alpha)"}, {value: "24", label: "24-bit RGB (white background)"}
+            ]}
+        ]},
         {id: "jxr", name: "JPEG XR", extension: ".jxr", extensions: [".jxr", ".wdp", ".wmp"], mime: "image/vnd.ms-photo", quality: 90}
     ];
 

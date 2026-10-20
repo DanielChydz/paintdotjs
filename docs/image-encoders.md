@@ -12,9 +12,11 @@ with FFmpeg, independently of the application codec.
   5 (LZW) and 8 (Deflate). Export selects 8-bit/channel RGB or RGBA; RGB removes
   alpha over white. The existing uncompressed RGBA writer remains the default.
   Multi-page images and higher bit depths are not offered.
-- BMP/TGA: the existing native JavaScript writers produce 32-bit true-color
-  pixels. Their headers and row layout permit a separate 24-bit RGB mode
-  without another dependency.
+- BMP/TGA: native JavaScript writers retain the default 32-bit true-color mode
+  with alpha and offer 24-bit RGB composited over white. BMP uses a 40-byte
+  header and four-byte row padding for 24-bit pixels; its default 32-bit V4
+  header and channel masks are unchanged. TGA retains top-origin uncompressed
+  true-color pixels with the matching alpha-bit descriptor.
 - DDS: the bundled encoder can write BC1/DXT1 and BC3/DXT5. Selecting the
   compression enum alone produced DXT5 for both in the audit; the explicit
   `dds:compression` define is required. `dds:mipmaps=0` disables implicit mipmap
