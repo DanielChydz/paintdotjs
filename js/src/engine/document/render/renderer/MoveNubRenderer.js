@@ -152,9 +152,10 @@ class MoveNubRenderer extends CanvasControl {
     }
 
     setShape(shape) {
-        this.shape = shape;
-
-        // TODO notify?
+        if (this.shape !== shape) {
+            this.shape = shape;
+            this.invalidate();
+        }
     }
 
     setHitTestPadding(padding) {
@@ -169,6 +170,6 @@ class MoveNubRenderer extends CanvasControl {
         this.transform = transform.clone();
         this.transformAngle = Utility.getAngleOfTransform(this.transform);
 
-        // TODO notify?
+        this.invalidate();
     }
 }

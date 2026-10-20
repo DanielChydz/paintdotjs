@@ -70,7 +70,8 @@ class SelectionTool extends Tool {
 
         this.getDocumentWorkspace().getSelectionRenderer().setSelectionTinting(false);
 
-        this.getSurfaceBox().removeRenderer(this.newSelectionRenderer);
+        this.newSelectionRenderer.dispose();
+        this.newSelection.data.dispose();
         this.newSelection = null;
         this.newSelectionRenderer = null;
         this.oldSelectionBounds = null;

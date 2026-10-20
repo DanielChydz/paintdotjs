@@ -2,6 +2,47 @@
 
 ## Current verified checkpoint (2026-10-20)
 
+All 255 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
+all 286 runtime JavaScript source files, without added exclusions or ignores.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 46,444 | 46,444 | 100% | 0 |
+| Branches | 11,897 | 11,897 | 100% | 0 |
+| Functions | 2,864 | 2,864 | 100% | 0 |
+
+Completed backlog items 8–11. Item 7 (prerelease updates) is explicitly deferred
+by the user; no prerelease behavior was changed.
+
+- The white selection outline fades back over 200 ms after reset using the
+  existing render loop. Both the renderer flag and global Animations preference
+  are respected; disabled animation produces a fully visible, static outline.
+- Every transform gesture, keyboard nudge and Finish has its own history series;
+  undo/redo preserves the series identifier and existing compound grouping.
+- Handle location, angle, shape, transform, visibility and rotation indicator
+  changes request presentation without recompositing the document.
+- Renderer disposal detaches from its SurfaceBox and is idempotent. Selection
+  renderers release their own paths and selection/settings subscriptions.
+  Document closing disposes all remaining renderers, and selection-tool changes
+  dispose the temporary selection preview. Borrowed surfaces remain caller-owned.
+
+`checkRendererHistory` verifies rendered pixels, independent gesture boundaries,
+undo/redo pixels, composition revision, repeated disposal, subscriptions and
+borrowed-surface ownership. It also runs against the packaged executable.
+Lint, source headers, asset validation and version metadata checks pass.
+Coverage log: `/tmp/paintjs-next-coverage-complete.log`.
+
+Built `dist/paintdotjs-2.6.0-linux-amd64.deb` (99,610,204 bytes), extracted it
+into `/tmp/paintjs-next-final-deb-root`, and passed all six packaged-executable
+scenarios: assets/fonts, modern codecs, upstream features, painting, first-batch
+features and renderer/history contracts. This uses an isolated temporary profile
+under Xvfb without installing the package or changing the user's settings.
+Build/package logs: `/tmp/paintjs-next-final-deb.log`,
+`/tmp/paintjs-next-final-package.log`. No release was published or pushed.
+Other operating-system packages and native GPU hardware were not exercised.
+
+## Historical first-batch checkpoint (2026-10-20)
+
 All 254 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
 all 286 runtime JavaScript source files, without added exclusions or ignores.
 

@@ -32,13 +32,24 @@ class SurfaceBoxRenderer {
         if (this.disposed) {
             throw new Error("SurfaceBoxRenderer is disposed");
         }
-        this.visible = visible;
+        if (this.visible !== visible) {
+            this.visible = visible;
+            this.invalidate();
+        }
+    }
+
+    invalidate() {
+        if (!this.disposed) {
+            this.surfaceBox.invalidate();
+        }
     }
 
     dispose() {
-        this.disposed = true;
-
-        // TODO dispose?
+        if (!this.disposed) {
+            this.disposed = true;
+            this.surfaceBox.removeRenderer(this);
+            this.surfaceBox = null;
+        }
     }
 
 }

@@ -66,10 +66,7 @@ class DocumentWorkspace extends DocumentView {
             this.scratchSurface.dispose();
             this.scratchSurface = null;
         }
-        if (this.selectionRenderer.selectedPath !== null) {
-            this.selectionRenderer.selectedPath.dispose();
-            this.selectionRenderer.selectedPath = null;
-        }
+        this.selectionRenderer.dispose();
         this.selection.data.dispose();
         this.history.clearUndoStack();
         this.history.clearRedoStack();

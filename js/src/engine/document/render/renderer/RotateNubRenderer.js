@@ -27,15 +27,17 @@ class RotateNubRenderer extends SurfaceBoxRenderer {
     }
 
     setAngle(angle) {
-        this.angle = angle;
-
-        // TODO notify?
+        if (this.angle !== angle) {
+            this.angle = angle;
+            this.invalidate();
+        }
     }
 
     setLocation(location) {
-        this.location = location;
-
-        // TODO notify?
+        if (this.location !== location) {
+            this.location = location;
+            this.invalidate();
+        }
     }
 
     render(destination, renderBounds) {

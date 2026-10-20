@@ -69,8 +69,9 @@ module.exports = async function checkSurfaceTransactions() {
     let borderSource = Surface.create(4, 4);
     let borderTarget = Surface.create(10, 10);
     borderSource.clear(Color.fromRGBA(0, 255, 0, 255));
-    let renderer = new SurfaceBoxBaseRenderer({getSurface: () => borderSource,
-        getApp: () => ({getActiveDocumentWorkspace: () => null})});
+    let borderBox = new SurfaceBox({getActiveDocumentWorkspace: () => null, invalidateRender() {}});
+    borderBox.setSurface(borderSource);
+    let renderer = borderBox.baseRenderer;
     let previous = new Map(["canvas.customBorder", "canvas.borderColor", "canvas.dropShadow"]
         .map(key => [key, AppSettingsStore.get(key)]));
     let rootStyle = document.documentElement.style;

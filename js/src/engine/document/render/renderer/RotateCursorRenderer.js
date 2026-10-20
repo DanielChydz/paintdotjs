@@ -24,6 +24,7 @@ class RotateCursorRenderer extends SurfaceBoxRenderer {
     setIndicator(location, angle) {
         this.location = location.clone();
         this.angle = angle;
+        this.invalidate();
     }
 
     render(destination, renderBounds) {

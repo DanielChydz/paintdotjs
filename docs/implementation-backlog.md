@@ -3,7 +3,8 @@
 Stan przeglądu: 2026-10-20. Źródła: README, FIXME.md, komentarze TODO w `js/`
 oraz nieaktywne pozycje menu i ustawień. To audyt repozytorium, a nie pełna
 inwentaryzacja wszystkich funkcji najnowszego Paint.NET. Pierwsza partia
-(punkty 1–6) została zaimplementowana; pozostałe pozycje pozostają planem prac.
+(punkty 1–6) oraz punkty 8–11 zostały zaimplementowane. Punkt 7 jest odłożony
+na decyzję użytkownika; pozostałe pozycje pozostają planem prac.
 
 Skala: **S** — mała, lokalna zmiana; **M** — kilka współpracujących komponentów;
 **L** — większa funkcja lub praca wymagająca pomiarów; **XL** — osobny projekt.
@@ -35,6 +36,26 @@ zajętości oraz zachowanie pikseli i historii po błędach alokacji.
 | 6 | Błędy wykonywania operacji i wykrywalne błędy alokacji | M | Jedna spójna ścieżka zgłoszenia błędu; nie maskować go samym logiem. Nie zapisywać nieudanego działania w historii, zwalniać zasoby częściowo utworzonej operacji i zachować dokument. Nie obiecywać przechwycenia zabicia całego procesu przez system. | [DocumentWorkspace.executeFunction](../js/src/engine/document/DocumentWorkspace.js) |
 
 ## P2 — konkretne uzupełnienia i zaległości techniczne
+
+**Status:** punkt 7 odłożony — obecnie nie publikujemy wydań prerelease.
+Punkty **8–11 ukończone**:
+
+- 8: biały obrys wraca płynnie przez 200 ms po resecie; globalne wyłączenie
+  animacji pozostawia pełny, statyczny obrys. Wykorzystana jest istniejąca pętla
+  rysowania, bez dodatkowych timerów.
+- 9: pojedynczy gest (także ruch klawiaturą) i zatwierdzenie mają osobne
+  `seriesGuid`, zachowywane w mementach przy undo/redo. Kolejne gesty pozostają
+  osobnymi krokami historii; istniejące grupowanie wewnątrz gestu jest zachowane.
+- 10: zmiana geometrii, transformacji lub widoczności uchwytów zgłasza potrzebę
+  odświeżenia widoku. Istniejąca pętla scala żądania; dokument nie jest ponownie
+  komponowany z powodu samego przesunięcia uchwytu.
+- 11: `dispose()` renderera jest idempotentne i odpina go od SurfaceBox;
+  `removeRenderer()` tylko odłącza, umożliwiając dalsze użycie. SurfaceBox sprząta
+  swoje renderery, lecz nie zwalnia pożyczonej powierzchni. Renderer zaznaczenia
+  odpina zdarzenia zaznaczenia i ustawień oraz zwalnia własną ścieżkę. Sprzątany
+  jest również tymczasowy podgląd narzędzia zaznaczania.
+
+Tabela zachowuje pierwotny zakres; następne nieukończone punkty to **12–16**.
 
 | ID | Zadanie | Skala | Zakres i kryterium ukończenia | Miejsce w kodzie |
 | --- | --- | --- | --- | --- |

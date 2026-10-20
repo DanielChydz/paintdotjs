@@ -30,14 +30,15 @@ class CanvasControl extends SurfaceBoxRenderer {
         if (this.location !== location) {
             this.location = location;
 
-            // TODO notify?
+            this.invalidate();
         }
     }
 
     setAngle(angle) {
-        this.angle = angle;
-
-        // TODO notify?
+        if (this.angle !== angle) {
+            this.angle = angle;
+            this.invalidate();
+        }
     }
 
 }

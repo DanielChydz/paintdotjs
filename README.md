@@ -64,6 +64,11 @@ still some additions and limitations worth noting.
 - Failed history operations report the error and restore saved pixels, layers, selection, and history.
   Catchable allocation failures release partially created layers; operating-system process termination
   cannot be recovered this way.
+- Moving a selection briefly fades its white outline back in; disabling **Settings → User Interface →
+  Animations** keeps it static and fully visible. Transform handles repaint immediately when their
+  geometry changes, without recompositing document pixels. Each transform gesture and Finish retain
+  a distinct history series through undo/redo. Closing a document or changing tools releases renderer
+  subscriptions and owned selection paths while preserving borrowed surfaces.
 - The deployed web version can work offline and provides browser-oriented file, clipboard, and drag
   and drop workflows.
 

@@ -65,7 +65,7 @@ class DocumentView {
             this.compositionSurface.dispose();
             this.compositionSurface = null;
         }
-        this.surfaceBox.setSurface(null);
+        this.surfaceBox.dispose();
     }
 
     onDocumentInvalidated() {
