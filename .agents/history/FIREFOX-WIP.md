@@ -130,3 +130,12 @@ rewriting remote history. Develop now uses **2.6.1-dev.0** in package.json and
 package-lock.json; the Firefox runs above used 2.6.0 builds. Regenerate builds on
 resume. Master stays at 6486561 (completed 19–20 and the user's README disclaimer).
 The user explicitly authorized pushing master and develop in this save/stop turn.
+
+## Push blocked by authentication
+
+The requested `git push --atomic origin master:master develop:develop` failed
+before updating either remote ref: `fatal: could not read Username for
+'https://github.com': No such device or address`. GitHub CLI is not installed.
+Both branches are committed locally; **neither branch was pushed** in this turn.
+After configuring GitHub authentication, run `git push --atomic origin master develop`.
+No force push is needed: develop retains origin/develop's version commit.
