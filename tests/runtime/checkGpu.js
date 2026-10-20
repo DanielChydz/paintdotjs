@@ -414,8 +414,13 @@ module.exports = async function checkGpu() {
     cpu.dispose();
     gpu.dispose();
     SettingsDialog.open("graphics");
-    check(SettingsDialog.instance.page.textContent.includes("Graphics acceleration is available."),
-        "Graphics settings did not report the working native WebGL renderer");
+    let deadline = performance.now() + 5000;
+    while (!SettingsDialog.instance.page.textContent.includes("Current process acceleration:")) {
+        check(performance.now() < deadline, "Desktop graphics diagnostics timed out");
+        await new Promise(resolve => setTimeout(resolve, 10));
+    }
+    check(SettingsDialog.instance.page.textContent.includes("gpu_compositing:"),
+        "Graphics settings did not report Chromium's actual feature status");
     SettingsDialog.instance.selectSection("diagnostics");
     let gpuDiagnostics = [...SettingsDialog.instance.page.querySelectorAll(".settings-diagnostics-table span")]
         .map(cell => cell.textContent);

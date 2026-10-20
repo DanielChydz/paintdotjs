@@ -32,7 +32,9 @@ module.exports = async function checkCameraCapture() {
         }
     };
     let cancel = async promise => {
-        button("Cancel").click();
+        let cancelButton = button("Cancel");
+        cancelButton.click();
+        cancelButton.onclick();
         check(await promise === null, "Cancelled camera returned a photo");
         check(document.querySelector(".camera-dialog") === null, "Camera dialog remained mounted");
     };

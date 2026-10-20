@@ -2,6 +2,54 @@
 
 ## Current verified checkpoint (2026-10-20)
 
+All 266 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
+all 287 runtime JavaScript source files, without added exclusions or ignores.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 46,971 | 46,971 | 100% | 0 |
+| Branches | 12,088 | 12,088 | 100% | 0 |
+| Functions | 2,894 | 2,894 | 100% | 0 |
+
+Completed backlog items 12–16 in separate local commits, with TIFF, BMP/TGA
+and DDS exports implemented and validated sequentially. Item 7 remains deferred.
+
+- The measured 1024×768 new-document path performs one composition instead of
+  two, retaining three working surfaces. One hundred scroll changes require no
+  new compositions or surfaces. Twenty unchanged resize events perform zero
+  canvas backing-store resets instead of forty; fitted resize resets drop from
+  four to zero. Real viewport resizing preserves the document center without
+  reallocating document surfaces. Inactive tabs no longer scroll the active view.
+- Integer region scans round nonempty fractional rectangles outward and retain
+  negative origins, disconnected islands and holes. Empty bounds are defined,
+  unsafe coordinates fail explicitly, and path-derived regions share selection
+  statistics' even/odd rasterization rather than filling contour bounding boxes.
+- Desktop hardware acceleration is persisted and applied before Electron is
+  ready. Tests cover a real disabled-acceleration launch, next-launch preference
+  changes, restart reporting, current process/Chromium feature diagnostics,
+  persistence failures and the disabled browser control.
+- Camera acquisition runs in both Electron and the Node-disabled browser.
+  Chromium's test camera exercises real getUserMedia and image import. Failure
+  fixtures cover permissions, missing/busy devices, disconnection, playback,
+  allocation, encoding and import. Cancellation during permission and encoding,
+  title close, Escape and page exit all release streams.
+- Export tests inspect TIFF compression/channel tags, BMP/TGA bit depth and row
+  padding, DDS FourCC, block padding and absence of mipmaps. FFmpeg independently
+  decodes the exported files. Browser tests verify the same options, per-format
+  persistence, defaults and previews decoded from actual exported bytes.
+
+Lint, source headers, asset/version metadata checks and the release build pass.
+Built `dist/paintdotjs-2.6.0-linux-amd64.deb` (99,573,908 bytes), extracted it
+without installing, and passed all ten packaged-executable scenarios:
+assets/fonts, modern codecs, upstream features, painting, first-batch features,
+renderer/history contracts, viewport measurements, graphics settings, camera
+capture and extended exports. Tests use an isolated temporary profile under Xvfb;
+the packaged camera test uses Chromium's synthetic device and permission flags.
+No release was published or pushed. Physical camera/GPU hardware and other
+operating-system packages were not exercised.
+
+## Previous renderer/history checkpoint (2026-10-20)
+
 All 255 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
 all 286 runtime JavaScript source files, without added exclusions or ignores.
 

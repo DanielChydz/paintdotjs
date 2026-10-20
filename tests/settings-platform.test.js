@@ -112,6 +112,57 @@ function updateFixture(options = {}) {
     return {settings, state, context, window, scope, button: {textContent: "Check now", disabled: false}};
 }
 
+test("web graphics controls remain disabled and distinguish WebGL from physical acceleration", () => {
+    for (let available of [true, false]) {
+        let {settings, context} = updateFixture();
+        delete context.isApp;
+        let controls = [];
+        let notes = [];
+        settings.addHeading = () => {};
+        settings.addCheckbox = (key, label, options) => controls.push({key, ...options});
+        settings.addSelect = (key, label, choices, options) => controls.push({key, ...options});
+        settings.addNote = text => notes.push(text);
+        context.document.createElement = () => ({getContext: () => available ? {} : null});
+        settings.getEntry("graphics").render();
+        assert.ok(controls.every(control => control.disabled));
+        assert.ok(notes.some(note => note.includes(available ? "WebGL is available." : "WebGL is not available.")));
+        assert.ok(notes.some(note => note.includes("does not identify a physical GPU")));
+    }
+});
+
+test("desktop graphics diagnostics distinguish pending, enabled and failed preference writes", async () => {
+    let {settings, context, window, state} = updateFixture({isApp: true});
+    let preference = true;
+    context.AppSettingsStore.get = () => preference;
+    context.AppSettingsStore.set = (key, value) => {
+        assert.equal(key, "graphics.hardwareAcceleration");
+        preference = value;
+    };
+    let input = {checked: true, disabled: false};
+    let diagnostic = {textContent: ""};
+    let entry = settings.getEntry("graphics");
+    window.desktopGraphics = {getStatus: async () => ({
+        preference: false, enabled: null, features: null, restartRequired: true
+    })};
+    await entry.updateDesktopGraphics(input, diagnostic);
+    assert.equal(input.checked, false);
+    assert.match(diagnostic.textContent, /pending GPU initialization/);
+    window.desktopGraphics.setEnabled = async enabled => ({
+        preference: enabled, enabled: true, features: {gpu_compositing: "enabled"}, restartRequired: false
+    });
+    await entry.updateDesktopGraphics(input, diagnostic, true);
+    assert.match(diagnostic.textContent, /acceleration: enabled/);
+    assert.match(diagnostic.textContent, /gpu_compositing: enabled/);
+    window.desktopGraphics.setEnabled = async () => { throw new Error("Storage unavailable"); };
+    input.checked = false;
+    await entry.updateDesktopGraphics(input, diagnostic, false);
+    assert.equal(input.checked, true);
+    assert.equal(input.disabled, false);
+    assert.equal(preference, true);
+    assert.equal(state.errors.length, 1);
+    assert.match(diagnostic.textContent, /Storage unavailable/);
+});
+
 test("web update cancellation keeps unsaved work, registrations and caches intact", async () => {
     let {settings, state, button} = updateFixture({dirty: true, choice: "cancel"});
     await settings.getEntry("updates").checkForUpdates(button);

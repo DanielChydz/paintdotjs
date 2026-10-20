@@ -489,6 +489,10 @@ test("integer region scans round outward, ignore empty rectangles and reject uns
     assert.throws(() => GraphicsPath.fromRegion(Region.fromRectangles([
         new Rectangle(0, 0, 1, 1), new Rectangle(1e9, 1e9, 1, 1)
     ])), /stencil exceeds/);
+    assert.throws(() => Region.fromRectangles([
+        new Rectangle(-Number.MAX_SAFE_INTEGER, 0, 1, 1),
+        new Rectangle(Number.MAX_SAFE_INTEGER - 1, 0, 1, 1)
+    ]).getBoundsInt(), /bounds exceed/);
     for (let value of [NaN, Infinity, Number.MAX_SAFE_INTEGER]) {
         let path = new GraphicsPath();
         path.addLines([new Point(value, 0), new Point(1, 1), new Point(0, 1)]);

@@ -106,7 +106,11 @@ class Region {
     }
 
     getBoundsInt() {
-        return Region.fromRectangles(this.getRegionScansInt()).getBounds();
+        let bounds = Region.fromRectangles(this.getRegionScansInt()).getBounds();
+        if (![bounds.width, bounds.height].every(Number.isSafeInteger)) {
+            throw new RangeError("Region bounds exceed the safe integer range");
+        }
+        return bounds;
     }
 
     clone() {

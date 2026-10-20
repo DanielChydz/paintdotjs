@@ -254,6 +254,9 @@ layer-name safety, document cleanup, worker cancellation, dialogs, image codecs,
 painting, selections, text, move history, and CPU/WebGL resampling. The WebGL
 scenario uses SwiftShader to execute the actual shaders without requiring a
 hardware GPU; this is a correctness check, not a hardware GPU benchmark.
+Camera scenarios use Chromium's synthetic video device, not a physical webcam.
+Export scenarios require FFmpeg to decode TIFF, BMP, TGA and DDS independently;
+the application itself does not depend on FFmpeg.
 
 Additional scenarios verify save previews, native file writes, clipboard history,
 color palettes, keyboard navigation, error recovery, and real FontFace/IndexedDB
