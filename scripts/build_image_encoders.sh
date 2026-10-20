@@ -47,7 +47,7 @@ flags=(-Oz -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web,worker -sALLOW_MEMORY
     '-sEXPORTED_RUNTIME_METHODS=["UTF8ToString","HEAPU8"]')
 em++ scripts/codecs/heic_encoder.cpp -I"$prefix/include" "$prefix/lib/libheif.a" "$prefix/lib/libkvazaar.a" \
     "${flags[@]}" -o lib/codecs/heic-encoder.js
-flags+=('-sEXPORTED_FUNCTIONS=["_malloc","_free","_encode_rgba","_encoded_data","_encoded_size","_encoder_error","_release_result","_decode_image","_image_width","_image_height","_image_channels","_image_depth","_image_color","_image_flags"]')
+flags+=('-sEXPORTED_FUNCTIONS=["_malloc","_free","_encode_rgba","_encoded_data","_encoded_size","_encoder_error","_release_result","_decode_image","_image_width","_image_height","_image_channels","_image_depth","_image_color","_image_flags","_image_bits"]')
 emcc scripts/codecs/jxr_encoder.c -I"$jxr_source/jxrgluelib" -I"$jxr_source/common/include" \
     -I"$jxr_source/image/sys" -D__ANSI__ "$jxr_source/build/libjxrglue.a" "$jxr_source/build/libjpegxr.a" \
     "${flags[@]}" -o lib/codecs/jxr-encoder.js

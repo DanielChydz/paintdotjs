@@ -38,7 +38,8 @@ function moduleFixture() {
         _image_channels: () => 4,
         _image_color: () => 7,
         _image_depth: () => 1,
-        _image_flags: () => 0x70
+        _image_flags: () => 0x70,
+        _image_bits: () => 32
     };
     return {module, freed};
 }
@@ -115,7 +116,7 @@ test('JPEG XR bridge preserves metadata, copies results and frees memory after d
     module.HEAPU8.set([20, 30, 40, 50], 64);
     let decoded = await codec.decode(new Uint8Array([9, 10]));
     assert.deepEqual([...module.HEAPU8.slice(16, 18)], [9, 10]);
-    assert.deepEqual(decoded.pixelInfo, {channels: 4, colorFormat: 'RGB', bitDepth: '8',
+    assert.deepEqual(decoded.pixelInfo, {channels: 4, colorFormat: 'RGB', bitsPerPixel: 32, bitDepth: '8',
         hasAlpha: true, premultipledAlpha: true, bgr: true});
     assert.deepEqual([decoded.width, decoded.height], [1, 1]);
     module.HEAPU8.fill(0);
@@ -123,13 +124,16 @@ test('JPEG XR bridge preserves metadata, copies results and frees memory after d
     module._image_flags = () => 0;
     module._image_color = () => 4;
     decoded = await codec.decode(new Uint8Array([1]));
+    assert.equal(decoded.pixelInfo.colorFormat, 'CMYK');
+    module._image_color = () => 6;
+    decoded = await codec.decode(new Uint8Array([1]));
     assert.equal(decoded.pixelInfo.colorFormat, 'Unsupported');
     assert.equal(decoded.pixelInfo.hasAlpha, false);
     assert.equal(decoded.pixelInfo.premultipledAlpha, false);
     assert.equal(decoded.pixelInfo.bgr, false);
     module._decode_image = () => 1;
     await assert.rejects(codec.decode(new Uint8Array([1])), /Native codec failed/);
-    assert.deepEqual(freed, ['output', 16, 'output', 16, 'output', 16]);
+    assert.deepEqual(freed, ['output', 16, 'output', 16, 'output', 16, 'output', 16]);
     module._malloc = () => 0;
     await assert.rejects(codec.decode(new Uint8Array([1])), /allocate/);
 });

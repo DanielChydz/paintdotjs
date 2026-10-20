@@ -119,11 +119,13 @@ int image_channels(void) { return decoded_info.cChannel; }
 int image_depth(void) { return decoded_info.bdBitDepth; }
 int image_color(void) { return decoded_info.cfColorFormat; }
 int image_flags(void) { return decoded_info.grBit; }
+int image_bits(void) { return decoded_info.cbitUnit; }
 
 int decode_image(U8* bytes, size_t length)
 {
     ERR err = WMP_errSuccess;
     PKImageDecode* decoder = NULL;
+    PKFormatConverter* converter = NULL;
     struct WMPStream* stream = NULL;
     PKPixelFormatGUID format;
     release_result();
@@ -134,9 +136,17 @@ int decode_image(U8* bytes, size_t length)
     Call(decoder->GetPixelFormat(decoder, &format));
     decoded_info.pGUIDPixFmt = &format;
     Call(PixelFormatLookup(&decoded_info, LOOKUP_FORWARD));
+    /* Expand bilevel rows with the reference converter, including polarity. */
+    if (decoded_info.bdBitDepth == BD_1) {
+        Call(PKCodecFactory_CreateFormatConverter(&converter));
+        Call(converter->Initialize(converter, decoder, NULL, GUID_PKPixelFormat8bppGray));
+        format = GUID_PKPixelFormat8bppGray;
+        decoded_info.pGUIDPixFmt = &format;
+        Call(PixelFormatLookup(&decoded_info, LOOKUP_FORWARD));
+    }
     /* Validate before calculating stride or allowing a codec allocation. */
     if (decoded_width < 1 || decoded_height < 1 || decoded_info.cbitUnit < 8
-        || decoded_info.cbitUnit > 128 || decoded_info.cbitUnit % 8 != 0
+        || decoded_info.cbitUnit > 256 || decoded_info.cbitUnit % 8 != 0
         || (uint64_t)decoded_width * decoded_height * (decoded_info.cbitUnit / 8) > 0x1fffffff) {
         err = WMP_errInvalidParameter;
         goto Cleanup;
@@ -150,8 +160,15 @@ int decode_image(U8* bytes, size_t length)
     /* The original npm wrapper leaves this at zero and silently drops planar alpha. */
     decoder->WMP.wmiSCP.uAlphaMode = 2;
     PKRect rectangle = {0, 0, decoded_width, decoded_height};
-    Call(decoder->Copy(decoder, &rectangle, output, decoded_width * (decoded_info.cbitUnit / 8)));
+    if (converter != NULL) {
+        Call(converter->Copy(converter, &rectangle, output, decoded_width * (decoded_info.cbitUnit / 8)));
+    } else {
+        Call(decoder->Copy(decoder, &rectangle, output, decoded_width * (decoded_info.cbitUnit / 8)));
+    }
 Cleanup:
+    if (converter != NULL) {
+        converter->Release(&converter);
+    }
     if (decoder != NULL) {
         decoder->Release(&decoder);
     }

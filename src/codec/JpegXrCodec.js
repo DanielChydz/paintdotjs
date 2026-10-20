@@ -13,8 +13,13 @@
  */
 
 import WasmImageEncoder from './encoder/WasmImageEncoder.js';
+import JpegXrPixels from './JpegXrPixels.js';
 
 class JpegXrCodec extends WasmImageEncoder {
+
+    async decodeRgba(bytes) {
+        return JpegXrPixels.convert(await this.decode(bytes));
+    }
 
     async decode(bytes) {
         let codec = await this.initialize();
@@ -34,7 +39,8 @@ class JpegXrCodec extends WasmImageEncoder {
                 bytes: codec.HEAPU8.slice(codec._encoded_data(), codec._encoded_data() + codec._encoded_size()),
                 pixelInfo: {
                     channels: codec._image_channels(),
-                    colorFormat: codec._image_color() === 7 ? 'RGB' : 'Unsupported',
+                    colorFormat: ({0: 'Gray', 4: 'CMYK', 7: 'RGB', 8: 'RGBE'})[codec._image_color()] || 'Unsupported',
+                    bitsPerPixel: codec._image_bits(),
                     bitDepth: ['1', '8', '16', '16Fixed', '16Float', '32', '32Fixed', '32Float', '5', '10', '565'][codec._image_depth()],
                     hasAlpha: (flags & 0x10) !== 0,
                     premultipledAlpha: (flags & 0x20) !== 0,

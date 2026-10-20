@@ -119,7 +119,7 @@ WebGL availability alone is not proof of hardware acceleration.
 | GIF | Yes | Yes | Yes | Yes | paint.js saves a single static, palette-based image only. |
 | BMP | Yes | Yes | Yes | Yes | Saves 32-bit with alpha or 24-bit RGB over white. |
 | TGA | Yes | Yes | Yes | Yes | Saves uncompressed 32-bit with alpha or 24-bit RGB over white. |
-| JPEG XR (`.jxr`, `.wdp`, `.wmp`) | Yes | Yes | Limited | Yes | Opens RGB images with 8-bit, 16-bit, or 32-bit floating-point channels. Saves 8-bit RGBA with lossless alpha; quality 100 also preserves RGB exactly. |
+| JPEG XR (`.jxr`, `.wdp`, `.wmp`) | Yes | Yes | Limited | Yes | Opens gray/bilevel, RGB/BGR, packed RGB555/565/10-bit, integer/fixed/half/float, RGBE and CMYK(A). Converts to 8-bit SDR; CMYK uses an unprofiled fallback. Arbitrary N-channel models are unsupported. Saves 8-bit RGBA with lossless alpha; quality 100 preserves RGB exactly. See [codec details](docs/image-encoders.md#jpeg-xr-decoding). |
 
 Animated and multi-page files are imported and exported as a single static image in paint.js.
 
@@ -301,3 +301,6 @@ flatpak run net.paintjs.Paintjs
 
 paint.js is licensed under the [MIT License](LICENSE.md). See the
 [attribution notice](NOTICE.md) for details about Paint.NET and the JavaScript port.
+
+Large-document measurements and the reproducible benchmark are described in
+[large-documents.md](docs/large-documents.md).

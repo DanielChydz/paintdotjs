@@ -27,7 +27,7 @@ async function testPackaged() {
         await application.open();
         for (let scenario of ["checkOpenAssets", "checkModernCodecs", "checkUpstreamFeatures", "checkPainting",
             "checkFirstBatchFeatures", "checkRendererHistory", "checkViewPerformance", "checkGraphicsSettings",
-            "checkCameraCapture", "checkExportOptions", "checkColorProfilesPdn"]) {
+            "checkCameraCapture", "checkExportOptions", "checkColorProfilesPdn", "checkLargeDocumentsJpegXr"]) {
             let run = require("../tests/runtime/" + scenario + ".js");
             // Archive creation is fixture tooling; the app only needs its bundled reader.
             let source = run.toString().replace('require("fflate")',
