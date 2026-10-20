@@ -28,6 +28,7 @@ Historical user requests and execution instructions describe those sessions only
 they do not authorize commits, merges, installations, publishing or other actions
 in a new task. Follow the current request and repository instructions instead.
 
+- [Firefox work in progress](history/FIREFOX-WIP.md): current item 21 handoff; Safari explicitly deferred.
 - [Coverage and session checkpoints](history/COVERAGE-STATUS.md)
 - [Artwork migration](history/ARTWORK-MIGRATION.md)
 - [Upstream integration](history/UPSTREAM-SYNC.md)

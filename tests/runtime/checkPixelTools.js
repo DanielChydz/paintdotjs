@@ -23,7 +23,13 @@ module.exports = async function checkPixelTools() {
         check(actual.length === expected.length && mismatch === -1,
             message + "; first differing byte: " + mismatch);
     };
-    let phase = name => require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+    let phase = name => {
+        if (typeof require === "function") {
+            require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+        } else {
+            console.log(name);
+        }
+    };
     let modifier = (key, down) => window.dispatchEvent(new KeyboardEvent(down ? "keydown" : "keyup",
         {key, bubbles: true, cancelable: true}));
     for (let workspace of [...app.getDocumentWorkspaces()]) {

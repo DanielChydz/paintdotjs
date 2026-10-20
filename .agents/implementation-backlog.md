@@ -265,3 +265,13 @@ Samo usunięcie TODO nie jest wykonaniem zadania. Dla komentarza dotyczącego
 już działającej funkcji najpierw potwierdzić to testem i ustalić pozostały zakres.
 Zachować bramkę 100% pokrycia runtime bez nowych wykluczeń; budowane paczki
 weryfikować istniejącym testem aplikacji rozpakowanej z pakietu.
+
+
+### Punkt 21 — Firefox w trakcie (checkpoint 2026-10-20)
+
+Użytkownik polecił rozpocząć wyłącznie Firefox, a następnie zapisać i wypchnąć
+niedokończony stan. Nie zaczynać Safari bez kolejnej decyzji. Poprawki i realny
+harness Firefox zapisano na develop; nie scalać do master przed ukończeniem.
+Stan, przechodzące scenariusze, błąd testu kamery, niezweryfikowany produkcyjny
+offline i polecenia wznowienia: [FIREFOX-WIP.md](history/FIREFOX-WIP.md).
+Obecne develop nie ma jeszcze potwierdzonej pełnej bramki 100% pokrycia.

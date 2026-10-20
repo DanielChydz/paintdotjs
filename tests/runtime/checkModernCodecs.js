@@ -17,6 +17,9 @@ module.exports = async function checkModernCodecs() {
     context.putImageData(image, 0, 0);
     let expected = context.getImageData(0, 0, canvas.width, canvas.height).data;
     let png = new Uint8Array(await (await ImageEncoder.encode(canvas, 'png')).arrayBuffer());
+    // This API accepts encoded PNG bytes. Compare its result to those bytes,
+    // since a browser's native PNG encoder can round transparent RGB channels.
+    let pngPixels = (await window.portableImageCodec.decode(png, 'png')).rgba;
     let sizes = {};
     for (let format of ['heic', 'heif', 'jxr', 'wdp', 'wmp']) {
         for (let quality of [0, 90, 100]) {
@@ -44,7 +47,7 @@ module.exports = async function checkModernCodecs() {
             } else {
                 check(alphaError === 0, 'JPEG XR changed lossless alpha');
                 if (quality === 100) {
-                    check(decoded.rgba.every((value, i) => value === expected[i]), 'Lossless JPEG XR changed RGBA pixels');
+                    check(decoded.rgba.every((value, i) => value === pngPixels[i]), 'Lossless JPEG XR changed RGBA pixels');
                 }
             }
             sizes[format + quality] = bytes.length;

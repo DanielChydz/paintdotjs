@@ -19,7 +19,13 @@ module.exports = async function checkTransformTools() {
         }
     };
     let near = (actual, expected, message) => check(Math.abs(actual - expected) < 0.01, message + ": " + actual + " != " + expected);
-    let phase = name => require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+    let phase = name => {
+        if (typeof require === "function") {
+            require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+        } else {
+            console.log(name);
+        }
+    };
     for (let workspace of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(workspace, false);
     }

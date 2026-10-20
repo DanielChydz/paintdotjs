@@ -1,3 +1,9 @@
+## Current Firefox work in progress (2026-10-20)
+
+See [FIREFOX-WIP.md](FIREFOX-WIP.md). Firefox work on develop is unfinished;
+full coverage has not been rerun. The complete 19–20 checkpoint below applies
+to master before these changes. Safari must not be started without user approval.
+
 # Runtime coverage handoff
 
 Historical session checkpoints; see the [agent index](../README.md) for their scope.

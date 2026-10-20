@@ -18,7 +18,13 @@ module.exports = async function checkLayerActions() {
             throw new Error(message);
         }
     };
-    let phase = name => require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+    let phase = name => {
+        if (typeof require === "function") {
+            require("electron").ipcRenderer.send("paintdotjs:test-phase", name);
+        } else {
+            console.log(name);
+        }
+    };
     let rejects = (operation, pattern) => {
         let failure = null;
         try {

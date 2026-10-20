@@ -133,8 +133,12 @@ module.exports = async function checkCameraCapture() {
         video = document.querySelector(".camera-dialog video");
         tracks = video.srcObject.getTracks();
         tracks[0].dispatchEvent(new Event("ended"));
-        check(button("Take Photo").disabled && !button("Start Camera").disabled
-            && tracks.every(track => track.readyState === "ended"), "Disconnection retained a usable capture/device");
+        check(button("Take Photo").disabled && !button("Start Camera").disabled,
+            "Disconnection retained a usable capture: take=" + button("Take Photo").disabled
+                + ", start=" + button("Start Camera").disabled + ", tracks=" + tracks.map(track => track.readyState).join(",")
+                + ", status=" + document.querySelector(".camera-content p").textContent);
+        // Firefox canvas-capture tracks can report ended on the next task.
+        await waitFor(() => tracks.every(track => track.readyState === "ended"));
         button("Start Camera").click();
         await waitFor(() => !button("Take Photo").disabled);
         video = document.querySelector(".camera-dialog video");

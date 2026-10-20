@@ -17,8 +17,10 @@ const http = require("node:http");
 const path = require("node:path");
 
 class WebRuntimeServer {
-    constructor(root) {
+    constructor(root, host = "127.0.0.2", fixtures = true) {
         this.root = root;
+        this.host = host;
+        this.fixtures = fixtures;
         this.origin = null;
         this.workerVersion = 1;
         this.server = http.createServer((request, response) => {
@@ -29,26 +31,26 @@ class WebRuntimeServer {
     async start() {
         await new Promise((resolve, reject) => {
             this.server.once("error", reject);
-            this.server.listen(0, "127.0.0.2", resolve);
+            this.server.listen(0, this.host, resolve);
         });
-        this.origin = "http://127.0.0.2:" + this.server.address().port;
+        this.origin = "http://" + this.host + ":" + this.server.address().port;
         return this.origin;
     }
 
     async handleRequest(request, response) {
         try {
             let relative = decodeURIComponent(new URL(request.url, this.origin).pathname).slice(1);
-            if (relative === "__test__/update" && request.method === "POST") {
+            if (this.fixtures && relative === "__test__/update" && request.method === "POST") {
                 ++this.workerVersion;
                 response.writeHead(200).end();
                 return;
             }
-            if (relative === "assets/update.json") {
+            if (this.fixtures && relative === "assets/update.json") {
                 response.writeHead(200, {"Content-Type": "application/json", "Cache-Control": "no-store"})
                     .end(JSON.stringify({version: "9.0." + this.workerVersion}));
                 return;
             }
-            if (relative === "service_worker.js") {
+            if (this.fixtures && relative === "service_worker.js") {
                 response.writeHead(200, {"Content-Type": "text/javascript", "Cache-Control": "no-store",
                     "Service-Worker-Allowed": "/"})
                     .end("self.testVersion=" + this.workerVersion + ";"
@@ -62,6 +64,7 @@ class WebRuntimeServer {
             let file = path.resolve(this.root, relative || "index.html");
             let allowed = relative === "" || relative === "index.html"
                 || relative === "desktop-resources/asset-manifest.json"
+                || relative === "run/test.png" || relative === "service_worker.js" || /^workbox-[a-f0-9]+\.js$/.test(relative)
                 || /^(?:js|css|lib|assets|build\/web)\//.test(relative);
             if (!allowed || !file.startsWith(this.root + path.sep)) {
                 response.writeHead(403).end();
