@@ -14,11 +14,48 @@
 
 const {app, net} = require('electron');
 const {autoUpdater} = require('electron-updater');
+const fs = require('node:fs');
+const path = require('node:path');
 
 const releaseApiUrl = 'https://api.github.com/repos/DanielChydz/paintdotjs/releases/latest';
 
 let window = null;
 let initialized = false;
+let automatic = true;
+let timer = null;
+
+function setAutomaticUpdates(enabled) {
+    let changed = automatic !== (enabled === true);
+    automatic = enabled === true;
+    try {
+        fs.writeFileSync(path.join(app.getPath('userData'), 'update-preferences.json'),
+            JSON.stringify({automatic}));
+    } catch (error) {
+        send('error', error.message);
+    }
+    if (changed) {
+        scheduleAutomaticCheck(10_000);
+    }
+}
+
+function scheduleAutomaticCheck(delay = 60 * 60 * 1000) {
+    clearTimeout(timer);
+    timer = null;
+    if (automatic && app.isPackaged) {
+        timer = setTimeout(async () => {
+            if (!automatic) {
+                return;
+            }
+            try {
+                await checkForUpdates();
+            } catch (error) {
+                send('error', error.message);
+            }
+            scheduleAutomaticCheck();
+        }, delay);
+    }
+}
+
 
 function send(state, detail = null) {
     if (window && !window.isDestroyed()) {
@@ -71,13 +108,19 @@ function initializeUpdater(mainWindow) {
         return;
     }
     initialized = true;
+    try {
+        automatic = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'),
+            'update-preferences.json'), 'utf8')).automatic !== false;
+    } catch (_) {
+        automatic = true;
+    }
     if (!app.isPackaged) {
         send('development');
         return;
     }
     if (isManagedInstall()) {
         send('managed');
-        setTimeout(() => void checkManagedUpdate().catch(() => send('managed')), 10_000);
+        scheduleAutomaticCheck(10_000);
         return;
     }
     autoUpdater.autoDownload = true;
@@ -88,7 +131,7 @@ function initializeUpdater(mainWindow) {
     autoUpdater.on('download-progress', progress => send('downloading', Math.round(progress.percent)));
     autoUpdater.on('update-downloaded', info => send('downloaded', info.version));
     autoUpdater.on('error', error => send('error', error.message));
-    setTimeout(() => void autoUpdater.checkForUpdates().catch(error => send('error', error.message)), 10_000);
+    scheduleAutomaticCheck(10_000);
 }
 
 async function checkForUpdates() {
@@ -108,4 +151,4 @@ function installUpdate() {
     }
 }
 
-module.exports = {checkForUpdates, initializeUpdater, installUpdate, updatesSupported};
+module.exports = {checkForUpdates, initializeUpdater, installUpdate, updatesSupported, setAutomaticUpdates};
