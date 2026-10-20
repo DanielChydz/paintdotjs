@@ -75,6 +75,34 @@ class PdnDocumentCodec {
             throw new Error("Invalid Paint.NET document structure");
         }
 
+        let layers = layerObjects.map((layerObject, index) => {
+            if (layerObject === null || layerObject === undefined) {
+                throw new Error("Invalid Paint.NET layer entry");
+            }
+
+            if (layerObject.typeName !== undefined && layerObject.typeName !== "PaintDotNet.BitmapLayer") {
+                throw new Error("Unsupported Paint.NET layer type: " + layerObject.typeName);
+            }
+            const properties = layerObject.members["Layer+properties"].members;
+            let blendMode = properties.blendMode?.members?.value__ ?? properties.blendMode ?? 0;
+            if (!LayerProperties.BLEND_MODES.some(mode => mode.pdnValue === blendMode)) {
+                throw new Error("Unsupported Paint.NET blend mode: " + blendMode);
+            }
+            return {
+                name: properties.name || "Layer " + (index + 1),
+                visible: properties.visible !== false,
+                isBackground: !!properties.isBackground,
+                opacity: properties.opacity === undefined ? 255 : properties.opacity,
+                blendMode: LayerProperties.getBlendMode(blendMode).value,
+                userMetadataItems: this.readMetadata(properties.userMetadataItems ?? properties.userMetaData)
+            };
+        });
+
+        let metadata = this.readMetadata(root.members.userMetadataItems ?? root.members.userMetaData);
+        let resolution = Number(metadata.find(entry => entry.key === "paint.js.resolution")?.value || 96);
+        if (!Number.isFinite(resolution) || resolution <= 0) {
+            throw new Error("Invalid Paint.NET resolution metadata");
+        }
         const pixelBlocks = await this.findPixelBlocks(
             bytes,
             graphStart,
@@ -85,33 +113,8 @@ class PdnDocumentCodec {
             throw new Error("Could not decode the Paint.NET layer pixels");
         }
 
-        const layers = layerObjects.map((layerObject, index) => {
-            if (layerObject === null || layerObject === undefined) {
-                throw new Error("Invalid Paint.NET layer entry");
-            }
-
-            if (layerObject.typeName !== undefined && layerObject.typeName !== "PaintDotNet.BitmapLayer") {
-                throw new Error("Unsupported Paint.NET layer type: " + layerObject.typeName);
-            }
-            const properties = layerObject.members["Layer+properties"].members;
-            return {
-                name: properties.name || "Layer " + (index + 1),
-                visible: properties.visible !== false,
-                isBackground: !!properties.isBackground,
-                opacity: properties.opacity === undefined ? 255 : properties.opacity,
-                blendMode: LayerProperties.getBlendMode(
-                    properties.blendMode?.members?.value__ ?? properties.blendMode
-                ).value,
-                userMetadataItems: this.readMetadata(properties.userMetadataItems),
-                canvas: this.createCanvasFromBgra(pixelBlocks[index], width, height)
-            };
-        });
-
-        let metadata = this.readMetadata(root.members.userMetadataItems);
-        let resolution = Number(metadata.find(entry => entry.key === "paint.js.resolution")?.value || 96);
-        if (!Number.isFinite(resolution) || resolution <= 0) {
-            throw new Error("Invalid Paint.NET resolution metadata");
-        }
+        layers = layers.map((layer, index) => ({...layer,
+            canvas: this.createCanvasFromBgra(pixelBlocks[index], width, height)}));
         return {width, height, activeLayer: layerCount - 1, layers, metadata, resolution};
     }
 

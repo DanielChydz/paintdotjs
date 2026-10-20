@@ -22,7 +22,7 @@ The following data round trips:
   metadata. Layer metadata survives cloning and property-history snapshots;
   document metadata survives whole-document transformations and canvas resizing.
 
-Known scope: bitmap-layer PDN3 documents. Unknown layer types are rejected.
+Known scope: bitmap-layer PDN3 documents. Unknown layer types, blend modes and metadata structures are rejected before pixel allocation.
 This work does not add the future/new PDN container, adjustment/vector layers,
 embedded plugin objects, history or selection serialization. Files from every
 Paint.NET version have not been validated; generated-graph interoperability and
@@ -32,3 +32,10 @@ variants. Original Paint.NET is not used by the automated test suite.
 The schema lives in `src/pdn/PdnObjectGraph.js`, the container reader/writer in
 `js/src/io/PdnDocumentCodec.js`. Tests verify 65-layer round trips and the unchanged
 bytes of the existing 1–64-layer generated templates.
+
+Source audit: [OpenPDN 3.36.7](https://github.com/rivy/OpenPDN) uses the older
+`NameValueCollection userMetaData` representation. Its DPI lives in `$exif`
+PropertyItem values. Those legacy collections are rejected explicitly rather than silently discarded.
+Legacy collection support and native EXIF DPI interpretation are outside the supported `userMetadataItems` schema here; paint.js resolution
+metadata is namespaced separately. No Paint.NET 5.1.12 executable was decompiled
+or run during this implementation.

@@ -56,6 +56,15 @@ module.exports = async function checkColorProfilesPdn() {
     check(ColorProfileManager.get(model) !== null, "Import lost source ICC");
     let rendered = workspace.getActiveLayer().getSurface().context.getImageData(0, 0, 2, 1).data;
     check(rendered[0] === 60 && rendered[1] === 220, "Managed import did not reach the document");
+    let readClipboard = DocumentIO.readClipboardImage;
+    try {
+        DocumentIO.readClipboardImage = async () => new Blob([taggedPng], {type: "image/png"});
+        await DocumentIO.pasteIntoNewImage();
+        check(ColorProfileManager.get(app.getActiveDocumentWorkspace().getDocument()) !== null,
+            "Paste into new image lost ICC");
+    } finally {
+        DocumentIO.readClipboardImage = readClipboard;
+    }
     let originalMetadata = JSON.stringify(model.metadata);
     ColorProfileManager.set(workspace, null);
     check(ColorProfileManager.get(model) === null, "sRGB preference not applied");
@@ -147,6 +156,30 @@ module.exports = async function checkColorProfilesPdn() {
         await loading;
         check(ColorProfileManager.get(reopened.getDocument()) === null, "Late profile read changed document");
     }
+    let many = app.createBlankDocumentInNewWorkspace(1, 1);
+    many.getDocument().setResolution(300);
+    many.getDocument().metadata.push({key: "Author", value: "Żółw"});
+    for (let index = 0; index < 65; ++index) {
+        let layer = index === 0 ? many.getActiveLayer() : Layer.createLayer(many, 1, 1, "Layer " + index);
+        layer.properties.name = "Layer " + index;
+        layer.properties.userMetadataItems = [{key: "index", value: String(index)}];
+        layer.getSurface().context.fillStyle = "rgb(" + index + ",55,99)";
+        layer.getSurface().context.fillRect(0, 0, 1, 1);
+        if (index !== 0) {
+            many.getDocument().addLayer(layer);
+        }
+    }
+    let manyBlob = await DocumentIO.serializePdn(many);
+    let manyData = await DocumentIO.readPdn(new window.File([manyBlob], "65-layers.pdn"));
+    check(manyData.layers.length === 65 && manyData.resolution === 300, "65-layer PDN lost layers or resolution");
+    for (let [index, layer] of manyData.layers.entries()) {
+        check(layer.name === "Layer " + index && layer.canvas.getContext("2d").getImageData(0, 0, 1, 1).data[0] === index
+            && layer.userMetadataItems[0].value === String(index), "65-layer PDN changed layer " + index);
+    }
+    let manyReopened = await DocumentIO.createWorkspaceFromPdnData(manyData, "65-layers.pdn");
+    check(manyReopened.getDocument().getLayers().getLayerCount() === 65
+        && manyReopened.getDocument().metadata.some(entry => entry.key === "Author" && entry.value === "Żółw"),
+        "65-layer workspace lost document metadata");
     for (let entry of [...app.getDocumentWorkspaces()]) {
         app.closeDocumentWorkspace(entry, false);
     }

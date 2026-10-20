@@ -481,6 +481,19 @@ test("PDN generated graphs round trip more than 64 bitmap layers and document/la
     graph.members.layers.members["ArrayList+_items"][0].typeName = "PaintDotNet.FutureLayer";
     let bytes = codec.concat([codec.createHeader(1, 1, 1), serialize(graph), pixelBlock(new Uint8Array(4), false)]);
     await assert.rejects(codec.decode(bytes), /Unsupported Paint.NET layer type/);
+    graph = Factory.create(1, {width: 1, height: 1});
+    graph.members.layers.members["ArrayList+_items"][0].members["Layer+properties"].members.blendMode.members.value__ = 999;
+    bytes = codec.concat([codec.createHeader(1, 1, 1), serialize(graph), pixelBlock(new Uint8Array(4), false)]);
+    await assert.rejects(codec.decode(bytes), /Unsupported Paint.NET blend mode/);
+    for (let scope of ["document", "layer"]) {
+        graph = Factory.create(1, {width: 1, height: 1});
+        let owner = scope === "document" ? graph.members
+            : graph.members.layers.members["ArrayList+_items"][0].members["Layer+properties"].members;
+        delete owner.userMetadataItems;
+        owner.userMetaData = {typeName: "System.Collections.Specialized.NameValueCollection", members: {}};
+        bytes = codec.concat([codec.createHeader(1, 1, 1), serialize(graph), pixelBlock(new Uint8Array(4), false)]);
+        await assert.rejects(codec.decode(bytes), /Unsupported Paint.NET metadata structure/);
+    }
     graph = Factory.create(1, {width: 1, height: 1, metadata: [{key: "paint.js.resolution", value: "NaN"}]});
     bytes = codec.concat([codec.createHeader(1, 1, 1), serialize(graph), pixelBlock(new Uint8Array(4), false)]);
     await assert.rejects(codec.decode(bytes), /resolution metadata/);

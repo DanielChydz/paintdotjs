@@ -95,7 +95,7 @@ WebGL availability alone is not proof of hardware acceleration.
 
 - Chromium is the supported browser family. Firefox and Safari are not regularly tested, and their
   file-system and clipboard capabilities differ.
-- Scanner acquisition and color-profile commands are not implemented yet.
+- Scanner acquisition is not implemented yet. ICC support uses an 8-bit sRGB working space; wide-gamut editing and soft proofing are not implemented.
 - Native Paint.NET DLL plugins cannot be loaded. JavaScript plugins can provide effects and file types; see [the plugin guide](docs/plugin-api/README.md).
 - Manual GPU/device selection and direct advanced-color management are not implemented.
 - Very large documents, large-radius effects, and complex selections may still be slower or more

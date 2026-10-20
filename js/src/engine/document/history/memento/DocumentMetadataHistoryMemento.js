@@ -14,7 +14,7 @@
 
 class DocumentMetadataHistoryMemento extends HistoryMemento {
     constructor(workspace) {
-        super("Color Profile", null);
+        super("Color Profile", "assets/icons/menu_image_color_profile_icon.png");
         this.workspace = workspace;
         this.metadata = workspace.getDocument().metadata.map(entry => ({...entry}));
     }

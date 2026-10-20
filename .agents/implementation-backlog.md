@@ -7,7 +7,7 @@ Stan przeglądu: 2026-10-20. Źródła: [README](../README.md),
 [FIXME.md](history/FIXME.md), komentarze TODO w `js/`
 oraz nieaktywne pozycje menu i ustawień. To audyt repozytorium, a nie pełna
 inwentaryzacja wszystkich funkcji najnowszego Paint.NET. Pierwsza partia
-(punkty 1–6) oraz punkty 8–16 zostały zaimplementowane. Punkt 7 jest odłożony
+(punkty 1–6) oraz punkty 8–18 zostały zaimplementowane w opisanym poniżej zakresie. Punkt 7 jest odłożony
 na decyzję użytkownika; pozostałe pozycje pozostają planem prac.
 
 Skala: **S** — mała, lokalna zmiana; **M** — kilka współpracujących komponentów;
@@ -60,7 +60,7 @@ Punkty **8–16 ukończone**:
   jest również tymczasowy podgląd narzędzia zaznaczania.
 
 Tabela zachowuje pierwotny zakres; podsumowanie punktów **12–16** znajduje się
-poniżej. Kolejne większe zadania (17–21) wymagają osobnej decyzji.
+poniżej. Punkty 17–18 opisano niżej; kolejne większe zadania (19–21) wymagają osobnej decyzji.
 
 ### Ukończona partia 12–16
 
@@ -141,7 +141,46 @@ scenariuszach, w tym nowych testach widoku, akceleracji, kamery i eksportu.
 | 15 | Pobranie obrazu z kamery | M | Wyodrębnić od skanera: podgląd, zgoda na dostęp, wykonanie zdjęcia, anulowanie, zwolnienie urządzenia i otwarcie wyniku jako dokumentu. Zdefiniować wsparcie desktop/web i zachowanie przy braku urządzenia. | [FileMenu](../js/src/interface/panel/header/main/menu/FileMenu.js), README |
 | 16 | Rozszerzenie opcji eksportu | M/L na format | Osobne zadania: warianty/kompresja TIFF, głębia BMP/TGA, kompresowane DDS. Najpierw audyt możliwości obecnych kodeków, potem kontrolki zapisu i testy plików odczytanych niezależnym dekoderem. Nie wdrażać wszystkich formatów naraz. | README: tabela formatów, [portableImageCodec](../src/portableImageCodec.js) |
 
-## P3 — większe zadania do osobnej decyzji
+## P3 — większe zadania
+
+### Ukończona partia 17–18 (2026-10-20)
+
+- **17 — ICC:** otwieranie PNG/JPEG/WebP/TIFF/AVIF/JPEG XL z osadzonym ICC
+  konwertuje piksele do roboczego sRGB i zachowuje profil źródłowy. Image → Color
+  Profile pokazuje profil, umożliwia wybór RGB ICC eksportu i powrót do sRGB.
+  Zmiana jest odwracalna przez undo/redo. Eksport do sześciu wymienionych formatów
+  rzeczywiście przelicza kolory i osadza profil. PDN zachowuje źródłowy i eksportowy
+  profil; przekształcenia dokumentu i resize nie gubią tych ustawień. Pozostałe
+  formaty eksportują dotychczasowe sRGB. Nie jest to edycja HDR/wide-gamut,
+  soft proofing ani wyjście CMYK. Szczegóły: [color-management.md](../docs/color-management.md).
+- **18 — PDN:** wspólny generator NRBF `src/pdn/PdnObjectGraph.js` obsługuje do
+  65 535 warstw (ograniczenie walidacyjne; rzeczywisty limit zależy od pamięci).
+  Stare szablony 1–64 pozostają zgodne bajt w bajt i nadal służą odzyskiwaniu
+  wadliwych blend records dawnych plików paint.js. Zachowane są dokumentowe
+  i warstwowe tablice string key/value `userMetadataItems`, także nieznane klucze,
+  oraz własne ustawienia ICC i DPI. Nieznane typy warstw/tryby mieszania/struktury
+  metadanych są odrzucane przed alokacją pikseli. Nie dodano obsługi nowego
+  kontenera ani arbitralnych obiektów pluginów. Nie deklarować zgodności ze
+  wszystkimi wersjami PDN; szczegóły: [pdn-format.md](../docs/pdn-format.md).
+
+Źródła kontrolne wskazane przez użytkownika: [OpenPDN 3.36.7](https://github.com/rivy/OpenPDN)
+i [wydanie 5.1.12](https://github.com/paintdotnet/release/releases/tag/v5.1.12).
+Źródła OpenPDN przejrzano w `/tmp/paintjs-openpdn-audit`: `Document.cs`,
+`Layer.cs`, `MetaData.cs`, `SystemLayer/PropertyItem2.cs`. Wersja 3.36.7 ma
+starsze `NameValueCollection userMetaData`; DPI jest w sekcji `$exif` jako
+PropertyItem. Obecna implementacja zachowuje tablice `userMetadataItems` schematu
+5.x, a własny DPI zapisuje pod `paint.js.resolution`; nie jest to implementacja
+odczytu/zapisu natywnego EXIF DPI ani automatyczna obsługa kolekcji z wersji 3.x.
+Oryginalnej aplikacji 5.1.12 nie dekompilowano ani nie uruchamiano.
+
+Weryfikacja: 269 testów przeszło; 100% linii/gałęzi/funkcji 291 plików runtime,
+bez nowych wykluczeń. Testy obejmują profil z zamienionymi czerwonymi/zielonymi
+primariami (niezależny wzorzec Pillow/Little CMS), odczyt wyeksportowanego ICC,
+undo/redo, błędy/anulowanie/równoległy odczyt profilu i rzeczywisty round trip
+65 warstw w desktopie/web. Log: `/tmp/paintjs-icc-pdn-coverage-complete.log`.
+Testy paczki i końcowy stan przekazania: [COVERAGE-STATUS.md](history/COVERAGE-STATUS.md).
+
+Tabela zachowuje pierwotny zakres. **19–21 pozostają do zrobienia; 7 odłożony.**
 
 | ID | Zadanie | Skala | Uwagi |
 | --- | --- | --- | --- |
