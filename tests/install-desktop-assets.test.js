@@ -26,7 +26,7 @@ test("bundled assets carry open provenance, checked licenses and no proprietary 
     let root = path.resolve(__dirname, "..");
     let manifest = require("../desktop-resources/asset-manifest.json");
     assert.equal(AssetCatalog.verify(path.join(root, "assets"), manifest), path.join(root, "assets"));
-    for (let relative of ["font/Inter.ttf", "licenses/Inter-OFL.txt", "licenses/paintjs-icons-LICENSE.txt", "icon.png", "icon.ico"]) {
+    for (let relative of ["font/inter/Inter-Variable.woff2", "licenses/Inter-OFL.txt", "licenses/paintjs-icons-LICENSE.txt", "icon.png", "icon.ico"]) {
         assert.equal(typeof manifest.files[relative], "string");
     }
     assert.equal(fs.existsSync(path.join(root, "assets/font/segoe_ui.ttf")), false);

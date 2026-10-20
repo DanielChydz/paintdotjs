@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Regenerate checked-in artwork offline. Requires Pillow and ImageMagick convert.
+"""Regenerate checked-in artwork offline. Requires Pillow, fonttools[woff], and ImageMagick convert.
 Sources and redistribution licenses are documented in artwork/SOURCES.md.
 """
 import json
+import io
 import pathlib
 import re
 import subprocess
 from PIL import Image, ImageDraw, ImageFont
+from fontTools.ttLib.woff2 import decompress
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 ASSETS = ROOT / 'assets'
@@ -55,8 +57,10 @@ print('Generated original branding and copied upstream icon aliases.')
 header = Image.new('RGBA', (960, 240), '#142b3b')
 header.alpha_composite(Image.open(ASSETS / 'icon.png').resize((190, 190), Image.Resampling.LANCZOS), (24, 25))
 draw = ImageDraw.Draw(header)
-font = ImageFont.truetype(str(ASSETS / 'font/Inter.ttf'), 84)
-small_font = ImageFont.truetype(str(ASSETS / 'font/Inter.ttf'), 27)
+inter = io.BytesIO()
+decompress(ASSETS / 'font/inter/Inter-Variable.woff2', inter)
+font = ImageFont.truetype(io.BytesIO(inter.getvalue()), 84)
+small_font = ImageFont.truetype(io.BytesIO(inter.getvalue()), 27)
 draw.text((244, 40), 'paint.js', font=font, fill='#f3fbff')
 draw.text((250, 146), 'Open source image editor', font=small_font, fill='#a8c8d9')
 header.save(ROOT / '.github/assets/header.png')
