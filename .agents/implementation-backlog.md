@@ -1,6 +1,10 @@
 # Lista prac implementacyjnych
 
-Stan przeglądu: 2026-10-20. Źródła: README, FIXME.md, komentarze TODO w `js/`
+Kontekst zadań dla agentów; zobacz [indeks](README.md). Wyniki i polecenia
+przekazania poniżej są zapisem sesji, nie upoważnieniem do działań w nowym zadaniu.
+
+Stan przeglądu: 2026-10-20. Źródła: [README](../README.md),
+[FIXME.md](history/FIXME.md), komentarze TODO w `js/`
 oraz nieaktywne pozycje menu i ustawień. To audyt repozytorium, a nie pełna
 inwentaryzacja wszystkich funkcji najnowszego Paint.NET. Pierwsza partia
 (punkty 1–6) oraz punkty 8–16 zostały zaimplementowane. Punkt 7 jest odłożony
@@ -113,13 +117,13 @@ i BC3/DXT5, bez mipmap. Warianty RGB składają przezroczystość na bieli.
 Opcje są trwałe per format; można przywrócić domyślne. Podgląd TIFF/TGA/DDS
 dekoduje wynik zapisu, w tym stratny DDS. Testy kontrolują nagłówki, rzeczywiste
 bajty, nieparzyste i minimalne wymiary, alfa oraz padding; niezależny FFmpeg
-odczytuje eksporty desktopowe. Audyt opisano w [image-encoders.md](image-encoders.md).
+odczytuje eksporty desktopowe. Audyt opisano w [image-encoders.md](../docs/image-encoders.md).
 
 **Przekazanie:** punkty 1–6 i 8–16 są ukończone; punkt 7 pozostaje odłożony
 na wyraźną decyzję użytkownika (brak wydań prerelease). Ostatnia weryfikacja:
 266 testów przeszło, pokrycie linii, gałęzi i funkcji wszystkich 287 plików
 runtime wynosi 100%, bez nowych wykluczeń. Szczegóły testów paczki zapisano w
-[COVERAGE-STATUS.md](../COVERAGE-STATUS.md). Pracować na `develop`, commitować
+[COVERAGE-STATUS.md](history/COVERAGE-STATUS.md). Pracować na `develop`, commitować
 lokalnie, a po zakończeniu i testach scalać do lokalnego `master`; nie pushować.
 Zbudowano DEB i przetestowano jego rzeczywisty plik wykonywalny w dziesięciu
 scenariuszach, w tym nowych testach widoku, akceleracji, kamery i eksportu.
@@ -163,7 +167,7 @@ scenariuszach, w tym nowych testach widoku, akceleracji, kamery i eksportu.
 
 ## Co jest już zrobione lub wymaga ostrożnej interpretacji
 
-- Wszystkie cztery pozycje w `FIXME.md` są oznaczone jako ukończone: układ
+- Wszystkie cztery pozycje w [FIXME.md](history/FIXME.md) są oznaczone jako ukończone: układ
   kontrolek kolorów, tłumaczenia jednostek oraz zapis HEIC i JPEG XR.
 - `AppFile.exists()` ma implementację przez Node fs.
 - `MoveTool.onPasteMouseDown()` jest zaimplementowane i wywoływane.

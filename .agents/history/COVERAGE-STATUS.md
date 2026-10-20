@@ -1,5 +1,9 @@
 # Runtime coverage handoff
 
+Historical session checkpoints; see the [agent index](../README.md) for their scope.
+Counts and instructions below describe recorded sessions, not the current checkout.
+Run commands from the repository root; plain-text source and artifact paths use that root.
+
 ## Current verified checkpoint (2026-10-20)
 
 All 266 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
@@ -245,7 +249,7 @@ The previous 100% result below applies to the pre-integration source snapshot.
 The newly integrated upstream features expand the measured code; the strict 100%
 gate is not currently satisfied. This gap is recorded rather than excluding code.
 Lint, test lint, headers, version and bundled-asset checks pass.
-Log: `/tmp/paintdotjs-upstream-icons-coverage.log`. See UPSTREAM-SYNC.md for merge decisions.
+Log: `/tmp/paintdotjs-upstream-icons-coverage.log`. See [UPSTREAM-SYNC.md](UPSTREAM-SYNC.md) for merge decisions.
 
 ## Historical verified snapshot after open-artwork migration (2026-10-16)
 
@@ -265,11 +269,11 @@ Current logs: `/tmp/paintdotjs-desktop-brand-coverage.log`,
 `/tmp/paintdotjs-desktop-brand-strict.log`.
 The latest regression checks desktop version/title labels while retaining the
 browser's Web label; the bundle preserves metadata supplied by desktop preload.
-The asset task and licensing/provenance checks are documented in ARTWORK-MIGRATION.md.
+The asset task and licensing/provenance checks are documented in [ARTWORK-MIGRATION.md](ARTWORK-MIGRATION.md).
 Source verification includes packaged manifest lookup and offline PWA startup
 regressions. Pages and Linux DEB were rebuilt from commit 451183d and audited;
 the actual packaged application and production PWA both pass offline reloads.
-See ARTWORK-MIGRATION.md for artifact hashes and the completed verification.
+See [ARTWORK-MIGRATION.md](ARTWORK-MIGRATION.md) for artifact hashes and the completed verification.
 
 ## Historical checkpoint before artwork migration
 
@@ -725,18 +729,18 @@ These changes were discussed with and approved by the user. Keep them.
 
 | Source | Change |
 |---|---|
-| [PreviewShapeTool](./js/src/engine/document/tool/tool/PreviewShapeTool.js) | Scale pending shapes by displacement from the initial handle press; preserve geometry on stationary/off-center presses. Normalize inclusive aliased rectangle bounds and avoid a duplicate Canvas outline. |
-| [RectangleSelectTool](./js/src/engine/document/tool/tool/RectangleSelectTool.js) | Normalize fixed-ratio selections in all four drag quadrants. |
-| [File](./js/src/io/File.js) | Preserve absolute/relative path kind when obtaining a parent. |
-| [WebFile](./js/src/io/file/WebFile.js) | Write using the existing IndexedDB `fileName` key; no schema migration. |
-| [MoveTool](./js/src/engine/document/tool/tool/move/MoveTool.js) | Finish history snapshots include clipped source and transformed destination footprints. Redo no longer leaves a copy at the old origin. Existing dirty-rectangle merging avoids capturing the gap/full canvas. |
-| [VertexList](./js/src/engine/document/selection/VertexList.js) | Shared adaptive ellipse generation, default 0.01px chord error, cardinal bounds, explicit finite-bound/tolerance/count validation. |
-| [EllipseSelectTool](./js/src/engine/document/tool/tool/EllipseSelectTool.js) | Delegate existing adaptive ellipse generation to the shared helper without degrading selection accuracy. |
-| [GraphicsPath](./js/src/engine/document/selection/GraphicsPath.js) | Skip empty degenerate ellipses; repair `flatten()` to validate tolerance and transform already-linear paths without deleting short/duplicate/closed/hole vertices. |
-| [Tool](./js/src/engine/document/tool/Tool.js) | Implement Hue/Saturation/Color/Luminosity software blending with W3C weighted luminosity, saturation and gamut clipping. Avoid extra calculations for transparent source/backdrop. |
-| [SettingsDialog](./js/src/interface/window/dialog/SettingsDialog.js) | Disable Windows Pen & Ink/display links outside the Windows desktop app. Browser checks short-circuit without requiring Node's `process`. |
-| [FontManager](./js/src/engine/util/FontManager.js) | Resolve storage operations after transaction completion, not request success. A successful request followed by transaction rollback must reject, not acknowledge a lost write. |
-| [DocumentWorkspace](./js/src/engine/document/DocumentWorkspace.js), [DocumentWorkspaceAction](./js/src/engine/document/history/action/actions/DocumentWorkspaceAction.js) | Share document-action dispatch. Push only actual history mementos; handle asynchronous results/errors as the former UI dispatcher did. Prevent `undefined` history entries after actions that already record history. |
+| [PreviewShapeTool](../../js/src/engine/document/tool/tool/PreviewShapeTool.js) | Scale pending shapes by displacement from the initial handle press; preserve geometry on stationary/off-center presses. Normalize inclusive aliased rectangle bounds and avoid a duplicate Canvas outline. |
+| [RectangleSelectTool](../../js/src/engine/document/tool/tool/RectangleSelectTool.js) | Normalize fixed-ratio selections in all four drag quadrants. |
+| [File](../../js/src/io/File.js) | Preserve absolute/relative path kind when obtaining a parent. |
+| [WebFile](../../js/src/io/file/WebFile.js) | Write using the existing IndexedDB `fileName` key; no schema migration. |
+| [MoveTool](../../js/src/engine/document/tool/tool/move/MoveTool.js) | Finish history snapshots include clipped source and transformed destination footprints. Redo no longer leaves a copy at the old origin. Existing dirty-rectangle merging avoids capturing the gap/full canvas. |
+| [VertexList](../../js/src/engine/document/selection/VertexList.js) | Shared adaptive ellipse generation, default 0.01px chord error, cardinal bounds, explicit finite-bound/tolerance/count validation. |
+| [EllipseSelectTool](../../js/src/engine/document/tool/tool/EllipseSelectTool.js) | Delegate existing adaptive ellipse generation to the shared helper without degrading selection accuracy. |
+| [GraphicsPath](../../js/src/engine/document/selection/GraphicsPath.js) | Skip empty degenerate ellipses; repair `flatten()` to validate tolerance and transform already-linear paths without deleting short/duplicate/closed/hole vertices. |
+| [Tool](../../js/src/engine/document/tool/Tool.js) | Implement Hue/Saturation/Color/Luminosity software blending with W3C weighted luminosity, saturation and gamut clipping. Avoid extra calculations for transparent source/backdrop. |
+| [SettingsDialog](../../js/src/interface/window/dialog/SettingsDialog.js) | Disable Windows Pen & Ink/display links outside the Windows desktop app. Browser checks short-circuit without requiring Node's `process`. |
+| [FontManager](../../js/src/engine/util/FontManager.js) | Resolve storage operations after transaction completion, not request success. A successful request followed by transaction rollback must reject, not acknowledge a lost write. |
+| [DocumentWorkspace](../../js/src/engine/document/DocumentWorkspace.js), [DocumentWorkspaceAction](../../js/src/engine/document/history/action/actions/DocumentWorkspaceAction.js) | Share document-action dispatch. Push only actual history mementos; handle asynchronous results/errors as the former UI dispatcher did. Prevent `undefined` history entries after actions that already record history. |
 
 Important decisions:
 
@@ -759,57 +763,57 @@ Important decisions:
 
 New root test files:
 
-- [abstract-contracts.test.js](./tests/abstract-contracts.test.js):
+- [abstract-contracts.test.js](../../tests/abstract-contracts.test.js):
   window, history, renderer and UI/item API contracts and cleanup.
-- [action-shortcuts.test.js](./tests/action-shortcuts.test.js):
+- [action-shortcuts.test.js](../../tests/action-shortcuts.test.js):
   tool cycling, timeout, conflicts, registration and storage failures.
-- [document-io-boundaries.test.js](./tests/document-io-boundaries.test.js):
+- [document-io-boundaries.test.js](../../tests/document-io-boundaries.test.js):
   document boundaries, picker/save configuration, flatten consent, failed writes,
   dirty-state preservation and save-all focus restoration.
-- [error-reporting.test.js](./tests/error-reporting.test.js):
+- [error-reporting.test.js](../../tests/error-reporting.test.js):
   real ErrorForm installation/reporting and AppView routing in an isolated VM.
-- [file-storage.test.js](./tests/file-storage.test.js):
+- [file-storage.test.js](../../tests/file-storage.test.js):
   platform caching, temporary-file collisions and explicit storage failures.
-- [settings-platform.test.js](./tests/settings-platform.test.js):
+- [settings-platform.test.js](../../tests/settings-platform.test.js):
   Windows-link gating for Windows/Linux/macOS/FreeBSD and a Node-free browser.
 
 New runtime scenarios:
 
-- [checkPendingSelections.js](./tests/runtime/checkPendingSelections.js)
-- [checkToolbarWindows.js](./tests/runtime/checkToolbarWindows.js)
-- Registered in [desktop.test.cjs](./tests/desktop.test.cjs).
+- [checkPendingSelections.js](../../tests/runtime/checkPendingSelections.js)
+- [checkToolbarWindows.js](../../tests/runtime/checkToolbarWindows.js)
+- Registered in [desktop.test.cjs](../../tests/desktop.test.cjs).
 
-Extended root tests: [effects.test.js](./tests/effects.test.js),
-[geometry-color.test.js](./tests/geometry-color.test.js),
-[pdn-codec.test.js](./tests/pdn-codec.test.js),
-[platform-runtime.test.js](./tests/platform-runtime.test.js).
+Extended root tests: [effects.test.js](../../tests/effects.test.js),
+[geometry-color.test.js](../../tests/geometry-color.test.js),
+[pdn-codec.test.js](../../tests/pdn-codec.test.js),
+[platform-runtime.test.js](../../tests/platform-runtime.test.js).
 
 Notable real runtime regressions:
 
-- [checkControls.js](./tests/runtime/checkControls.js): color UI/palette gestures,
+- [checkControls.js](../../tests/runtime/checkControls.js): color UI/palette gestures,
   directory picker and real FileList fallback imports, real font storage commits,
   rollback/request/version errors, clipboard and recovery behavior.
-- [checkSettingsControls.js](./tests/runtime/checkSettingsControls.js): font picker
+- [checkSettingsControls.js](../../tests/runtime/checkSettingsControls.js): font picker
   import/reset, clear-button confirmation, and disabled Windows controls on Linux.
-- [checkFileWorkflows.js](./tests/runtime/checkFileWorkflows.js): actual new-document
+- [checkFileWorkflows.js](../../tests/runtime/checkFileWorkflows.js): actual new-document
   dispatch, default/active/clipboard dimensions, print dimensions/DPI/unit conversion,
   percentage limits, resampling reset and accessible canvas anchors.
-- [checkDocumentChrome.js](./tests/runtime/checkDocumentChrome.js): native held/tapped
+- [checkDocumentChrome.js](../../tests/runtime/checkDocumentChrome.js): native held/tapped
   tab-navigation presses, real pointer capture, repeat timing and release cleanup.
-- [checkEffectControls.js](./tests/runtime/checkEffectControls.js): normalized/copied
+- [checkEffectControls.js](../../tests/runtime/checkEffectControls.js): normalized/copied
   curve input and canceled edits begun through genuine native pointer capture.
-- [checkSavingClipboard.js](./tests/runtime/checkSavingClipboard.js): rapid format
+- [checkSavingClipboard.js](../../tests/runtime/checkSavingClipboard.js): rapid format
   switching, independent quality values, fresh JPEG signature/MIME/dimensions
   when submitting before the preview debounce completes.
-- [checkLayerActions.js](./tests/runtime/checkLayerActions.js): exact layer/flatten
+- [checkLayerActions.js](../../tests/runtime/checkLayerActions.js): exact layer/flatten
   pixels and identity, shared synchronous/asynchronous action history, error
   reporting, and actual layer-row double-click behavior.
-- [checkSurfaceTransactions.js](./tests/runtime/checkSurfaceTransactions.js):
+- [checkSurfaceTransactions.js](../../tests/runtime/checkSurfaceTransactions.js):
   700 native Canvas blend comparisons, actual clipped bucket pixels and undo/redo,
   sparse snapshots and explicit abstract move/selection contracts.
-- [checkTransformTools.js](./tests/runtime/checkTransformTools.js): frame coalescing,
+- [checkTransformTools.js](../../tests/runtime/checkTransformTools.js): frame coalescing,
   live resampling/gamma, exact moved pixels and snapshot allocation budgets.
-- [checkPixelTools.js](./tests/runtime/checkPixelTools.js): clone source warnings,
+- [checkPixelTools.js](../../tests/runtime/checkPixelTools.js): clone source warnings,
   deleted source layers, settings/preview changes and exact paint/history pixels.
 - Other extended scenarios: browser/WebFile/welcome behavior, GPU error/cache
   paths and text/gradient fallback rendering.

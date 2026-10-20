@@ -1,10 +1,13 @@
 # Open asset migration (completed, 2026-10-16)
 
+Historical session report; see the [agent index](../README.md) for its scope.
+Paths in commands and plain-text artifact references are relative to the repository root.
+
 Latest state: the upstream 2.4.3 interface icon/cursor pack supersedes the Lucide
 migration below, at the user's explicit request. Lucide sources/generated assets
 were removed. The supplied desktop icon, original web mark and independently
-constructed PDN templates remain. Current provenance: artwork/SOURCES.md and
-artwork/upstream-icons.json. See UPSTREAM-SYNC.md for the integration checkpoint.
+constructed PDN templates remain. Current provenance: [artwork/SOURCES.md](../../artwork/SOURCES.md) and
+[artwork/upstream-icons.json](../../artwork/upstream-icons.json). See [UPSTREAM-SYNC.md](UPSTREAM-SYNC.md) for the integration checkpoint.
 The measurements and artifact hashes in the sections below are historical.
 
 ## Desktop title and requested icon follow-up (2026-10-16)
@@ -118,4 +121,4 @@ node scripts/generate_asset_manifest.js
 npm run check-assets
 
 Downloads used only for vendoring open resources are under /tmp/paintdotjs-open-assets;
-no dependency manifest changes were needed. Source license URLs are in SOURCES.md.
+no dependency manifest changes were needed. Source license URLs are in [SOURCES.md](../../artwork/SOURCES.md).

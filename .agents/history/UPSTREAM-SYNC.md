@@ -1,5 +1,8 @@
 # Upstream 2.4.3 integration (2026-10-16)
 
+Historical session report; see the [agent index](../README.md) for its scope.
+Paths in commands and plain-text artifact references are relative to the repository root.
+
 Source: https://github.com/LabyStudio/paintdotjs, master b4e6fc5.
 47 upstream commits are merged as history, preserving the fork's 78 local commits.
 Work branch: sync/upstream-20261016; completed on local master.
