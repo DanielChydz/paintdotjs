@@ -32,7 +32,7 @@
     "preapp": "npm run desktop:build",
     "app": "electron .",
     "predesktop:build": "npm run lint && npm run check-assets && npm run check-version-info && npm run check-headers",
-    "desktop:build": "webpack --config webpack.config.js",
+    "desktop:build": "webpack --config webpack.config.js && node scripts/prepare_desktop.js",
     "dist": "npm run desktop:build && electron-builder",
     "dist:linux": "npm run desktop:build && electron-builder --linux AppImage",
     "dist:deb": "npm run desktop:build && electron-builder --linux deb --publish never",
@@ -42,7 +42,8 @@
     "assets:manifest": "node scripts/generate_asset_manifest.js",
     "gen-imports": "node ./scripts/generate_imports.js",
     "pwa": "npm run pages",
-    "prepublish": "npm run web"
+    "prepublish": "npm run web",
+    "test:package": "node scripts/test_packaged.js"
   },
   "keywords": [
     "paint",
@@ -61,7 +62,9 @@
     "node": ">=22.13.0"
   },
   "devDependencies": {
+    "binaryen": "132.0.0",
     "c8": "^12.0.0",
+    "clean-css": "5.3.3",
     "electron": "44.7.0",
     "electron-builder": "^26.15.3",
     "eslint": "^10.12.0",
@@ -91,19 +94,28 @@
       "LICENSE.md",
       "NOTICE.md",
       "docs/image-encoders.md",
-      "css/**/*",
-      "js/**/*",
-      "lib/**/*",
-      "!lib/codecs/**/*",
-      "scripts/**/*",
+      {
+        "from": "build/desktop",
+        "to": ".",
+        "filter": [
+          "**/*",
+          "!**/*.map"
+        ]
+      },
       "desktop-resources/**/*",
       "build/web/**/*",
       "!node_modules/@imagemagick/magick-wasm/**/*",
       "!node_modules/ms-nrbf-js/**/*",
       "!node_modules/buffer/**/*",
-      "!scripts/__pycache__/**/*",
-      "!scripts/test_coverage.js",
-      "!**/*.map"
+      "!**/*.map",
+      "!node_modules/fflate/**/*",
+      "!node_modules/yauzl/**/*",
+      "!node_modules/pend/**/*",
+      "!node_modules/base64-js/**/*",
+      "!node_modules/ieee754/**/*",
+      "!node_modules/custom-electron-titlebar/**/*.mjs",
+      "!node_modules/js-yaml/dist/**/*",
+      "!node_modules/js-yaml/bin/**/*"
     ],
     "extraResources": [
       {
@@ -289,7 +301,11 @@
         "libasound2t64",
         "libcups2t64"
       ],
-      "recommends": []
+      "recommends": [],
+      "fpm": [
+        "--deb-compression-level",
+        "9"
+      ]
     },
     "rpm": {
       "maintainer": "Daniel <dan.devmail@proton.me>",

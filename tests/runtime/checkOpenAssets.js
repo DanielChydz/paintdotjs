@@ -12,13 +12,15 @@
  * Licensed under LICENSE.md. See NOTICE.md for full attribution.
  */
 
-module.exports = async function checkOpenAssets() {
+module.exports = async function checkOpenAssets(catalog = null) {
     let check = (condition, message) => {
         if (!condition) {
             throw new Error(message);
         }
     };
-    let catalog = await (await fetch("desktop-resources/asset-manifest.json")).json();
+    if (catalog === null) {
+        catalog = await (await fetch("desktop-resources/asset-manifest.json")).json();
+    }
     check(catalog.assetSet === "paintjs-open-v1", "Unexpected asset provenance");
     if (isApp) {
         check(!PdjInfo.version().includes("(Web)"), "Desktop bundle overwrote its distribution label");

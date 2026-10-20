@@ -56,3 +56,7 @@ notices for the fonts distributed with a particular release.
 These codecs are separate WebAssembly modules. Exact corresponding source
 archives, checksums, upstream documentation and rebuild/replacement instructions
 are provided in `scripts/codecs/sources.json` and `docs/image-encoders.md`.
+
+Bundled codec and archive JavaScript is compiled into the web bundle rather than
+installed a second time as Node packages. Its notices are retained in
+`assets/licenses/{magick-wasm,fflate,buffer,ms-nrbf-js}-*.txt`.
