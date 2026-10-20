@@ -38,14 +38,32 @@ class SurfaceBox {
     }
 
     addRenderer(renderer) {
-        this.rendererList.push(renderer);
+        if (!this.rendererList.includes(renderer)) {
+            this.rendererList.push(renderer);
+            this.invalidate();
+        }
     }
 
     removeRenderer(renderer) {
         let index = this.rendererList.indexOf(renderer);
         if (index !== -1) {
             this.rendererList.splice(index, 1);
+            this.invalidate();
         }
+    }
+
+    invalidate() {
+        // Overlay changes need presentation, not a new document composition.
+        this.app.invalidateRender();
+    }
+
+    dispose() {
+        // The composition surface is borrowed from DocumentView.
+        for (let renderer of [...this.rendererList]) {
+            renderer.dispose();
+        }
+        this.surface = null;
+        this.baseRenderer = null;
     }
 
     getScaleFactorRatio() {

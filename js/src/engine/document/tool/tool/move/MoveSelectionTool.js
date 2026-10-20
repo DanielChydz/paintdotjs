@@ -79,7 +79,7 @@ class MoveSelectionTool extends MoveToolBase {
         this.context.dispose();
         this.context = new MoveToolBaseContext();
 
-        this.flushHistoryMementos(i18n("moveSelectionTool.historyMemento.dropSelection"));
+        this.flushHistoryMementos(i18n("moveSelectionTool.historyMemento.dropSelection"), UUID.randomUUID());
     }
 
     onSelectionChanging() {
@@ -150,7 +150,7 @@ class MoveSelectionTool extends MoveToolBase {
         return consumed;
     }
 
-    flushHistoryMementos(name) {
+    flushHistoryMementos(name, seriesGuid = this.context.seriesGuid) {
         if (this.currentHistoryMementos.length > 0) {
             let cha = new CompoundHistoryMemento(null, null, this.currentHistoryMementos);
 
@@ -166,7 +166,7 @@ class MoveSelectionTool extends MoveToolBase {
 
             let ctha = new CompoundToolHistoryMemento(cha, this.getDocumentWorkspace(), haName, image);
 
-            // ctha.setSeriesGuid(this.context.seriesGuid); // TODO implement seriesGuid
+            ctha.setSeriesGuid(seriesGuid);
             this.getDocumentWorkspace().getHistory().pushNewMemento(ctha);
 
             this.currentHistoryMementos = [];

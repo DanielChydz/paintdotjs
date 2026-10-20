@@ -15,6 +15,7 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "selection fades, overlay invalidation, renderer ownership and gesture history series", file: "checkRendererHistory.js"},
     {name: "recent files, plugin help, busy operations and history failure recovery", file: "checkFirstBatchFeatures.js"},
     {name: "browser recent file handles persist and retain permissions", file: "checkFirstBatchFeaturesBrowser.js", browser: true},
     {name: "extension tool integration preserves text erase, tiny-canvas handles and nested menus", file: "checkExtensionTools.js"},

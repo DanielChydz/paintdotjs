@@ -472,8 +472,6 @@ class MoveToolBase extends Tool {
     lift(mouseX, mouseY, button, forceTranslate = false) {
         this.pushContextHistoryMemento();
 
-        this.context.seriesGuid = UUID.randomUUID();
-
         let out = forceTranslate
             ? {mode: MoveToolBaseMode.TRANSLATE, edge: MoveToolBaseEdge.NONE}
             : this.determineMoveMode(mouseX, mouseY, button);
@@ -504,6 +502,9 @@ class MoveToolBase extends Tool {
         if (this.tracking || button === MouseButton.MIDDLE) {
             return;
         }
+
+        // Each drag or keyboard nudge is independently undoable, even while lifted.
+        this.context.seriesGuid = UUID.randomUUID();
 
         let determinedMoveMode = forceTranslate;
         let newMode = MoveToolBaseMode.TRANSLATE;
@@ -784,7 +785,7 @@ class MoveToolBase extends Tool {
             this.dontDrop = false;
 
             this.render(newOffset, true);
-            // this.update() // TODO notify?
+            this.getSurfaceBox().invalidate();
 
             this.context.offset = newOffset;
 

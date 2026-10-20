@@ -18,7 +18,10 @@ class SelectionRenderer extends SurfaceBoxRenderer {
         super(surfaceBox);
 
         this.selection = selection;
-        this.selection.changed.add(this.onSelectionChanged.bind(this));
+        this.onSelectionChanged = this.onSelectionChanged.bind(this);
+        this.selection.changed.add(this.onSelectionChanged);
+        this.onSettingsChanged = this.onSettingsChanged.bind(this);
+        window.addEventListener("paintdotjs:setting-changed", this.onSettingsChanged);
 
         this.selectedPath = null;
         this.timeInitialized = Date.now();
@@ -29,6 +32,7 @@ class SelectionRenderer extends SurfaceBoxRenderer {
         this.renderingQuality = "high";
 
         this.whiteOpacity = 255;
+        this.whiteOpacityReset = null;
     }
 
     render(destination, renderBounds) {
@@ -54,17 +58,25 @@ class SelectionRenderer extends SurfaceBoxRenderer {
 
         // Draw black outline
         if (this.selectionOutline) {
+            let animate = this.isOutlineAnimationEnabled();
+            if (!animate) {
+                this.whiteOpacity = 255;
+                this.whiteOpacityReset = null;
+            }
             this.renderPath(context, renderBounds, selectedPath, {
                 color: "rgba(0, 0, 0, 0.6)",
                 lineWidth: 1
             });
 
             // Draw marching ants (white dashed outline)
+            if (this.whiteOpacityReset !== null) {
+                this.whiteOpacity = Math.min(255, Math.max(0, (Date.now() - this.whiteOpacityReset) / 200 * 255));
+            }
             let antsOffset = -(Date.now() - this.timeInitialized) / 30 % 8;
             this.renderPath(context, renderBounds, selectedPath, {
-                color: "white",
+                color: `rgba(255, 255, 255, ${this.whiteOpacity / 255})`,
                 dashPattern: [4, 4],
-                antsOffset: this.outlineAnimation ? antsOffset : 0,
+                antsOffset: animate ? antsOffset : 0,
                 lineWidth: 1
             });
         }
@@ -135,33 +147,69 @@ class SelectionRenderer extends SurfaceBoxRenderer {
         }
 
         this.selectedPath = path;
+        this.invalidate();
     }
 
     setSelectionTinting(selectionTinting) {
         this.selectionTinting = selectionTinting;
+        this.invalidate();
     }
 
     setSelectionOutline(selectionOutline) {
         this.selectionOutline = selectionOutline;
+        this.invalidate();
     }
 
     setOutlineAnimation(outlineAnimation) {
         this.outlineAnimation = outlineAnimation;
+        if (!outlineAnimation) {
+            this.whiteOpacity = 255;
+            this.whiteOpacityReset = null;
+        }
+        this.invalidate();
     }
 
     setRenderingQuality(renderingQuality) {
         this.renderingQuality = renderingQuality === "aliased" ? "aliased" : "high";
+        this.invalidate();
     }
 
     isAnimationActive() {
         return this.isVisible()
             && this.selectionOutline
-            && this.outlineAnimation
+            && this.isOutlineAnimationEnabled()
             && this.selectedPath !== null
             && !this.selectedPath.isEmpty();
     }
 
     resetOutlineWhiteOpacity() {
-        this.whiteOpacity = 0; // TODO use it
+        let animate = this.isOutlineAnimationEnabled();
+        this.whiteOpacity = animate ? 0 : 255;
+        this.whiteOpacityReset = animate ? Date.now() : null;
+        this.invalidate();
+    }
+
+    isOutlineAnimationEnabled() {
+        return this.outlineAnimation && AppSettingsStore.get("ui.animations", true);
+    }
+
+    onSettingsChanged(event) {
+        if (event.detail.path === "ui.animations") {
+            this.resetOutlineWhiteOpacity();
+        }
+    }
+
+    dispose() {
+        if (this.disposed) {
+            return;
+        }
+        this.selection.changed.remove(this.onSelectionChanged);
+        window.removeEventListener("paintdotjs:setting-changed", this.onSettingsChanged);
+        if (this.selectedPath !== null) {
+            this.selectedPath.dispose();
+            this.selectedPath = null;
+        }
+        this.selection = null;
+        super.dispose();
     }
 }

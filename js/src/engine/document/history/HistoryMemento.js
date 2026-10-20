@@ -20,6 +20,7 @@ class HistoryMemento {
         this.name = name;
         this.image = image;
         this.data = null;
+        this.seriesGuid = null;
 
         this.id = HistoryMemento.nextId++;
     }
@@ -31,6 +32,7 @@ class HistoryMemento {
     performUndo() {
         let memento = this.onUndo();
         memento.setId(this.getId());
+        memento.setSeriesGuid(this.getSeriesGuid());
         return memento;
     }
 
@@ -48,6 +50,14 @@ class HistoryMemento {
 
     setId(id) {
         this.id = id;
+    }
+
+    getSeriesGuid() {
+        return this.seriesGuid;
+    }
+
+    setSeriesGuid(seriesGuid) {
+        this.seriesGuid = seriesGuid;
     }
 
     setName(name) {

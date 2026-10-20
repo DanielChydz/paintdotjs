@@ -108,7 +108,7 @@ test("history base contracts propagate failures, execute once and preserve memen
 
 test("base renderers enforce visibility/disposal while leaving abstract rendering side-effect free", () => {
     let {SurfaceBoxRenderer} = contractFixture();
-    let surfaceBox = {};
+    let surfaceBox = {invalidate() {}, removeRenderer() {}};
     let renderer = new SurfaceBoxRenderer(surfaceBox);
     assert.equal(renderer.surfaceBox, surfaceBox);
     assert.equal(renderer.isVisible(), true);
