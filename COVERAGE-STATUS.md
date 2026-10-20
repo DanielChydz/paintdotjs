@@ -2,6 +2,45 @@
 
 ## Current verified checkpoint (2026-10-20)
 
+All 254 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
+all 286 runtime JavaScript source files, without added exclusions or ignores.
+
+| Metric | Covered | Total | Percentage | Remaining |
+|---|---:|---:|---:|---:|
+| Lines/statements | 46,353 | 46,353 | 100% | 0 |
+| Branches | 11,866 | 11,866 | 100% | 0 |
+| Functions | 2,856 | 2,856 | 100% | 0 |
+
+Implemented backlog items 1–6: persistent recent documents with desktop paths
+and browser handles, Help → Plugins, original move/rotate cursors, painted busy
+state before large final transforms, persistent automatic update preferences,
+and rollback of failed history functions using their existing bitmap/selection
+snapshots. Partial layer allocation is released and catchable failures report
+once. Wrapping a canvas with no available 2D context leaves the caller's canvas
+unchanged; failed allocation of an owned canvas releases it.
+
+Native and browser regressions cover real IndexedDB persistence, deduplication,
+missing files, revoked/denied handles, transaction failures, busy-state cleanup,
+pixel/history restoration and nested failures during error recovery. Updater
+fixtures cover startup/periodic preferences, stale timer callbacks, manual checks
+and preference changes while a web update prompt waits for another dialog.
+
+Lint, source headers and version metadata checks pass. Coverage log:
+`/tmp/paintjs-six-final-coverage.log`.
+
+Built `dist/paintdotjs-2.6.0-linux-amd64.deb` (99,574,104 bytes), extracted it
+into `/tmp/paintjs-six-final-deb-root`, and passed all five scenarios using its
+actual executable: bundled assets/fonts, modern codecs, upstream features,
+painting, and the new first-batch features. The test uses an isolated profile
+under Xvfb, without installing the package or changing the user's settings.
+The packaged tester tolerates first-run navigation only during its readiness
+probe; scenario failures are never retried or suppressed. Build/package logs:
+`/tmp/paintjs-six-final-deb.log`, `/tmp/paintjs-six-final-package.log`.
+No release was published or pushed. Other operating-system packages and native
+GPU hardware were not exercised in this Linux task.
+
+## Historical size optimization checkpoint (2026-10-20)
+
 All 250 tests pass with Node 24.21.0. `npm run test:coverage:check` includes
 all 282 runtime JavaScript source files, without added exclusions or ignores.
 

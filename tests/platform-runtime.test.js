@@ -96,6 +96,7 @@ function bootFixture(options = {}) {
         this.disconnect = () => state.disconnected = true;
     }
     let globals = {
+        AppSettingsStore: {get: () => state.automatic !== false},
         isApp: false, navigator: {serviceWorker}, document, MutationObserver,
         location: {hostname: options.hostname || "paint.example.test", reload: () => ++state.reloads},
         sessionStorage: {getItem: key => storage.get(key) || null,
@@ -127,7 +128,8 @@ function bootFixture(options = {}) {
             state.dialogs.push(settings);
             return state.choices.shift() || "later";
         }},
-        window: options.noApp ? {} : {app: {hasUnsavedDocuments: () => state.unsaved}},
+        window: Object.assign(options.noApp ? {} : {app: {hasUnsavedDocuments: () => state.unsaved}},
+            {addEventListener: (type, callback) => { state.settingChanged = callback; }}),
         DocumentIO: {saveAll: async () => {
             ++state.saves;
             return state.saveResult;
@@ -293,18 +295,28 @@ function updaterFixture(packaged, managed) {
     let window = {isDestroyed: () => !!state.destroyed, webContents: {send: (...args) => messages.push(args)}};
     let {api} = loadPlatform("desktop/updater.js", {
         process: {env: {PAINTDOTJS_MANAGED_INSTALL: managed ? "1" : "0"}},
-        setTimeout: (callback, delay) => {
-            assert.equal(delay, 10000);
+        clearTimeout: () => {}, setTimeout: (callback, delay) => {
+            assert.ok(delay === 10000 || delay === 3600000);
             timers.push(callback);
         }
     }, {
         electron: {
-            app: {isPackaged: packaged, getVersion: () => "2.1.16"},
+            app: {isPackaged: packaged, getVersion: () => "2.1.16", getPath: () => "/tmp/paintjs-test-updater"},
             net: {fetch: async (url, options) => {
                 assert.equal(url, "https://api.github.com/repos/DanielChydz/paintdotjs/releases/latest");
                 assert.equal(options.headers.Accept, "application/vnd.github+json");
                 return state.response;
             }}
+        },
+        "node:fs": {
+            readFileSync: () => {
+                if (state.readError) { throw state.readError; }
+                return state.preferences || '{"automatic":true}';
+            },
+            writeFileSync: (filename, data) => {
+                if (state.writeError) { throw state.writeError; }
+                state.savedPreferences = JSON.parse(data);
+            }
         },
         "electron-updater": {autoUpdater}
     });
@@ -386,7 +398,7 @@ test("managed updater compares release versions, reports malformed responses and
     await assert.rejects(fixture.api.checkForUpdates(), /HTTP 503/);
     fixture.timers[0]();
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(fixture.messages.at(-1)[1].state, "managed");
+    assert.equal(fixture.messages.at(-1)[1].state, "error");
 });
 
 function mainFixture(directory, options = {}) {
@@ -748,6 +760,7 @@ function rendererBridgeFixture() {
             state.prompts.push(options);
             return state.pendingPrompt || state.choice;
         }},
+        AppSettingsStore: {get: () => true},
         navigator: {clipboard: {writeText: async value => {
             if (state.clipboardError) {
                 throw new Error("clipboard denied");
@@ -926,4 +939,64 @@ test("desktop renderer managed-update dismissal, manual checks and deferred appl
     context.DocumentIO = {};
     state.timers[0]();
     await ready;
+});
+
+test("automatic update preferences survive startup, stop scheduled checks and preserve manual checks", async () => {
+    let fixture = updaterFixture(true, false);
+    fixture.state.preferences = '{"automatic":false}';
+    fixture.api.initializeUpdater(fixture.window);
+    assert.equal(fixture.timers.length, 0);
+    assert.equal((await fixture.api.checkForUpdates()).supported, true);
+    fixture.api.setAutomaticUpdates(true);
+    assert.equal(fixture.state.savedPreferences.automatic, true);
+    assert.equal(fixture.timers.length, 1);
+    fixture.api.setAutomaticUpdates(true);
+    assert.equal(fixture.timers.length, 1);
+    await fixture.timers[0]();
+    assert.equal(fixture.timers.length, 2);
+    fixture.api.setAutomaticUpdates(false);
+    assert.equal(fixture.state.savedPreferences.automatic, false);
+    await fixture.timers[1](); // Even an already queued stale callback must respect the preference.
+    assert.equal(fixture.timers.length, 2);
+    fixture.state.writeError = new Error("disk denied");
+    fixture.api.setAutomaticUpdates(false);
+    assert.equal(fixture.messages.at(-1)[1].detail, "disk denied");
+    let broken = updaterFixture(true, true);
+    broken.state.preferences = 'null';
+    broken.api.initializeUpdater(broken.window);
+    assert.equal(broken.timers.length, 1);
+    let browser = bootFixture({automatic: false, waiting: true});
+    await browser.flush();
+    assert.equal(browser.state.dialogs.length, 0);
+    await browser.state.interval();
+    assert.equal(browser.state.updates, 0);
+    browser.state.settingChanged({detail: {path: "ui.animations", value: true}});
+    browser.state.automatic = true;
+    browser.state.settingChanged({detail: {path: "updates.automatic", value: true}});
+    await browser.flush();
+    assert.equal(browser.state.updates, 1);
+    browser.state.settingChanged({detail: {path: "updates.automatic", value: false}});
+});
+
+test("web automatic update prompts recheck preferences after waiting for a modal slot", async () => {
+    let fixture = bootFixture({waiting: true, modal: true});
+    await fixture.flush();
+    fixture.state.automatic = false;
+    fixture.state.modal = false;
+    fixture.state.observer();
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 0);
+    fixture.state.automatic = true;
+    fixture.state.settingChanged({detail: {path: "updates.automatic", value: true}});
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 1);
+    fixture.registration.waiting = null;
+    fixture.state.settingChanged({detail: {path: "updates.automatic", value: true}});
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 1);
+    fixture.registration.waiting = fixture.worker;
+    fixture.serviceWorker.controller = null;
+    fixture.state.settingChanged({detail: {path: "updates.automatic", value: true}});
+    await fixture.flush();
+    assert.equal(fixture.state.dialogs.length, 1);
 });

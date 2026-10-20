@@ -465,7 +465,22 @@ class DocumentIO {
         }
     }
 
+    static async openRecent(entry) {
+        let file;
+        if (entry.path !== null) {
+            file = await window.desktopFileActions.readFile(entry.path);
+        } else {
+            if (await entry.handle.requestPermission({mode: "read"}) !== "granted") {
+                throw new Error("Permission to open this recent file was not granted.");
+            }
+            file = await entry.handle.getFile();
+            this.openedFileHandles.set(file, entry.handle);
+        }
+        await this.openFiles([file]);
+    }
+
     static async openFiles(files) {
+        await this.app.busyOperation;
         for (const file of files) {
             try {
                 if (file.name.toLowerCase().endsWith(".pdn")) {
@@ -474,6 +489,8 @@ class DocumentIO {
                 else {
                     await this.openImage(file);
                 }
+                await RecentFilesStore.remember(file.name, this.getLocalFilePath(file),
+                    this.openedFileHandles.get(file) || null);
             } catch (error) {
                 alert("Could not open \"" + file.name + "\": " + error.message);
             }
@@ -752,6 +769,7 @@ class DocumentIO {
             this.flattenDocument();
         }
         workspace.setDirty(false);
+        await RecentFilesStore.remember(workspace.fileName, workspace.getFilePath(), workspace.fileHandle);
         return true;
     }
 

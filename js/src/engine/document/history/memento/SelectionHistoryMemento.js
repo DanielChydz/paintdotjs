@@ -19,6 +19,7 @@ class SelectionHistoryMemento extends HistoryMemento {
 
         this.documentWorkspace = documentWorkspace;
         this.savedSelectionData = documentWorkspace.getSelection().save();
+        documentWorkspace.historyTransaction?.captureSelection(this.savedSelectionData);
     }
 
     onUndo() {

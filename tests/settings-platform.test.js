@@ -182,8 +182,9 @@ test("web update settings describe the web cache workflow and expose disabled ch
     settings.addNote = text => notes.push(text);
     settings.getEntry("updates").render();
     assert.equal(controls.length, 2);
-    assert.ok(controls.every(control => control.disabled));
-    assert.ok(controls[0].note.includes("installed web app"));
+    assert.equal(Boolean(controls[0].disabled), false);
+    assert.equal(controls[1].disabled, true);
+    assert.ok(controls[0].note.includes("Manual checks"));
     assert.equal(controls[1].key, "updates.prerelease");
     assert.equal(notes.length, 1);
     assert.ok(notes[0].includes("offline cache"));

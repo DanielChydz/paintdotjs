@@ -21,6 +21,13 @@ const localFilePaths = new WeakMap();
 
 window.desktopFileActions = {
     copyText: text => navigator.clipboard.writeText(text),
+    readFile: async filename => {
+        let data = await fs.promises.readFile(filename);
+        let file = new Blob([data]);
+        Object.defineProperty(file, "name", {value: path.basename(filename)});
+        localFilePaths.set(file, filename);
+        return file;
+    },
     getPathForFile: file => localFilePaths.get(file) || webUtils.getPathForFile(file),
     writeFile: async (filePath, data) => {
         await fs.promises.writeFile(filePath, Buffer.from(data));
@@ -49,6 +56,7 @@ ipcRenderer.on('desktop:request-close', async () => {
     let shouldClose = false;
     try {
         await waitForApplication();
+        await app.busyOperation;
         const dirtyWorkspaces = app.getDocumentWorkspaces().filter(workspace => workspace.isDirty());
         if (dirtyWorkspaces.length === 0) {
             shouldClose = true;
@@ -65,7 +73,15 @@ ipcRenderer.on('desktop:request-close', async () => {
     }
 });
 
-void waitForApplication().then(() => ipcRenderer.send('desktop:close-dialog-ready'));
+void waitForApplication().then(() => {
+    ipcRenderer.send('desktop:close-dialog-ready');
+    ipcRenderer.send('desktop:automatic-updates', AppSettingsStore.get('updates.automatic', true));
+});
+window.addEventListener('paintdotjs:setting-changed', event => {
+    if (event.detail.path === 'updates.automatic') {
+        ipcRenderer.send('desktop:automatic-updates', event.detail.value);
+    }
+});
 
 const openLocalFiles = async filenames => {
     await waitForApplication();

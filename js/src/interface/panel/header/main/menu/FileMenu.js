@@ -17,8 +17,7 @@ class FileMenu extends DropMenuItem {
         super("menu.file", [
             FileMenu.create("new"),
             FileMenu.create("open"),
-            new DropEntry("menu.file.openRecent", null)
-                .withNoIcon(),
+            new RecentFilesDropEntry().withNoIcon(),
             new DropEntry("menu.file.acquire", null)
                 .withNoIcon(),
             new VerticalSeparator(),

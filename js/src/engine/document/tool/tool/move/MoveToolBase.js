@@ -665,23 +665,7 @@ class MoveToolBase extends Tool {
                     this.rotateNub.setLocation(center);
                     this.rotateNub.setAngle(this.context.startAngle + this.angleDelta);
 
-                    // TODO Set rotate cursor and rotate the image
-                    let direction = "";
-                    switch (Math.abs(Math.floor(-this.angleDelta / 45 - 45 / 2) + 1) % 4) {
-                        case 0:
-                            direction = "ew";
-                            break;
-                        case 1:
-                            direction = "nwse";
-                            break;
-                        case 2:
-                            direction = "ns";
-                            break;
-                        case 3:
-                            direction = "nesw";
-                            break;
-                    }
-                    this.app.setCursor(direction + "-resize");
+                    this.app.setCursorImg("rotate_tool_cursor");
 
                     break;
                 case "scale":
@@ -831,7 +815,7 @@ class MoveToolBase extends Tool {
                 return;
             }
 
-            this.app.setCursor("move");
+            this.app.setCursorImg("move_tool_cursor");
         }
     }
 

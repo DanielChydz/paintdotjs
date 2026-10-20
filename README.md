@@ -56,14 +56,27 @@ still some additions and limitations worth noting.
   application.
 - Interface, canvas, tool, pen, window, and dialog preferences are stored locally and restored across
   sessions.
+- **File → Open Recent** remembers the last ten documents, removes duplicates, and lets you clear
+  the list. Desktop entries retain file paths; browser entries retain file-system handles and may
+  request permission again. Files opened or downloaded without a reusable handle are not listed.
+- **Help → Plugins** opens plugin settings. Moving and rotating use bundled original cursors;
+  final transforms on large images display a busy dialog before processing and block concurrent input.
+- Failed history operations report the error and restore saved pixels, layers, selection, and history.
+  Catchable allocation failures release partially created layers; operating-system process termination
+  cannot be recovered this way.
 - The deployed web version can work offline and provides browser-oriented file, clipboard, and drag
   and drop workflows.
+
+**Settings → Updates → Automatically check for updates** is persistent. On desktop it controls
+startup and hourly checks; **Check now** remains available. In the web app it controls application
+update checks and prompts. The browser may independently check its service worker for updates;
+disabling the preference keeps offline support intact.
 
 ### Missing or limited compared with Paint.NET
 
 - Chromium is the supported browser family. Firefox and Safari are not regularly tested, and their
   file-system and clipboard capabilities differ.
-- Open Recent, scanner/camera acquisition, and color-profile commands are not implemented yet.
+- Scanner/camera acquisition and color-profile commands are not implemented yet.
 - Native Paint.NET DLL plugins cannot be loaded. JavaScript plugins can provide effects and file types; see [the plugin guide](docs/plugin-api/README.md).
 - Manual GPU/device selection and direct advanced-color management are not implemented.
 - Very large documents, large-radius effects, and complex selections may still be slower or more

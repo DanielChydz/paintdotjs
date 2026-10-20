@@ -20,6 +20,7 @@ class BitmapLayer extends Layer {
         this.documentWorkspace = documentWorkspace;
 
         this.surface = Surface.create(width, height);
+        documentWorkspace.historyTransaction?.createdLayers.push(this);
         if (fillColor !== null) {
             this.surface.clear(fillColor);
         }
@@ -41,9 +42,14 @@ class BitmapLayer extends Layer {
 
     clone() {
         let layer = new BitmapLayer(this.documentWorkspace, this.width, this.height);
-        layer.surface.context.drawImage(this.surface.canvas, 0, 0);
-        layer.properties = this.properties.clone();
-        return layer;
+        try {
+            layer.surface.context.drawImage(this.surface.canvas, 0, 0);
+            layer.properties = this.properties.clone();
+            return layer;
+        } catch (error) {
+            layer.dispose();
+            throw error;
+        }
     }
 
     dispose() {

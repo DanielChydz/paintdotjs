@@ -377,3 +377,6 @@
 }
 
 
+
+.busy-dialog-backdrop, .busy-dialog-backdrop * { cursor: wait !important; }
+.busy-dialog { padding: 24px; min-width: 220px; text-align: center; }

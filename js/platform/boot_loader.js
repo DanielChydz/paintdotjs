@@ -39,6 +39,7 @@ if (typeof isApp !== 'undefined' && !isApp && 'serviceWorker' in navigator) {
                 return;
             }
 
+            const automaticUpdatesEnabled = () => AppSettingsStore.get('updates.automatic', true);
             let isRefreshing = false;
             let updatePromptOpen = false;
             let updateAccepted = false;
@@ -152,13 +153,16 @@ if (typeof isApp !== 'undefined' && !isApp && 'serviceWorker' in navigator) {
             };
 
             const showUpdatePrompt = async worker => {
-                if (worker === null || updatePromptOpen) {
+                if (!automaticUpdatesEnabled() || worker === null || updatePromptOpen) {
                     return;
                 }
                 updatePromptOpen = true;
 
                 try {
                     await waitForFreeDialogSlot();
+                    if (!automaticUpdatesEnabled()) {
+                        return;
+                    }
                     const version = await getAvailableVersion();
                     const result = await TaskDialog.show({
                         title: 'paint.js Updates',
@@ -215,7 +219,7 @@ if (typeof isApp !== 'undefined' && !isApp && 'serviceWorker' in navigator) {
 
             let lastUpdateCheck = 0;
             const checkForUpdate = async () => {
-                if (Date.now() - lastUpdateCheck < 5 * 60 * 1000) {
+                if (!automaticUpdatesEnabled() || Date.now() - lastUpdateCheck < 5 * 60 * 1000) {
                     return;
                 }
                 lastUpdateCheck = Date.now();
@@ -229,6 +233,14 @@ if (typeof isApp !== 'undefined' && !isApp && 'serviceWorker' in navigator) {
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'visible') {
                     void checkForUpdate();
+                }
+            });
+            window.addEventListener('paintdotjs:setting-changed', event => {
+                if (event.detail.path === 'updates.automatic' && event.detail.value === true) {
+                    void checkForUpdate();
+                    if (registration.waiting !== null && navigator.serviceWorker.controller !== null) {
+                        void showUpdatePrompt(registration.waiting);
+                    }
                 }
             });
             setInterval(() => void checkForUpdate(), 60 * 60 * 1000);

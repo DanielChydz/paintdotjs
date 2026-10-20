@@ -42,8 +42,7 @@ class MoveTool extends MoveToolBase {
             }
         }
 
-        // TODO find the texture for the move tool cursor
-        // this.app.setCursorImg("move_tool_cursor");
+        this.app.setCursorImg("move_tool_cursor");
 
         this.context.lifted = false;
         this.context.liftedPixels = null;
@@ -313,7 +312,6 @@ class MoveTool extends MoveToolBase {
         );
         let previousBounds = this.context.previewBounds;
 
-        // TODO wait cursor changer
 
         if (!this.context.copying) {
             this.context.liftedPixels.eraseFrom(this.renderArgs.getSurface());
@@ -447,32 +445,34 @@ class MoveTool extends MoveToolBase {
     onMouseUp(mouseX, mouseY, button) {
         this.cancelPendingMove();
         this.fullQuality = true;
-        let consumed = super.onMouseUp(mouseX, mouseY, button);
+        try {
+            let consumed = super.onMouseUp(mouseX, mouseY, button);
 
-        if (!this.tracking) {
-            this.fullQuality = false;
+            if (!this.tracking) {
+                return consumed;
+            }
+
+            // Flush the exact release position synchronously at final quality.
+            this.processMove(mouseX, mouseY);
+
+            this.rotateNub.setVisible(false);
+            this.tracking = false;
+            this.positionNubs(this.context.currentMode);
+
+            let resourceName = "moveTool.historyMemento." + MoveToolBaseMode.getName(this.context.currentMode);
+
+            this.context.startAngle += this.angleDelta;
+
+            this.context.liftTransform.reset();
+            this.context.liftTransform.multiply(this.context.deltaTransform, MatrixOrder.APPEND);
+
+            let actionName = i18n(resourceName);
+            this.flushHistoryMementos(actionName);
+
             return consumed;
+        } finally {
+            this.fullQuality = false;
         }
-
-        // Flush the exact release position synchronously at final quality.
-        this.processMove(mouseX, mouseY);
-        this.fullQuality = false;
-
-        this.rotateNub.setVisible(false);
-        this.tracking = false;
-        this.positionNubs(this.context.currentMode);
-
-        let resourceName = "moveTool.historyMemento." + MoveToolBaseMode.getName(this.context.currentMode);
-
-        this.context.startAngle += this.angleDelta;
-
-        this.context.liftTransform.reset();
-        this.context.liftTransform.multiply(this.context.deltaTransform, MatrixOrder.APPEND);
-
-        let actionName = i18n(resourceName);
-        this.flushHistoryMementos(actionName);
-
-        return consumed;
     }
 
     flushHistoryMementos(name) {

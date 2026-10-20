@@ -121,7 +121,16 @@ module.exports = async function checkDocumentContracts() {
     check(!workspace.isScratchSurfaceBorrowed && workspace.borrowScratchSurfaceReason === null,
         "Returning a scratch surface retained ownership");
     let historySize = workspace.getHistory().undoStack.length;
-    rejects(() => workspace.executeFunction(new HistoryFunction()), /Not implemented/);
+    let handleError = app.handleError;
+    let reportedError;
+    app.handleError = error => { reportedError = error; };
+    try {
+        check(workspace.executeFunction(new HistoryFunction()) === HistoryFunctionResult.NON_FATAL_ERROR,
+            "Failed operation did not return its nonfatal result");
+        check(/Not implemented/.test(reportedError.message), "Failed operation lost its diagnostic");
+    } finally {
+        app.handleError = handleError;
+    }
     check(workspace.getHistory().undoStack.length === historySize, "Rejected history operation recorded an entry");
     phase("empty, offscreen and non-bitmap selection commands do not record edits");
     let originalSelection = workspace.getSelection();

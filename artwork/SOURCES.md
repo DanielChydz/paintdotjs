@@ -48,3 +48,8 @@ Bundled fonts are stored in WOFF2 containers, preserving complete SFNT tables
 TTF hashes are pinned in `artwork/fonts.json`; see `assets/font/README.md` for
 offline regeneration and round-trip verification. Duplicate Inter TTFs were
 consolidated into `assets/font/inter/Inter-Variable.woff2`.
+
+Move and rotation cursors (`assets/cursors/{move,rotate}_tool_cursor.png`) are
+original vector artwork under the project MIT license. Sources are retained in
+`artwork/*_tool_cursor.svg`; `scripts/generate_artwork.py` rasterizes them to 32px.
+They contain no Paint.NET artwork.

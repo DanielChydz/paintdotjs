@@ -743,6 +743,17 @@ class AppView {
                 return handled;
             }
 
+            let tool = this.getActiveTool();
+            let document = documentWorkspace.getDocument();
+            if (tool instanceof MoveTool && tool.tracking && document.width * document.height >= 1048576) {
+                tool.cancelPendingMove();
+                void BusyDialog.run(this, () => this.onDocumentMouseUp(
+                    position.getX(), position.getY(), button, documentWorkspace,
+                    this.toDocumentPointerInput(documentWorkspace, input)
+                )).catch(error => this.handleError(error));
+                return true;
+            }
+
             if (this.onDocumentMouseUp(position.getX(), position.getY(), button, documentWorkspace,
                 this.toDocumentPointerInput(documentWorkspace, input))) {
                 return true;

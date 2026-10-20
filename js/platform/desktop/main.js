@@ -327,6 +327,11 @@ ipcMain.on('desktop:close-response', (event, shouldClose) => {
 });
 ipcMain.handle('desktop:check-for-updates', () => updater.checkForUpdates());
 ipcMain.on('desktop:install-update', () => updater.installUpdate());
+ipcMain.on('desktop:automatic-updates', (event, enabled) => {
+    if (mainWindow !== null && event.sender === mainWindow.webContents) {
+        updater.setAutomaticUpdates(enabled);
+    }
+});
 
 async function prepareApplication() {
     while (!activeAssets) {

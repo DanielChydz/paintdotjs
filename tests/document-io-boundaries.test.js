@@ -56,6 +56,7 @@ function documentFixture(options = {}) {
         createBlankDocumentInNewWorkspace: (...args) => state.created.push(args)
     };
     let context = vm.createContext({
+        RecentFilesStore: {remember: async () => {}},
         window, document, HTMLImageElement, Image, ImageData, TypeError, console, Blob, Uint8Array, TextDecoder,
         PluginFileTypes: {saveFormats: () => [], openExtensions: () => [], forFile: () => null, definitions: new Map()},
         ShapeManager: {isShapeFile: () => false}, PluginManager: {isPluginFile: () => false},

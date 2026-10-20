@@ -57,6 +57,7 @@ class BitmapHistoryMemento extends HistoryMemento {
         this.bounds = this.chunks.length === 0 ? Rectangle.empty() : this.chunks
             .map(chunk => chunk.bounds)
             .reduce((left, right) => Rectangle.union(left, right));
+        documentWorkspace.historyTransaction?.captureBitmap(layerIndex, this.chunks);
     }
 
     onUndo() {

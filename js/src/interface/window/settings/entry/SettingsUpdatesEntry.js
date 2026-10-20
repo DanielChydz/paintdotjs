@@ -17,9 +17,7 @@ class SettingsUpdatesEntry extends SettingsEntry {
     render() {
         this.addHeading("Updates");
         this.addCheckbox("updates.automatic", "Automatically check for updates", {
-            disabled: true,
-            note: isApp ? "Desktop releases check automatically shortly after startup." :
-                "The installed web app checks automatically while it is open."
+            note: "Checks periodically while the application is open. Manual checks remain available."
         });
         this.addCheckbox("updates.prerelease", "Also check for pre-release versions", {
             disabled: true,

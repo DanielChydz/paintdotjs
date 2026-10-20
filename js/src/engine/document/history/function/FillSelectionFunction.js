@@ -34,40 +34,45 @@ class FillSelectionFunction extends HistoryFunction {
         }
 
         const path = selection.createPath();
-        const surface = layer.getSurface();
-        const bounds = FillSelectionFunction.getPixelBounds(path, surface.getBounds());
-        if (bounds.isEmpty()) {
+        try {
+            const surface = layer.getSurface();
+            const bounds = FillSelectionFunction.getPixelBounds(path, surface.getBounds());
+            if (bounds.isEmpty()) {
+                return null;
+            }
+
+            const changedRegion = Region.fromRectangle(bounds.clone());
+            const memento = new BitmapHistoryMemento(
+                this.name,
+                this.image,
+                documentWorkspace,
+                documentWorkspace.getActiveLayerIndex(),
+                changedRegion
+            );
+            changedRegion.dispose();
+
+            const context = surface.context;
+            context.save();
+            try {
+                FillSelectionFunction.tracePath(context, path);
+                context.clip("evenodd");
+                // Paint.NET's fill-selection operation replaces pixels. Clearing first
+                // is important when the chosen color is translucent: source-over alone
+                // would blend it with the old pixels instead of writing that alpha.
+                context.clearRect(bounds.x, bounds.y, bounds.width, bounds.height);
+                context.globalCompositeOperation = "source-over";
+                context.globalAlpha = 1;
+                context.fillStyle = this.color.toHex();
+                context.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
+            } finally {
+                context.restore();
+            }
+
+            layer.invalidate(bounds);
+            return memento;
+        } finally {
             path.dispose();
-            return null;
         }
-
-        const changedRegion = Region.fromRectangle(bounds.clone());
-        const memento = new BitmapHistoryMemento(
-            this.name,
-            this.image,
-            documentWorkspace,
-            documentWorkspace.getActiveLayerIndex(),
-            changedRegion
-        );
-        changedRegion.dispose();
-
-        const context = surface.context;
-        context.save();
-        FillSelectionFunction.tracePath(context, path);
-        context.clip("evenodd");
-        // Paint.NET's fill-selection operation replaces pixels. Clearing first
-        // is important when the chosen color is translucent: source-over alone
-        // would blend it with the old pixels instead of writing that alpha.
-        context.clearRect(bounds.x, bounds.y, bounds.width, bounds.height);
-        context.globalCompositeOperation = "source-over";
-        context.globalAlpha = 1;
-        context.fillStyle = this.color.toHex();
-        context.fillRect(bounds.x, bounds.y, bounds.width, bounds.height);
-        context.restore();
-
-        path.dispose();
-        layer.invalidate(bounds);
-        return memento;
     }
 
     static getPixelBounds(path, surfaceBounds) {
