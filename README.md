@@ -183,8 +183,10 @@ npm run app
 ```
 
 The application ships the upstream paint.js interface icons and cursors locally.
-Inter uses SIL OFL 1.1, and the fork supplies its own web logo and English labels. See [artwork/SOURCES.md](artwork/SOURCES.md) and [NOTICE.md](NOTICE.md).
-The desktop window and package use the separately supplied desktop icon recorded there.
+Inter uses SIL OFL 1.1. The web mark and English labels were created for this fork.
+The desktop application logo is by [TetratheBecherovka](https://github.com/TetratheBecherovka),
+who shared it in [upstream issue #7](https://github.com/LabyStudio/paintdotjs/issues/7).
+See [artwork/SOURCES.md](artwork/SOURCES.md) and [NOTICE.md](NOTICE.md) for credits and provenance.
 Neither builds nor first launch download Paint.NET artwork, fonts or translations.
 `npm run check-assets` only verifies the bundled files and their hashes.
 Only the independently authored English interface dictionary currently ships.

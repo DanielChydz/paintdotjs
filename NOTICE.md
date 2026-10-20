@@ -17,8 +17,11 @@ attribution notices.
 
 ## Bundled interface assets
 
-The desktop application icon is the user-supplied image recorded in
-`artwork/SOURCES.md`; it is separate from the project's original web mark.
+The desktop application logo was created by
+[TetratheBecherovka](https://github.com/TetratheBecherovka) and shared in
+[upstream issue #7](https://github.com/LabyStudio/paintdotjs/issues/7).
+Its provenance is recorded in `artwork/SOURCES.md`; it is separate from the
+project's original web mark and is not claimed as artwork authored by this fork.
 
 The application does not distribute or download Paint.NET logo artwork, toolbar
 icons, cursors, fonts or translation resource files. The original source-code
