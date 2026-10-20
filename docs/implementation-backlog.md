@@ -57,6 +57,32 @@ Punkty **8–11 ukończone**:
 
 Tabela zachowuje pierwotny zakres; następne nieukończone punkty to **12–16**.
 
+### TODO — do przejęcia przez kolejnego agenta
+
+Poniższe zadania są zapisane do późniejszej realizacji; ich implementacja nie
+została rozpoczęta. Zalecana kolejność: 12–14, następnie 15 i osobno każdy
+format z punktu 16. Szczegółowy zakres, kryteria ukończenia i odnośniki do kodu
+znajdują się w tabeli poniżej.
+
+- [ ] **12:** zmierzyć i usprawnić przewijanie, zmianę rozmiaru okna oraz
+  tworzenie dokumentu, zachowując zoom, pozycję widoku i poprawne odświeżanie.
+- [ ] **13:** ustalić i wdrożyć kontrakt całkowitoliczbowych skanów oraz granic
+  regionu; uwzględnić współrzędne ułamkowe, ujemne, otwory i puste regiony.
+- [ ] **14:** uruchomić rzeczywisty przełącznik akceleracji sprzętowej desktopu,
+  z trwałą preferencją, zastosowaniem przy starcie Electrona i informacją
+  o wymaganym restarcie.
+- [ ] **15:** dodać pobieranie obrazu z kamery: podgląd, uprawnienia, zdjęcie,
+  anulowanie, obsługę braku urządzenia i zwolnienie strumienia.
+- [ ] **16:** po audycie kodeków rozszerzać opcje eksportu kolejno dla TIFF,
+  BMP/TGA i DDS; wyniki weryfikować niezależnym dekoderem.
+
+**Przekazanie:** punkty 1–6 i 8–11 są ukończone; punkt 7 pozostaje odłożony
+na wyraźną decyzję użytkownika (brak wydań prerelease). Ostatnia weryfikacja:
+255 testów przeszło, pokrycie linii, gałęzi i funkcji runtime wynosi 100%; testy
+aplikacji rozpakowanej z DEB również przeszły. Szczegóły zapisano w
+[COVERAGE-STATUS.md](../COVERAGE-STATUS.md). Pracować na `develop`, commitować
+lokalnie, a po zakończeniu i testach scalać do lokalnego `master`; nie pushować.
+
 | ID | Zadanie | Skala | Zakres i kryterium ukończenia | Miejsce w kodzie |
 | --- | --- | --- | --- | --- |
 | 7 | Kanał aktualizacji prerelease | M | Ustawienie obecnie wyłączone. Spójne wybieranie wydań stabilnych/testowych, porównywanie wersji i zachowanie dla instalacji aktualizowanych ręcznie; bez samoczynnego przełączenia użytkowników na wersje testowe. | [SettingsUpdatesEntry](../js/src/interface/window/settings/entry/SettingsUpdatesEntry.js), [updater](../js/platform/desktop/updater.js) |
