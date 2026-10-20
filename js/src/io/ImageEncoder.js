@@ -65,9 +65,15 @@ class ImageEncoder {
         if (window.portableImageCodec?.encode === undefined) {
             throw new Error(format.toUpperCase() + " encoding is not available");
         }
-        const png = await this.canvasToBlob(canvas, "image/png");
-        const result = await window.portableImageCodec.encode(
-            new Uint8Array(await png.arrayBuffer()), format, options.quality ?? 100, options);
+        let result;
+        if (window.portableImageCodec.encodePixels !== undefined) {
+            result = await window.portableImageCodec.encodePixels(
+                this.getPixels(canvas), format, options.quality ?? 100, options);
+        } else {
+            const png = await this.canvasToBlob(canvas, "image/png");
+            result = await window.portableImageCodec.encode(
+                new Uint8Array(await png.arrayBuffer()), format, options.quality ?? 100, options);
+        }
         return new Blob([result], {type: this.mimeFor(format)});
     }
 

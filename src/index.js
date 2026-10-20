@@ -29,6 +29,7 @@ window.portableImageCodec = {
     inspectColorProfile: (...args) => getPortableImageCodec().then(codec => codec.inspectColorProfile(...args)),
     readColorProfile: (...args) => getPortableImageCodec().then(codec => codec.readColorProfile(...args)),
     decode: (...args) => getPortableImageCodec().then(codec => codec.decode(...args)),
+    encodePixels: (...args) => getPortableImageCodec().then(codec => codec.encodePixels(...args)),
     encode: (...args) => getPortableImageCodec().then(codec => codec.encode(...args))
 };
 

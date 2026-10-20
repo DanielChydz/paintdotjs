@@ -31,8 +31,9 @@ function documentFixture(options = {}) {
     let document = new EventEmitter();
     document.addEventListener = document.on;
     document.hidden = false;
+    document.body = {appendChild: element => { element.connected = true; }};
     document.createElement = tag => {
-        let element = {tag, click: () => state.clicked = element};
+        let element = {tag, click: () => state.clicked = element, remove: () => { element.connected = false; }};
         if (tag === "canvas") {
             element.getContext = () => ({putImageData: image => state.decodedImage = image});
         }
@@ -56,6 +57,7 @@ function documentFixture(options = {}) {
         createBlankDocumentInNewWorkspace: (...args) => state.created.push(args)
     };
     let context = vm.createContext({
+        ModalDialogController: {isActive: () => !!state.modal},
         RecentFilesStore: {remember: async () => {}},
         window, document, HTMLImageElement, Image, ImageData, TypeError, console, Blob, Uint8Array, TextDecoder,
         PluginFileTypes: {saveFormats: () => [], openExtensions: () => [], forFile: () => null, definitions: new Map()},
@@ -956,4 +958,53 @@ test("file pickers accept supported filters without retrying", async () => {
     assert.equal(saveCalls, 1);
     assert.equal(saving.state.writes.length, 1);
     assert.equal(saving.state.fileInfo[0], "supported.png");
+});
+
+test("native paste leaves text controls and modal dialogs alone", () => {
+    let fixture = documentFixture();
+    let {io, state, document, event} = fixture;
+    io.pasteBlob = () => { throw new Error("Unexpected image paste"); };
+    let clipboardData = {items: [{type: "image/png", getAsFile: () => "image"}]};
+    for (let target of [{tagName: "INPUT"}, {tagName: "TEXTAREA"}, {isContentEditable: true}]) {
+        let paste = event({target, clipboardData});
+        document.emit("paste", paste);
+        assert.equal(paste.defaultPrevented, false);
+    }
+    state.modal = true;
+    document.emit("paste", event({target: {tagName: "DIV"}, clipboardData}));
+});
+
+test("fallback file inputs stay attached until change/cancel and are removed on failures", async () => {
+    let fixture = documentFixture();
+    await fixture.io.openFilePicker();
+    let input = fixture.state.clicked;
+    assert.equal(input.connected, true);
+    assert.equal(input.hidden, true);
+    input.oncancel();
+    assert.equal(input.connected, false);
+    fixture.io.openFiles = async () => { throw new Error("Import failure"); };
+    await fixture.io.openFilePicker();
+    input = fixture.state.clicked;
+    await assert.rejects(input.onchange(), /Import failure/);
+    assert.equal(input.connected, false);
+    let original = fixture.document.createElement;
+    fixture.document.createElement = tag => {
+        let element = original(tag);
+        element.click = () => { throw new Error("Picker unavailable"); };
+        return element;
+    };
+    await assert.rejects(fixture.io.openFilePicker(), /Picker unavailable/);
+    assert.equal(fixture.state.elements.at(-1).connected, false);
+});
+
+
+test("native paste retains the in-app image fallback when OS clipboard has no image", () => {
+    let fixture = documentFixture();
+    let image = new Blob(["cached"]);
+    fixture.io.internalClipboard = image;
+    fixture.io.pasteBlob = value => { fixture.state.pasted = value; };
+    let paste = fixture.event({target: {tagName: "BODY"}, clipboardData: {items: [{type: "text/plain"}]}});
+    fixture.document.emit("paste", paste);
+    assert.equal(paste.defaultPrevented, true);
+    assert.equal(fixture.state.pasted, image);
 });

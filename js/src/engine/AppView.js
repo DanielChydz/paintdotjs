@@ -345,6 +345,14 @@ class AppView {
                 return; // Allow default behavior for text inputs
             }
 
+            // Native paste delivers the OS image directly in a ClipboardEvent.
+            // Cancelling Ctrl+V prevents that event in Firefox and forces an
+            // unrelated asynchronous clipboard permission prompt instead.
+            if (!isApp && normalizedKey === "v" && !event.shiftKey && !event.altKey
+                && ActionRegistry.get("menu.edit.paste").matchesShortcutEvent(event)) {
+                return;
+            }
+
             event.preventDefault();
             event.stopPropagation();
 

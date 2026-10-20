@@ -83,8 +83,19 @@ class DocumentIO {
             if (event.defaultPrevented || event.clipboardData === null) {
                 return;
             }
+            const target = event.target;
+            if (target && (target.isContentEditable || target.tagName === "INPUT" || target.tagName === "TEXTAREA")) {
+                return;
+            }
+            if (ModalDialogController.isActive()) {
+                return;
+            }
             const image = Array.from(event.clipboardData.items || []).find(item => item.type.startsWith("image/"));
             if (image === undefined) {
+                if (this.internalClipboard !== null) {
+                    event.preventDefault();
+                    this.pasteBlob(this.internalClipboard);
+                }
                 return;
             }
             const file = image.getAsFile();
@@ -379,7 +390,27 @@ class DocumentIO {
             ".jxl,.heif,.dds,.tif,.tiff,.tga,.jxr,.wdp,.wmp,.pdn,application/json," + PluginFileTypes.openExtensions().join(",");
         input.multiple = true;
         input.onchange = () => this.openFiles(Array.from(input.files || []));
-        input.click();
+        this.showFileInput(input);
+    }
+
+    static showFileInput(input) {
+        input.hidden = true;
+        let changed = input.onchange;
+        input.onchange = async () => {
+            try {
+                await changed();
+            } finally {
+                input.remove();
+            }
+        };
+        input.oncancel = () => input.remove();
+        document.body.appendChild(input);
+        try {
+            input.click();
+        } catch (error) {
+            input.remove();
+            throw error;
+        }
     }
 
     static openLayerFilePicker() {
@@ -401,7 +432,7 @@ class DocumentIO {
                 }
             }
         };
-        input.click();
+        this.showFileInput(input);
     }
 
     static async handleDroppedFiles(files) {

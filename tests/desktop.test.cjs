@@ -15,6 +15,7 @@
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const desktopScenarios = [
+    {name: "browser native paste routing and exact raw-pixel exports", file: "checkFirefoxCompatibility.js", browser: true},
     {name: "desktop large document effects and extended JPEG XR decoding", file: "checkLargeDocumentsJpegXr.js"},
     {name: "browser large document effects and extended JPEG XR decoding", file: "checkLargeDocumentsJpegXr.js", browser: true},
     {name: "desktop ICC color conversion and PDN metadata", file: "checkColorProfilesPdn.js"},

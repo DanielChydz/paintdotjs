@@ -21,6 +21,7 @@ import {
     ImageMagick,
     MagickColors,
     MagickFormat,
+    MagickReadSettings,
     initializeImageMagick
 } from '@imagemagick/magick-wasm'
 import srgbProfileUrl from '../assets/profiles/sRGB.icc'
@@ -130,10 +131,25 @@ export async function decode(bytes, format) {
     });
 }
 
-export async function encode(pngBytes, format, quality, options = {}) {
+export function encode(pngBytes, format, quality, options = {}) {
+    return encodeImage(pngBytes, format, quality, options, null);
+}
+
+export function encodePixels(pixels, format, quality, options = {}) {
+    let {width, height, data} = pixels;
+    if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1
+        || width > 32768 || height > 32768 || width * height > 0x1fffffff / 4
+        || !(data instanceof Uint8ClampedArray) || data.length !== width * height * 4) {
+        throw new Error('Invalid RGBA encoder input');
+    }
+    return encodeImage(data, format, quality, options, pixels);
+}
+
+async function encodeImage(input, format, quality, options, pixels) {
     await initializePortableCodecs();
     if (['heic', 'heif', 'jxr', 'wdp', 'wmp'].includes(format)) {
-        let decoded = await decode(pngBytes, 'png');
+        let decoded = pixels === null ? await decode(input, 'png')
+            : {rgba: pixels.data, width: pixels.width, height: pixels.height};
         let encoder = format === 'heic' || format === 'heif' ? heicEncoder : jxrEncoder;
         return encoder.encode(decoded.rgba, decoded.width, decoded.height, quality);
     }
@@ -141,7 +157,10 @@ export async function encode(pngBytes, format, quality, options = {}) {
     if (outputFormat === MagickFormat.Unknown) {
         throw new Error('Unsupported image format: ' + format);
     }
-    return ImageMagick.read(pngBytes, MagickFormat.Png, image => {
+    let settings = pixels === null ? MagickFormat.Png : new MagickReadSettings({
+        width: pixels.width, height: pixels.height, depth: 8, format: MagickFormat.Rgba
+    });
+    return ImageMagick.read(input, settings, image => {
         image.quality = quality;
         if (options.colorProfile !== undefined) {
             let target = new ColorProfile(options.colorProfile);
