@@ -25,7 +25,7 @@ function loadGeometry() {
         "util/Point", "util/Size", "util/Rectangle", "util/Scanline", "util/UtilityEdge",
         "document/selection/MatrixOrder", "document/selection/Matrix", "document/selection/CombineMode",
         "document/selection/VertexList", "document/selection/GraphicsPath",
-        "util/Region", "util/Utility", "util/Color"
+        "util/BitVector2D", "util/Region", "util/Utility", "util/Color"
     ]) {
         let filename = path.resolve(__dirname, "../js/src/engine", relative + ".js");
         vm.runInContext(fs.readFileSync(filename, "utf8"), context, {filename: pathToFileURL(filename).href});
@@ -396,7 +396,7 @@ test("regions intersect without mutating source rectangles and preserve independ
     assert.equal(copy.size(), 0);
     let graphic = new GraphicsPath([new VertexList()]);
     graphic.addRectangle(source);
-    assert.equal(Region.fromPath(graphic).size(), 1);
+    assert.equal(Region.fromPath(graphic).size(), 4);
     assert.throws(() => Region.fromPath({}), /must be a GraphicsPath/);
     let rectangles = [new Rectangle(2, 3, 2, 2), new Rectangle(0, 0, 8, 8), new Rectangle(1, 1, 1, 1)];
     let detailed = Region.fromRectangles(rectangles);
@@ -463,6 +463,82 @@ test("scan conversion advances past a completed roof into the next pair of side 
     let vertices = [[0, 0], [2, 1], [2, 4], [-2, 4], [-2, 1]].map(([x, y]) => new Point(x, y));
     assert.deepEqual(Array.from(Utility.getScans(vertices), scan => [scan.x, scan.y, scan.length]),
         [[0, 0, 0], [-2, 1, 4], [-2, 2, 4], [-2, 3, 4]]);
+});
+
+test("integer region scans round outward, ignore empty rectangles and reject unsafe coordinates", () => {
+    let {Rectangle, Region, GraphicsPath, Point} = loadGeometry();
+    let source = new Rectangle(-2.8, -1.2, 4.1, 2.4);
+    let region = Region.fromRectangles([new Rectangle(900, 900, 0, 4), source,
+        new Rectangle(-5, -5, -1, 2), new Rectangle(4.25, 3.5, 0.1, 0.1)]);
+    let scans = region.getRegionScansInt();
+    assert.deepEqual(Array.from(scans, rectangleValues), [[-3, -2, 5, 4], [4, 3, 1, 1]]);
+    assert.deepEqual(rectangleValues(region.getBoundsInt()), [-3, -2, 8, 6]);
+    scans[0].x = 100;
+    assert.equal(source.x, -2.8);
+    for (let rectangles of [[], [new Rectangle(1, 2, 0, 0)], [new Rectangle(1, 2, -1, 3)]]) {
+        let empty = Region.fromRectangles(rectangles);
+        assert.deepEqual(rectangleValues(empty.getBounds()), [0, 0, 0, 0]);
+        assert.deepEqual(rectangleValues(empty.getBoundsInt()), [0, 0, 0, 0]);
+        assert.equal(GraphicsPath.fromRegion(empty).isEmpty(), true);
+    }
+    for (let rect of [new Rectangle(NaN, 0, 1, 1), new Rectangle(0, Infinity, 1, 1),
+        new Rectangle(0, 0, Infinity, 1), new Rectangle(1e20, 0, 1, 1),
+        new Rectangle(-Number.MAX_SAFE_INTEGER, 0, Number.MAX_SAFE_INTEGER * 2, 1)]) {
+        assert.throws(() => Region.fromRectangle(rect).getRegionScansInt(), /finite|safe integer/);
+    }
+    assert.throws(() => GraphicsPath.fromRegion(Region.fromRectangles([
+        new Rectangle(0, 0, 1, 1), new Rectangle(1e9, 1e9, 1, 1)
+    ])), /stencil exceeds/);
+    for (let value of [NaN, Infinity, Number.MAX_SAFE_INTEGER]) {
+        let path = new GraphicsPath();
+        path.addLines([new Point(value, 0), new Point(1, 1), new Point(0, 1)]);
+        assert.throws(() => Region.fromPath(path), /Path coordinates/);
+    }
+});
+
+test("integer region paths preserve unions, holes, negative origins and fractional coverage", () => {
+    let {Rectangle, Region, GraphicsPath, VertexList} = loadGeometry();
+    let rectangles = [
+        new Rectangle(-4.5, -3.5, 6.5, 1.5),
+        new Rectangle(-4.5, -2, 1.5, 3),
+        new Rectangle(1, -2, 1, 3),
+        new Rectangle(-4.5, 1, 6.5, 1),
+        new Rectangle(4.2, 3.2, 0.2, 0.2),
+        new Rectangle(-4.1, -3.1, 1, 1)
+    ];
+    let converted = GraphicsPath.fromRegion(Region.fromRectangles(rectangles));
+    let covered = path => {
+        let pixels = new Set();
+        for (let scan of path.getScans()) {
+            for (let x = scan.x; x < scan.getRight(); ++x) {
+                pixels.add(x + "," + scan.y);
+            }
+        }
+        return pixels;
+    };
+    let expected = new Set();
+    for (let y = -6; y <= 6; ++y) {
+        for (let x = -6; x <= 6; ++x) {
+            if (rectangles.some(rect => x < rect.getRight() && x + 1 > rect.x
+                && y < rect.getBottom() && y + 1 > rect.y)) {
+                expected.add(x + "," + y);
+            }
+        }
+    }
+    assert.deepEqual(covered(converted), expected);
+    let outer = new VertexList();
+    outer.addRectangle(-3, -3, 6, 6);
+    let hole = new VertexList([], true);
+    hole.addRectangle(-1, -1, 2, 2);
+    let donut = new GraphicsPath([outer, hole]);
+    let region = Region.fromPath(donut);
+    let roundTrip = GraphicsPath.fromRegion(region);
+    assert.deepEqual(covered(roundTrip), covered(donut));
+    assert.equal(covered(roundTrip).size, 32);
+    assert.equal(covered(roundTrip).has("0,0"), false);
+    let triangle = new GraphicsPath();
+    triangle.addLines(donut.getPathPoints().slice(0, 3));
+    assert.equal(Region.fromPath(triangle).getRectangles().reduce((sum, rect) => sum + rect.width, 0), 21);
 });
 
 test("single-rectangle regions produce independent paths with unchanged coordinates", () => {

@@ -72,6 +72,10 @@ still some additions and limitations worth noting.
 - Scrolling reuses composed pixels. Window resizing preserves the document-space
   center at a fixed zoom, or refits and centers **Fit to Window** views; unchanged
   canvas dimensions do not reset its backing store. New documents compose once.
+- Region-to-path conversion uses half-open integer pixel scans: fractional
+  rectangles round outward, empty rectangles contribute nothing, and negative
+  origins, disconnected islands and holes are preserved. Path-derived regions
+  use the same even/odd pixel-center rasterization as selection statistics.
 - The deployed web version can work offline and provides browser-oriented file, clipboard, and drag
   and drop workflows.
 

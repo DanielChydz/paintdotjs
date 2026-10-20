@@ -238,12 +238,68 @@ class GraphicsPath {
         return returnPath;
     }
 
+    *getScans() {
+        let edges = [];
+        for (let list of this.getVertexLists()) {
+            let points = list.vertices;
+            for (let i = 0; i < points.length; i++) {
+                let top = points[i];
+                let bottom = points[(i + 1) % points.length];
+                if (![top.x, top.y].every(Number.isFinite)
+                    || ![top.x, top.y].every(value => Math.abs(value) <= Number.MAX_SAFE_INTEGER - 1)) {
+                    throw new RangeError("Path coordinates must be finite and within the safe integer range");
+                }
+                if (top.y > bottom.y) {
+                    [top, bottom] = [bottom, top];
+                }
+                let start = Math.ceil(top.y - 0.5);
+                let end = Math.ceil(bottom.y - 0.5);
+                if (start < end) {
+                    let dxdy = (bottom.x - top.x) / (bottom.y - top.y);
+                    let x = top.x + (start + 0.5 - top.y) * dxdy;
+                    edges.push({start, end, x, dxdy});
+                }
+            }
+        }
+        edges.sort((a, b) => a.start - b.start);
+
+        // Match selection statistics: sample y + 0.5, pair even/odd edges
+        // across all contours (including holes), and suppress overlapping spans.
+        let active = [];
+        let next = 0;
+        let y = edges.length === 0 ? 0 : edges[0].start;
+        while (next < edges.length || active.length > 0) {
+            active = active.filter(edge => edge.end > y);
+            if (active.length === 0 && next < edges.length) {
+                y = Math.max(y, edges[next].start);
+            }
+            while (next < edges.length && edges[next].start <= y) {
+                active.push(edges[next++]);
+            }
+            active.sort((a, b) => a.x - b.x);
+            let maxLeft = -Infinity;
+            for (let i = 0; i + 1 < active.length; i += 2) {
+                let left = Math.max(maxLeft, Math.ceil(active[i].x - 0.5));
+                let right = 1 + Math.floor(active[i + 1].x - 0.5);
+                if (right <= left) {
+                    continue;
+                }
+                maxLeft = Math.max(maxLeft, right);
+                yield new Rectangle(left || 0, y || 0, right - left, 1);
+            }
+            for (let edge of active) {
+                edge.x += edge.dxdy;
+            }
+            y++;
+        }
+    }
+
     static fromRegion(region) {
         if (!(region instanceof Region)) {
             throw new Error("Input must be an instance of Region");
         }
 
-        const scans = region.getRectangles(); // TODO GetRegionScansReadOnlyInt
+        const scans = region.getRegionScansInt();
 
         if (scans.length === 0) {
             return new GraphicsPath();
@@ -253,7 +309,10 @@ class GraphicsPath {
             path.addRectangle(scans[0]);
             return path;
         } else {
-            const bounds = region.getBounds(); // TODO GetBoundsInt
+            const bounds = Region.fromRectangles(scans).getBounds();
+            if (!Number.isSafeInteger(bounds.width * bounds.height)) {
+                throw new RangeError("Region stencil exceeds the safe integer range");
+            }
             const stencil = new BitVector2D(bounds.width, bounds.height);
 
             for (const rect of scans) {

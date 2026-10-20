@@ -66,7 +66,7 @@ znajdują się w tabeli poniżej.
 
 - [x] **12:** zmierzyć i usprawnić przewijanie, zmianę rozmiaru okna oraz
   tworzenie dokumentu, zachowując zoom, pozycję widoku i poprawne odświeżanie.
-- [ ] **13:** ustalić i wdrożyć kontrakt całkowitoliczbowych skanów oraz granic
+- [x] **13:** ustalić i wdrożyć kontrakt całkowitoliczbowych skanów oraz granic
   regionu; uwzględnić współrzędne ułamkowe, ujemne, otwory i puste regiony.
 - [ ] **14:** uruchomić rzeczywisty przełącznik akceleracji sprzętowej desktopu,
   z trwałą preferencją, zastosowaniem przy starcie Electrona i informacją
@@ -84,6 +84,14 @@ Rzeczywista zmiana wymiarów zmienia tylko backing store widoku, nie powierzchni
 dokumentu. Usunięto podwójną inwalidację nowego dokumentu i podwójne
 przeliczanie układu przy dopasowaniu. Nieaktywne dokumenty zachowują pozycję
 bez przewijania aktywnego widoku.
+
+**Kontrakt punktu 13:** `getRegionScansInt()` zwraca niezależne półotwarte
+prostokąty całkowitoliczbowe, zaokrąglając niepuste prostokąty na zewnątrz.
+`getBoundsInt()` obejmuje wyłącznie te skany; pusty region ma granice (0,0,0,0).
+Współrzędne niefinitywne i przekraczające bezpieczne liczby całkowite zgłaszają
+błąd zamiast indeksować tablicę ułamkami. Region z geometrii ścieżki używa
+wspólnego ze statystykami zaznaczenia skanowania even/odd w środkach pikseli,
+zamiast prostokątów otaczających kontury, które wypełniały otwory.
 
 **Przekazanie:** punkty 1–6 i 8–11 są ukończone; punkt 7 pozostaje odłożony
 na wyraźną decyzję użytkownika (brak wydań prerelease). Ostatnia weryfikacja:

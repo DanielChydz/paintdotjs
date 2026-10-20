@@ -73,11 +73,40 @@ class Region {
 
     getBounds() {
         let rects = this.getRectangles();
-        let bounds = rects[0];
-        for (let i = 1; i < rects.length; ++i) {
-            bounds = Rectangle.union(bounds, rects[i]);
+        let bounds = null;
+        for (let rect of rects) {
+            if (!rect.isEmpty()) {
+                bounds = bounds === null ? rect.clone() : Rectangle.union(bounds, rect);
+            }
         }
-        return bounds;
+        return bounds === null ? new Rectangle() : bounds;
+    }
+
+    getRegionScansInt() {
+        let scans = [];
+        for (let rect of this.rectangles) {
+            let edges = [rect.x, rect.y, rect.getRight(), rect.getBottom()];
+            if (!edges.every(Number.isFinite)) {
+                throw new RangeError("Region coordinates must be finite");
+            }
+            if (rect.isEmpty()) {
+                continue;
+            }
+            let left = Math.floor(rect.x);
+            let top = Math.floor(rect.y);
+            let right = Math.ceil(rect.getRight());
+            let bottom = Math.ceil(rect.getBottom());
+            if (![left, top, right, bottom, right - left, bottom - top].every(Number.isSafeInteger)) {
+                throw new RangeError("Region coordinates exceed the safe integer range");
+            }
+            // Half-open rectangles cover every pixel they intersect.
+            scans.push(new Rectangle(left, top, right - left, bottom - top));
+        }
+        return scans;
+    }
+
+    getBoundsInt() {
+        return Region.fromRectangles(this.getRegionScansInt()).getBounds();
     }
 
     clone() {
@@ -104,14 +133,7 @@ class Region {
             throw new Error("Input must be a GraphicsPath");
         }
 
-        let rectangles = [];
-        for (let vertexList of path.getVertexLists()) {
-            let rect = vertexList.getBounds();
-            if (rect !== null) {
-                rectangles.push(rect);
-            }
-        }
-        return Region.fromRectangles(rectangles);
+        return Region.fromRectangles([...path.getScans()]);
     }
 
     static fromRectangle(rectangle) {
