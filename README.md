@@ -123,7 +123,7 @@ WebGL availability alone is not proof of hardware acceleration.
 | AVIF | Yes | Yes | Yes | Yes | — |
 | HEIC/HEIF | With the Windows codec | With the Windows codec | Yes | Yes | Bundled libheif/Kvazaar saves 8-bit HEVC 4:2:0 images with alpha. RGB conversion and chroma subsampling can change colors even at quality 100. |
 | WebP | Yes | Yes | Yes | Yes | — |
-| DDS | Yes | Yes | Yes | Yes | paint.js saves uncompressed 32-bit images only. RGBA/BGRA 32-bit DDS is decoded directly, including older paint.js files; other variants use the bundled codec. |
+| DDS | Yes | Yes | Yes | Yes | Saves uncompressed RGBA or lossy BC1/DXT1 (RGB over white) and BC3/DXT5 (RGBA), without mipmaps. RGBA/BGRA 32-bit DDS is decoded directly, including older paint.js files; other variants use the bundled codec. |
 | TIFF (`.tif`, `.tiff`) | Yes | Yes | Yes | Yes | Saves 8-bit/channel RGB or RGBA, uncompressed, LZW or Deflate. RGB composites transparency onto white; RGBA retains alpha. |
 | GIF | Yes | Yes | Yes | Yes | paint.js saves a single static, palette-based image only. |
 | BMP | Yes | Yes | Yes | Yes | Saves 32-bit with alpha or 24-bit RGB over white. |

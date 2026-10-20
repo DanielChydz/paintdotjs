@@ -21,7 +21,13 @@ class SaveImageDialog {
         {id: "avif", name: "AV1 (AVIF)", extension: ".avif", mime: "image/avif", quality: 90},
         {id: "heic", name: "HEIC", extension: ".heic", extensions: [".heic", ".heif"], mime: "image/heic", quality: 90},
         {id: "webp", name: "WebP", extension: ".webp", mime: "image/webp", quality: 90},
-        {id: "dds", name: "DirectDraw Surface (DDS)", extension: ".dds", mime: "image/vnd-ms.dds"},
+        {id: "dds", name: "DirectDraw Surface (DDS)", extension: ".dds", mime: "image/vnd-ms.dds", controls: [
+            {key: "compression", type: "select", label: "Compression:", defaultValue: "none", choices: [
+                {value: "none", label: "Uncompressed RGBA (32-bit)"},
+                {value: "bc1", label: "BC1 / DXT1 (lossy RGB, white background)"},
+                {value: "bc3", label: "BC3 / DXT5 (lossy RGBA)"}
+            ]}
+        ]},
         {id: "tiff", name: "TIFF", extension: ".tif", extensions: [".tif", ".tiff"], mime: "image/tiff", controls: [
             {key: "colorMode", type: "select", label: "Color:", defaultValue: "rgba", choices: [
                 {value: "rgba", label: "RGBA (32-bit, with alpha)"}, {value: "rgb", label: "RGB (24-bit, white background)"}
@@ -280,7 +286,14 @@ class SaveImageDialog {
                     }
                     currentBlob = blob;
                     let displayBlob = blob;
-                    if (!["png", "jpeg", "webp", "gif", "bmp", "avif"].includes(format.id)) {
+                    if (["tiff", "tga", "dds"].includes(format.id)) {
+                        let decoded = await window.portableImageCodec.decode(new Uint8Array(await blob.arrayBuffer()), format.id);
+                        let previewCanvas = document.createElement("canvas");
+                        previewCanvas.width = decoded.width;
+                        previewCanvas.height = decoded.height;
+                        previewCanvas.getContext("2d").putImageData(new ImageData(decoded.rgba, decoded.width, decoded.height), 0, 0);
+                        displayBlob = await ImageEncoder.canvasToBlob(previewCanvas, "image/png");
+                    } else if (!["png", "jpeg", "webp", "gif", "bmp", "avif"].includes(format.id)) {
                         displayBlob = await ImageEncoder.canvasToBlob(canvas, "image/png");
                     }
                     if (closed || ownGeneration !== generation) {

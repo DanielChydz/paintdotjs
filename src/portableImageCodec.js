@@ -158,6 +158,22 @@ export async function encode(pngBytes, format, quality, options = {}) {
             }
             image.colorType = colorMode === 'rgba' ? ColorType.TrueColorAlpha : ColorType.TrueColor;
         }
+        if (outputFormat === MagickFormat.Dds) {
+            let compression = options.compression ?? 'none';
+            let methods = {none: CompressionMethod.NoCompression, bc1: CompressionMethod.DXT1, bc3: CompressionMethod.DXT5};
+            if (!Object.hasOwn(methods, compression)) {
+                throw new Error('Unsupported DDS compression');
+            }
+            image.depth = 8;
+            image.settings.compression = methods[compression];
+            image.settings.setDefine(MagickFormat.Dds, 'compression', {none: 'none', bc1: 'dxt1', bc3: 'dxt5'}[compression]);
+            image.settings.setDefine(MagickFormat.Dds, 'mipmaps', '0');
+            if (compression === 'bc1') {
+                image.backgroundColor = MagickColors.White;
+                image.alpha(AlphaAction.Remove);
+            }
+            image.colorType = compression === 'bc1' ? ColorType.TrueColor : ColorType.TrueColorAlpha;
+        }
         if (outputFormat === MagickFormat.Jpeg && options.subsampling) {
             image.settings.setDefine(MagickFormat.Jpeg, 'sampling-factor', options.subsampling);
             image.setArtifact('jpeg:sampling-factor', options.subsampling);

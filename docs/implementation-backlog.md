@@ -73,7 +73,7 @@ znajdują się w tabeli poniżej.
   o wymaganym restarcie.
 - [x] **15:** dodać pobieranie obrazu z kamery: podgląd, uprawnienia, zdjęcie,
   anulowanie, obsługę braku urządzenia i zwolnienie strumienia.
-- [ ] **16:** po audycie kodeków rozszerzać opcje eksportu kolejno dla TIFF,
+- [x] **16:** po audycie kodeków rozszerzać opcje eksportu kolejno dla TIFF,
   BMP/TGA i DDS; wyniki weryfikować niezależnym dekoderem.
 
 **Pomiary punktu 12:** scenariusz `checkViewPerformance.js`, dokument 1024×768:

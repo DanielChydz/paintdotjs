@@ -23,7 +23,7 @@ class ImageEncoder {
             case "gif": return this.encodeGif(canvas);
             case "tiff": return this.encodeTiff(canvas, options);
             case "tga": return this.encodeTga(canvas, options);
-            case "dds": return this.encodeDds(canvas);
+            case "dds": return this.encodeDds(canvas, options);
             case "avif": return this.encodeModern(canvas, "image/avif", "avif", quality);
             case "heic": return this.encodeModern(canvas, "image/heic", "heic", quality);
             case "jxl": return this.encodeModern(canvas, null, "jxl", quality);
@@ -172,7 +172,14 @@ class ImageEncoder {
         return new Blob([bytes], {type: "image/x-tga"});
     }
 
-    static encodeDds(canvas) {
+    static encodeDds(canvas, options = {}) {
+        let compression = options.compression ?? "none";
+        if (!["none", "bc1", "bc3"].includes(compression)) {
+            throw new Error("Unsupported DDS compression");
+        }
+        if (compression !== "none") {
+            return this.encodePortable(canvas, "dds", {compression});
+        }
         const image = this.getPixels(canvas);
         const bytes = new Uint8Array(128 + image.data.length);
         const view = new DataView(bytes.buffer);

@@ -124,10 +124,53 @@ module.exports = async function checkExportOptions() {
         }
         await rejects(() => ImageEncoder.encode(canvas, format, {bitDepth: 16}), /Unsupported .* bit depth/);
     }
+    for (let [width, height] of [[1, 1], [5, 7], [8, 8]]) {
+        let ddsCanvas = document.createElement("canvas");
+        ddsCanvas.width = width;
+        ddsCanvas.height = height;
+        let ddsContext = ddsCanvas.getContext("2d");
+        ddsContext.fillStyle = "rgba(32, 96, 192, 0.5)";
+        ddsContext.fillRect(0, 0, width, height);
+        for (let compression of ["none", "bc1", "bc3"]) {
+            let blob = await ImageEncoder.encode(ddsCanvas, "dds", {compression});
+            let bytes = new Uint8Array(await blob.arrayBuffer());
+            let view = new DataView(bytes.buffer);
+            let reference = ImageEncoder.getPixels(ddsCanvas, compression === "bc1").data;
+            let fourCC = String.fromCharCode(...bytes.slice(84, 88));
+            check(view.getUint32(12, true) === height && view.getUint32(16, true) === width,
+                "DDS changed odd or tiny image dimensions");
+            check(compression === "none" ? view.getUint32(80, true) === 0x41
+                : fourCC === (compression === "bc1" ? "DXT1" : "DXT5"), "DDS writer ignored compression");
+            let expectedSize = compression === "none" ? width * height * 4
+                : Math.ceil(width / 4) * Math.ceil(height / 4) * (compression === "bc1" ? 8 : 16);
+            check(bytes.length === 128 + expectedSize && view.getUint32(28, true) <= 1,
+                "DDS emitted implicit mipmaps or incorrect block padding");
+            let decoded = await window.portableImageCodec.decode(bytes, "dds");
+            equal(decoded.rgba, reference, compression === "none" ? 0 : 8, "DDS round trip");
+            if (isApp) {
+                equal(independentDecode(bytes, "dds"), reference, compression === "none" ? 0 : 8, "Independent DDS");
+            }
+        }
+    }
+    await rejects(() => ImageEncoder.encode(canvas, "dds", {compression: "bad"}), /Unsupported DDS/);
+    await rejects(() => window.portableImageCodec.encode(png, "dds", 100, {compression: "bad"}), /Unsupported DDS/);
+    await window.portableImageCodec.encode(png, "dds", 100);
+    for (let compression of ["bc1", "bc3"]) {
+        let blob = await ImageEncoder.encode(canvas, "dds", {compression});
+        let bytes = new Uint8Array(await blob.arrayBuffer());
+        let decoded = await window.portableImageCodec.decode(bytes, "dds");
+        let independent = isApp ? independentDecode(bytes, "dds") : decoded.rgba;
+        for (let index = 3; index < expected.length; index += 4) {
+            let alpha = compression === "bc1" ? 255 : expected[index];
+            check(Math.abs(decoded.rgba[index] - alpha) <= 18 && Math.abs(independent[index] - alpha) <= 18,
+                "DDS compressed alpha lost transparent, partial or opaque coverage");
+        }
+    }
     let formats = [
         {format: "tiff", values: ["rgb", "zip"], keys: ["colorMode", "compression"]},
         {format: "bmp", values: ["24"], keys: ["bitDepth"]},
-        {format: "tga", values: ["24"], keys: ["bitDepth"]}
+        {format: "tga", values: ["24"], keys: ["bitDepth"]},
+        {format: "dds", values: ["bc3"], keys: ["compression"]}
     ];
     for (let {format, values, keys} of formats) {
         let savedOptions = AppSettingsStore.get("fileTypes.saveOptions", {});
@@ -142,6 +185,18 @@ module.exports = async function checkExportOptions() {
         for (let [index, value] of values.entries()) {
             select[index].value = value;
             select[index].dispatchEvent(new Event("change", {bubbles: true}));
+        }
+        await new Promise(resolve => setTimeout(resolve, 150));
+        await waitFor(ready);
+        let preview = dialog.querySelector(".save-config-preview-stage img");
+        await preview.decode();
+        let previewCanvas = document.createElement("canvas");
+        previewCanvas.width = canvas.width;
+        previewCanvas.height = canvas.height;
+        previewCanvas.getContext("2d").drawImage(preview, 0, 0);
+        let previewPixels = ImageEncoder.getPixels(previewCanvas).data;
+        if (format !== "dds") {
+            equal(previewPixels, opaque, format === "tiff" ? 1 : 0, "Encoded " + format + " preview");
         }
         dialog.requestSubmit();
         let result = await pending;

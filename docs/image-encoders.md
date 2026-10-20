@@ -20,7 +20,10 @@ with FFmpeg, independently of the application codec.
 - DDS: the bundled encoder can write BC1/DXT1 and BC3/DXT5. Selecting the
   compression enum alone produced DXT5 for both in the audit; the explicit
   `dds:compression` define is required. `dds:mipmaps=0` disables implicit mipmap
-  generation. This is lossy block compression, not lossless RGBA storage.
+  generation. BC1 exports opaque RGB over white; BC3 retains lossy alpha.
+  The existing uncompressed 32-bit RGBA writer is still the default. This is
+  lossy block compression, not lossless RGBA storage. TIFF, TGA and DDS previews
+  decode the actual encoded bytes, so alpha removal and DDS artifacts are visible.
 
 The export regression uses odd dimensions, transparent pixels, actual save
 controls, per-format persistence and restoring defaults in desktop and browser
